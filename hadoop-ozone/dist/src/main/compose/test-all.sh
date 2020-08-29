@@ -51,12 +51,18 @@ for t in ${tests}; do
       RESULT=1
       echo "ERROR: Test execution of ${d} is FAILED!!!!"
   fi
+
   cd "$SCRIPT_DIR"
   RESULT_DIR="${d}/result"
   TEST_DIR_NAME=$(basename ${d})
-  rebot --nostatusrc -N $TEST_DIR_NAME -o "$ALL_RESULT_DIR"/$TEST_DIR_NAME.xml "$RESULT_DIR"/"*.xml"
+  if [[ -n "$(find "${RESULT_DIR}" -name "*.xml")" ]]; then
+    rebot --nostatusrc -N $TEST_DIR_NAME -o "$ALL_RESULT_DIR"/$TEST_DIR_NAME.xml "$RESULT_DIR"/"*.xml"
+  fi
+
   cp "$RESULT_DIR"/docker-*.log "$ALL_RESULT_DIR"/
-  cp "$RESULT_DIR"/*.out* "$ALL_RESULT_DIR"/ || true
+  if [[ -n "$(find "${RESULT_DIR}" -name "*.out")" ]]; then
+    cp "$RESULT_DIR"/*.out* "$ALL_RESULT_DIR"/
+  fi
 done
 
 rebot --nostatusrc -N acceptance -d "$ALL_RESULT_DIR" "$ALL_RESULT_DIR"/*.xml
