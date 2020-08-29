@@ -69,7 +69,7 @@ wait_for_safemode_exit(){
   SECONDS=0
 
   #Don't give it up until 180 seconds
-  while [[ $SECONDS -lt 180 ]]; do
+  while [[ $SECONDS -lt 30 ]]; do
 
      #This line checks the safemode status in scm
      local command="${OZONE_SAFEMODE_STATUS_COMMAND}"
