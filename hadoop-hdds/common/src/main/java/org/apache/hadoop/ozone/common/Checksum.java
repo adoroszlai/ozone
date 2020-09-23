@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ChecksumType;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.util.Shell;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +65,7 @@ public class Checksum {
     return ByteString.copyFrom(Ints.toByteArray(n));
   }
 
-  private static Function<ByteBuffer, ByteString> newChecksumByteBufferFunction(
+  public static Function<ByteBuffer, ByteString> newChecksumByteBufferFunction(
       Supplier<ChecksumByteBuffer> constructor) {
     final ChecksumByteBuffer algorithm = constructor.get();
     return  data -> {
@@ -75,10 +76,10 @@ public class Checksum {
   }
 
   /** The algorithms for {@link ChecksumType}. */
-  enum Algorithm {
+  public enum Algorithm {
     NONE(() -> data -> ByteString.EMPTY),
     CRC32(() -> newChecksumByteBufferFunction(PureJavaCrc32ByteBuffer::new)),
-    CRC32C(() -> newChecksumByteBufferFunction(PureJavaCrc32CByteBuffer::new)),
+    CRC32C(maybeJava9Crc32C()),
     SHA256(() -> newMessageDigestFunction("SHA-256")),
     MD5(() -> newMessageDigestFunction("MD5"));
 
@@ -92,7 +93,7 @@ public class Checksum {
       this.constructor = constructor;
     }
 
-    Function<ByteBuffer, ByteString> newChecksumFunction() {
+    public Function<ByteBuffer, ByteString> newChecksumFunction() {
       return constructor.get();
     }
   }
@@ -169,7 +170,13 @@ public class Checksum {
     } catch (Exception e) {
       throw new OzoneChecksumException(checksumType);
     }
+    List<ByteString> checksumList =
+        computeChecksum(data, function, bytesPerChecksum);
+    return new ChecksumData(checksumType, bytesPerChecksum, checksumList);
+  }
 
+  public static List<ByteString> computeChecksum(ChunkBuffer data,
+      Function<ByteBuffer, ByteString> function, int bytesPerChecksum) {
     // Checksum is computed for each bytesPerChecksum number of bytes of data
     // starting at offset 0. The last checksum might be computed for the
     // remaining data with length less than bytesPerChecksum.
@@ -177,7 +184,7 @@ public class Checksum {
     for (ByteBuffer b : data.iterate(bytesPerChecksum)) {
       checksumList.add(computeChecksum(b, function, bytesPerChecksum));
     }
-    return new ChecksumData(checksumType, bytesPerChecksum, checksumList);
+    return checksumList;
   }
 
   /**
@@ -260,4 +267,15 @@ public class Checksum {
   public static ContainerProtos.ChecksumData getNoChecksumDataProto() {
     return new ChecksumData(ChecksumType.NONE, 0).getProtoBufMessage();
   }
+
+  public static Supplier<Function<ByteBuffer, ByteString>> maybeJava9Crc32C() {
+    Supplier<ChecksumByteBuffer> constructor;
+    if (Shell.isJavaVersionAtLeast(9)) {
+      constructor = Java9Crc32CByteBuffer::create;
+    } else {
+      constructor = PureJavaCrc32CByteBuffer::new;
+    }
+    return () -> newChecksumByteBufferFunction(constructor);
+  }
+
 }

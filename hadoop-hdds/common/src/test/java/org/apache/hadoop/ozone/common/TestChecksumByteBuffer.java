@@ -44,6 +44,13 @@ public class TestChecksumByteBuffer {
     new VerifyChecksumByteBuffer(expected, testee).testCorrectness();
   }
 
+  @Test
+  public void testNativeCrc32CByteBuffer() {
+    final Checksum expected = new PureJavaCrc32C();
+    final ChecksumByteBuffer subject = Java9Crc32CByteBuffer.create();
+    new VerifyChecksumByteBuffer(expected, subject).testCorrectness();
+  }
+
   static class VerifyChecksumByteBuffer {
     private final Checksum expected;
     private final ChecksumByteBuffer testee;
@@ -93,6 +100,12 @@ public class TestChecksumByteBuffer {
       expected.reset();
       testee.reset();
       checkSame();
+
+      for (int i = 1; i < length; i++) {
+        expected.update(bytes, i, length - i);
+        testee.update(bytes, i, length - i);
+        checkSame();
+      }
     }
 
     private void checkSame() {
