@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.common.Checksum;
+import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.common.Java9Crc32CByteBuffer;
+import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.common.PureJavaCrc32ByteBuffer;
 import org.apache.hadoop.ozone.common.PureJavaCrc32CByteBuffer;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
@@ -90,6 +93,19 @@ public class BenchmarkChecksum {
         () -> newChecksumByteBufferFunction(Java9Crc32CByteBuffer::create), bh);
   }
 
+  @Benchmark
+  public void checksumObjectCrc32C(Blackhole bh) throws OzoneChecksumException {
+    benchmark(new Checksum(ContainerProtos.ChecksumType.CRC32C,
+        kbPerChecksum << 10), bh);
+  }
+
+  private void benchmark(Checksum checksum, Blackhole bh) throws OzoneChecksumException {
+    for (int i = 0; i < count; i++) {
+      ChecksumData checksumData = checksum.computeChecksum(buffers.get(i));
+      bh.consume(checksumData);
+    }
+  }
+
   private void benchmark(Supplier<Function<ByteBuffer, ByteString>> function,
       Blackhole bh) {
     for (int i = 0; i < count; i++) {
@@ -97,7 +113,7 @@ public class BenchmarkChecksum {
           ChunkBuffer.wrap(buffers.get(i)),
           function.get(),
           kbPerChecksum << 10);
-      //bh.consume(checksumData);
+      bh.consume(checksumData);
     }
   }
 
