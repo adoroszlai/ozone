@@ -124,7 +124,7 @@ public class BenchmarkChecksum {
     buffer.mark();
     buffer.put(bytes);
     buffer.reset();
-    return buffer;
+    return buffer.asReadOnlyBuffer();
   }
 
   private ByteBuffer allocateByteBuffer(int length) {
