@@ -99,7 +99,15 @@ public class BenchmarkChecksum {
         kbPerChecksum << 10), bh);
   }
 
-  private void benchmark(Checksum checksum, Blackhole bh) throws OzoneChecksumException {
+  @Benchmark
+  public void convertToReadOnlyByteBuffer(Blackhole bh) {
+    for (int i = 0; i < count; i++) {
+      bh.consume(buffers.get(i).asReadOnlyBuffer());
+    }
+  }
+
+  private void benchmark(Checksum checksum, Blackhole bh)
+      throws OzoneChecksumException {
     for (int i = 0; i < count; i++) {
       ChecksumData checksumData = checksum.computeChecksum(buffers.get(i));
       bh.consume(checksumData);
@@ -124,7 +132,7 @@ public class BenchmarkChecksum {
     buffer.mark();
     buffer.put(bytes);
     buffer.reset();
-    return buffer.asReadOnlyBuffer();
+    return buffer;
   }
 
   private ByteBuffer allocateByteBuffer(int length) {
