@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.common.Java9Crc32CByteBuffer;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.ozone.common.PureJavaCrc32ByteBuffer;
 import org.apache.hadoop.ozone.common.PureJavaCrc32CByteBuffer;
+
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -46,99 +47,110 @@ import static org.apache.hadoop.ozone.common.Checksum.newChecksumByteBufferFunct
 /**
  * Benchmark for checksum implementations.
  */
-@State(Scope.Benchmark)
 public class BenchmarkChecksum {
 
-  @Param("10")
-  private int count;
+  @State(Scope.Benchmark)
+  public static class BenchmarkState {
+    @Param("10")
+    private int count;
 
-  //@Param({"4", "16"})
-  @Param({"4"})
-  private int dataLengthMB;
+    //@Param({"4", "16"})
+    @Param({"4"})
+    private int dataLengthMB;
 
-  //@Param({"256", "1024"})
-  @Param({"1024"})
-  private int kbPerChecksum;
+    //@Param({"256", "1024"})
+    @Param({"1024"})
+    private int kbPerChecksum;
 
-  //@Param({"true", "false"})
-  @Param({"false"})
-  private boolean directBuffer;
+    //@Param({"true", "false"})
+    @Param({"false"})
+    private boolean directBuffer;
 
-  private List<ByteBuffer> buffers;
+    private List<ByteBuffer> buffers;
 
-  @Setup
-  public void createData() {
-    ThreadLocalRandom random = ThreadLocalRandom.current();
-    buffers = new ArrayList<>(count);
-    for (int i = 0; i < count; i++) {
-      buffers.add(newData(random));
+    @Setup
+    public void createData() {
+      ThreadLocalRandom random = ThreadLocalRandom.current();
+      buffers = new ArrayList<>(count);
+      for (int i = 0; i < count; i++) {
+        buffers.add(newData(random));
+      }
+    }
+
+    private ByteBuffer newData(Random random) {
+      final byte[] bytes = new byte[dataLengthMB << 20];
+      random.nextBytes(bytes);
+      final ByteBuffer buffer = allocateByteBuffer(bytes.length);
+      buffer.mark();
+      buffer.put(bytes);
+      buffer.reset();
+      return buffer;
+    }
+
+    private ByteBuffer allocateByteBuffer(int length) {
+      return directBuffer
+          ? ByteBuffer.allocateDirect(length)
+          : ByteBuffer.allocate(length);
     }
   }
 
-  //@Benchmark
-  public void pureJavaCrc32(Blackhole bh) {
-    benchmark(
-        () -> newChecksumByteBufferFunction(PureJavaCrc32ByteBuffer::new), bh);
+  @Benchmark
+  public void pureJavaCrc32(BenchmarkState state, Blackhole bh) {
+    benchmark(state, bh,
+        () -> newChecksumByteBufferFunction(PureJavaCrc32ByteBuffer::new));
   }
 
   @Benchmark
-  public void pureJavaCrc32C(Blackhole bh) {
-    benchmark(
-        () -> newChecksumByteBufferFunction(PureJavaCrc32CByteBuffer::new), bh);
+  public void pureJavaCrc32C(BenchmarkState state, Blackhole bh) {
+    benchmark(state, bh,
+        () -> newChecksumByteBufferFunction(PureJavaCrc32CByteBuffer::new));
   }
 
   @Benchmark
-  public void newJava9Crc32C(Blackhole bh) {
-    benchmark(
-        () -> newChecksumByteBufferFunction(Java9Crc32CByteBuffer::create), bh);
+  public void newJava9Crc32C(BenchmarkState state, Blackhole bh) {
+    benchmark(state, bh,
+        () -> newChecksumByteBufferFunction(Java9Crc32CByteBuffer::create));
   }
 
   @Benchmark
-  public void checksumObjectCrc32C(Blackhole bh) throws OzoneChecksumException {
-    benchmark(new Checksum(ContainerProtos.ChecksumType.CRC32C,
-        kbPerChecksum << 10), bh);
-  }
-
-  @Benchmark
-  public void convertToReadOnlyByteBuffer(Blackhole bh) {
-    for (int i = 0; i < count; i++) {
-      bh.consume(buffers.get(i).asReadOnlyBuffer());
-    }
-  }
-
-  private void benchmark(Checksum checksum, Blackhole bh)
+  public void checksumObjectNone(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
-    for (int i = 0; i < count; i++) {
-      ChecksumData checksumData = checksum.computeChecksum(buffers.get(i));
+    benchmark(state, bh,
+        new Checksum(ChecksumType.NONE, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
+  public void checksumObjectCrc32C(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    benchmark(state, bh,
+        new Checksum(ChecksumType.CRC32C, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
+  public void convertToReadOnlyByteBuffer(BenchmarkState state, Blackhole bh) {
+    for (int i = 0; i < state.count; i++) {
+      bh.consume(state.buffers.get(i).asReadOnlyBuffer());
+    }
+  }
+
+  private void benchmark(BenchmarkState state, Blackhole bh,
+      Checksum checksum) throws OzoneChecksumException {
+    for (int i = 0; i < state.count; i++) {
+      ByteBuffer buffer = state.buffers.get(i);
+      ChecksumData checksumData = checksum.computeChecksum(buffer);
       bh.consume(checksumData);
     }
   }
 
-  private void benchmark(Supplier<Function<ByteBuffer, ByteString>> function,
-      Blackhole bh) {
-    for (int i = 0; i < count; i++) {
+  private void benchmark(BenchmarkState state, Blackhole bh,
+      Supplier<Function<ByteBuffer, ByteString>> function) {
+    for (int i = 0; i < state.count; i++) {
       List<ByteString> checksumData = Checksum.computeChecksum(
-          ChunkBuffer.wrap(buffers.get(i)),
+          ChunkBuffer.wrap(state.buffers.get(i)),
           function.get(),
-          kbPerChecksum << 10);
+          state.kbPerChecksum << 10);
       bh.consume(checksumData);
     }
-  }
-
-  private ByteBuffer newData(Random random) {
-    final byte[] bytes = new byte[dataLengthMB << 20];
-    random.nextBytes(bytes);
-    final ByteBuffer buffer = allocateByteBuffer(bytes.length);
-    buffer.mark();
-    buffer.put(bytes);
-    buffer.reset();
-    return buffer;
-  }
-
-  private ByteBuffer allocateByteBuffer(int length) {
-    return directBuffer
-        ? ByteBuffer.allocateDirect(length)
-        : ByteBuffer.allocate(length);
   }
 
 }
