@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.genesis;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChecksumType;
 import org.apache.hadoop.ozone.common.Checksum;
-import org.apache.hadoop.ozone.common.ChecksumData;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.common.Java9Crc32CByteBuffer;
 import org.apache.hadoop.ozone.common.OzoneChecksumException;
@@ -58,8 +57,8 @@ public class BenchmarkChecksum {
     private int count;
 
     //@Param({"4", "16"})
-    @Param({"4"})
-    private int dataLengthMB;
+    @Param({"1", "2048", "4194304"})
+    private int dataLength;
 
     //@Param({"256", "1024"})
     @Param({"1024"})
@@ -90,7 +89,7 @@ public class BenchmarkChecksum {
     }
 
     private ByteBuffer newData(Random random) {
-      final byte[] bytes = new byte[dataLengthMB << 20];
+      final byte[] bytes = new byte[dataLength];
       random.nextBytes(bytes);
       final ByteBuffer buffer = allocateByteBuffer(bytes.length);
       buffer.mark();
