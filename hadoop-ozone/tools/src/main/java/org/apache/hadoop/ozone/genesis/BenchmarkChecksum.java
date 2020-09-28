@@ -70,15 +70,21 @@ public class BenchmarkChecksum {
     private boolean directBuffer;
 
     private List<ByteBuffer> buffers;
+    private List<ByteBuffer> readonly;
+    private List<ChunkBuffer> chunkBuffers;
     private List<Checksum> crc32cs;
 
     @Setup
     public void createData() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
       buffers = new ArrayList<>(count);
+      readonly = new ArrayList<>(count);
+      chunkBuffers = new ArrayList<>(count);
       crc32cs = new ArrayList<>(count);
       for (int i = 0; i < count; i++) {
         buffers.add(newData(random));
+        readonly.add(buffers.get(i).asReadOnlyBuffer());
+        chunkBuffers.add(ChunkBuffer.wrap(readonly.get(i)));
         crc32cs.add(new Checksum(ChecksumType.CRC32C, kbPerChecksum << 10));
       }
     }
@@ -144,18 +150,28 @@ public class BenchmarkChecksum {
       throws OzoneChecksumException {
     for (int i = 0; i < state.count; i++) {
       ByteBuffer buffer = state.buffers.get(i);
-      ChecksumData checksumData = state.crc32cs.get(i).computeChecksum(buffer);
-      bh.consume(checksumData);
+      Checksum checksum = state.crc32cs.get(i);
+      bh.consume(checksum.computeChecksum(buffer));
     }
   }
 
   @Benchmark
-  public void preCreatedSkipReadonly(BenchmarkState state, Blackhole bh)
+  public void preCreatedReadOnly(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
     for (int i = 0; i < state.count; i++) {
-      ByteBuffer buffer = state.buffers.get(i);
+      ByteBuffer buffer = state.readonly.get(i);
       Checksum checksum = state.crc32cs.get(i);
-      bh.consume(checksum.computeChecksum(ChunkBuffer.wrap(buffer)));
+      bh.consume(checksum.computeChecksum(buffer));
+    }
+  }
+
+  @Benchmark
+  public void preCreatedChunkBuffer(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    for (int i = 0; i < state.count; i++) {
+      ChunkBuffer buffer = state.chunkBuffers.get(i);
+      Checksum checksum = state.crc32cs.get(i);
+      bh.consume(checksum.computeChecksum(buffer));
     }
   }
 
