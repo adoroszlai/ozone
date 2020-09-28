@@ -49,6 +49,9 @@ import static org.apache.hadoop.ozone.common.Checksum.newChecksumByteBufferFunct
  */
 public class BenchmarkChecksum {
 
+  private static final Checksum.Algorithm CRC32C =
+      Checksum.Algorithm.valueOf("CRC32C");
+
   @State(Scope.Benchmark)
   public static class BenchmarkState {
     @Param("10")
@@ -147,9 +150,33 @@ public class BenchmarkChecksum {
   }
 
   @Benchmark
+  public void preCreatedSkipReadonly(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    for (int i = 0; i < state.count; i++) {
+      ByteBuffer buffer = state.buffers.get(i);
+      Checksum checksum = state.crc32cs.get(i);
+      bh.consume(checksum.computeChecksum(ChunkBuffer.wrap(buffer)));
+    }
+  }
+
+  @Benchmark
   public void convertToReadOnlyByteBuffer(BenchmarkState state, Blackhole bh) {
     for (int i = 0; i < state.count; i++) {
       bh.consume(state.buffers.get(i).asReadOnlyBuffer());
+    }
+  }
+
+  @Benchmark
+  public void toAlgo(BenchmarkState state, Blackhole bh) {
+    for (int i = 0; i < state.count; i++) {
+      bh.consume(Checksum.Algorithm.valueOf(ChecksumType.CRC32C.name()));
+    }
+  }
+
+  @Benchmark
+  public void newChecksumFunction(BenchmarkState state, Blackhole bh) {
+    for (int i = 0; i < state.count; i++) {
+      bh.consume(CRC32C.newChecksumFunction());
     }
   }
 
@@ -157,8 +184,7 @@ public class BenchmarkChecksum {
       Checksum checksum) throws OzoneChecksumException {
     for (int i = 0; i < state.count; i++) {
       ByteBuffer buffer = state.buffers.get(i);
-      ChecksumData checksumData = checksum.computeChecksum(buffer);
-      bh.consume(checksumData);
+      bh.consume(checksum.computeChecksum(buffer));
     }
   }
 
