@@ -159,7 +159,7 @@ public class Checksum {
 
   public ChecksumData computeChecksum(ChunkBuffer data)
       throws OzoneChecksumException {
-    if (checksumType == ChecksumType.NONE) {
+    if (false && checksumType == ChecksumType.NONE) {
       // Since type is set to NONE, we do not need to compute the checksums
       return new ChecksumData(checksumType, bytesPerChecksum);
     }
