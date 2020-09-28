@@ -67,13 +67,16 @@ public class BenchmarkChecksum {
     private boolean directBuffer;
 
     private List<ByteBuffer> buffers;
+    private List<Checksum> crc32cs;
 
     @Setup
     public void createData() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
       buffers = new ArrayList<>(count);
+      crc32cs = new ArrayList<>(count);
       for (int i = 0; i < count; i++) {
         buffers.add(newData(random));
+        crc32cs.add(new Checksum(ChecksumType.CRC32C, kbPerChecksum << 10));
       }
     }
 
@@ -131,6 +134,16 @@ public class BenchmarkChecksum {
       throws OzoneChecksumException {
     benchmark(state, bh,
         new Checksum(ChecksumType.CRC32C, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
+  public void preCreatedChecksumObjectCrc32C(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    for (int i = 0; i < state.count; i++) {
+      ByteBuffer buffer = state.buffers.get(i);
+      ChecksumData checksumData = state.crc32cs.get(i).computeChecksum(buffer);
+      bh.consume(checksumData);
+    }
   }
 
   @Benchmark
