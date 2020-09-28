@@ -270,7 +270,7 @@ public class Checksum {
 
   public static Supplier<Function<ByteBuffer, ByteString>> maybeJava9Crc32C() {
     Supplier<ChecksumByteBuffer> constructor;
-    if (Shell.isJavaVersionAtLeast(9)) {
+    if (false && Shell.isJavaVersionAtLeast(9)) {
       constructor = Java9Crc32CByteBuffer::create;
     } else {
       constructor = PureJavaCrc32CByteBuffer::new;
