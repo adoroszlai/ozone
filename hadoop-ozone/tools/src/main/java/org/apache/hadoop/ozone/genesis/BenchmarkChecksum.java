@@ -120,6 +120,13 @@ public class BenchmarkChecksum {
   }
 
   @Benchmark
+  public void checksumObjectSha256(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    benchmark(state, bh,
+        new Checksum(ChecksumType.SHA256, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
   public void checksumObjectCrc32C(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
     benchmark(state, bh,
