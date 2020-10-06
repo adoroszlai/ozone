@@ -47,6 +47,11 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: Install Hugo
+        run: |
+          curl -LOSs --fail https://github.com/gohugoio/hugo/releases/download/v0.76.0/hugo_0.76.0_Linux-64bit.tar.gz
+          tar zxvf hugo_0.76.0_Linux-64bit.tar.gz hugo
+          sudo mv hugo /usr/local/bin/
       - name: Run a full build
         run: hadoop-ozone/dev-support/checks/build.sh
   bats:
