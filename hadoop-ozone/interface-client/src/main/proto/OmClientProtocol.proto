@@ -314,6 +314,8 @@ enum Status {
 
     PARTIAL_RENAME = 65;
 
+    QUOTA_EXCEEDED = 66;
+
 }
 
 /**
@@ -499,6 +501,9 @@ message BucketInfo {
     optional uint64 modificationTime = 11;
     optional string sourceVolume = 12;
     optional string sourceBucket = 13;
+    optional uint64 usedBytes = 14;
+    optional uint64 quotaInBytes = 15;
+    optional uint64 quotaInCounts = 16;
 }
 
 enum StorageTypeProto {
@@ -568,6 +573,8 @@ message BucketArgs {
     optional bool isVersionEnabled = 5;
     optional StorageTypeProto storageType = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
+    optional uint64 quotaInBytes = 8;
+    optional uint64 quotaInCounts = 9;
 }
 
 message PrefixInfo {

@@ -33,6 +33,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.PrefixManager;
 import org.apache.hadoop.ozone.om.ResolvedBucket;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
@@ -534,6 +535,27 @@ public abstract class OMKeyRequest extends OMClientRequest {
   }
 
   /**
+   * Check volume quota in bytes.
+   * @param omVolumeArgs
+   * @param allocateSize
+   * @throws IOException
+   */
+  protected void checkVolumeQuotaInBytes(OmVolumeArgs omVolumeArgs,
+      long allocateSize) throws IOException {
+    if (omVolumeArgs.getQuotaInBytes() > OzoneConsts.QUOTA_RESET) {
+      long usedBytes = omVolumeArgs.getUsedBytes().sum();
+      long quotaInBytes = omVolumeArgs.getQuotaInBytes();
+      if (quotaInBytes - usedBytes < allocateSize) {
+        throw new OMException("The DiskSpace quota of volume:"
+            + omVolumeArgs.getVolume() + "exceeded: quotaInBytes: "
+            + quotaInBytes + " Bytes but diskspace consumed: " + (usedBytes
+            + allocateSize) + " Bytes.",
+            OMException.ResultCodes.QUOTA_EXCEEDED);
+      }
+    }
+  }
+
+  /**
    * Check directory exists. If exists return true, else false.
    * @param volumeName
    * @param bucketName
@@ -563,6 +585,21 @@ public abstract class OMKeyRequest extends OMClientRequest {
       String volume) {
     return omMetadataManager.getVolumeTable().getCacheValue(
         new CacheKey<>(omMetadataManager.getVolumeKey(volume)))
+        .getCacheValue();
+  }
+
+  /**
+   * Return bucket info for the specified bucket.
+   * @param omMetadataManager
+   * @param volume
+   * @param bucket
+   * @return OmVolumeArgs
+   * @throws IOException
+   */
+  protected OmBucketInfo getBucketInfo(OMMetadataManager omMetadataManager,
+      String volume, String bucket) {
+    return omMetadataManager.getBucketTable().getCacheValue(
+        new CacheKey<>(omMetadataManager.getBucketKey(volume, bucket)))
         .getCacheValue();
   }
 }

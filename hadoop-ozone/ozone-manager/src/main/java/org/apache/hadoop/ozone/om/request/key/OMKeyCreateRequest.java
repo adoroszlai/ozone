@@ -198,6 +198,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     OmKeyInfo omKeyInfo = null;
     OmVolumeArgs omVolumeArgs = null;
+    OmBucketInfo omBucketInfo = null;
     final List< OmKeyLocationInfo > locations = new ArrayList<>();
 
     boolean acquireLock = false;
@@ -285,16 +286,8 @@ public class OMKeyCreateRequest extends OMKeyRequest {
           .collect(Collectors.toList());
       omKeyInfo.appendNewBlocks(newLocationList, false);
 
-      // Add to cache entry can be done outside of lock for this openKey.
-      // Even if bucket gets deleted, when commitKey we shall identify if
-      // bucket gets deleted.
-      omMetadataManager.getOpenKeyTable().addCacheEntry(
-          new CacheKey<>(dbOpenKeyName),
-          new CacheValue<>(Optional.of(omKeyInfo), trxnLogIndex));
-
-      long scmBlockSize = ozoneManager.getScmBlockSize();
       omVolumeArgs = getVolumeInfo(omMetadataManager, volumeName);
-
+      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
       // Here we refer to the implementation of HDFS:
       // If the key size is 600MB, when createKey, keyLocationInfo in
       // keyLocationList is 3, and  the every pre-allocated block length is
@@ -302,8 +295,21 @@ public class OMKeyCreateRequest extends OMKeyRequest {
       // ize is 256MB * 3 * 3. We will allocate more 256MB * 3 * 3 - 600mb * 3
       // = 504MB in advance, and we  will subtract this part when we finally
       // commitKey.
-      omVolumeArgs.getUsedBytes().add(newLocationList.size() * scmBlockSize
-          * omKeyInfo.getFactor().getNumber());
+      long preAllocatedSpace = newLocationList.size()
+          * ozoneManager.getScmBlockSize()
+          * omKeyInfo.getFactor().getNumber();
+      // check volume quota
+      checkVolumeQuotaInBytes(omVolumeArgs, preAllocatedSpace);
+
+      // Add to cache entry can be done outside of lock for this openKey.
+      // Even if bucket gets deleted, when commitKey we shall identify if
+      // bucket gets deleted.
+      omMetadataManager.getOpenKeyTable().addCacheEntry(
+          new CacheKey<>(dbOpenKeyName),
+          new CacheValue<>(Optional.of(omKeyInfo), trxnLogIndex));
+
+      omVolumeArgs.getUsedBytes().add(preAllocatedSpace);
+      omBucketInfo.getUsedBytes().add(preAllocatedSpace);
 
       // Prepare response
       omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
@@ -312,7 +318,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
           .setOpenVersion(openVersion).build())
           .setCmdType(Type.CreateKey);
       omClientResponse = new OMKeyCreateResponse(omResponse.build(),
-          omKeyInfo, missingParentInfos, clientID, omVolumeArgs);
+          omKeyInfo, missingParentInfos, clientID, omVolumeArgs, omBucketInfo);
 
       result = Result.SUCCESS;
     } catch (IOException ex) {

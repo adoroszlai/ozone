@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.util.OmResponseUtil;
@@ -163,9 +164,10 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
         getOmRequest());
     OMClientResponse omClientResponse = null;
 
-    OmKeyInfo openKeyInfo;
+    OmKeyInfo openKeyInfo = null;
     IOException exception = null;
     OmVolumeArgs omVolumeArgs = null;
+    OmBucketInfo omBucketInfo = null;
 
     try {
       keyArgs = resolveBucketLink(ozoneManager, keyArgs, auditMap);
@@ -190,9 +192,16 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
             KEY_NOT_FOUND);
       }
 
-      // Append new block
       List<OmKeyLocationInfo> newLocationList = Collections.singletonList(
           OmKeyLocationInfo.getFromProtobuf(blockLocation));
+      omVolumeArgs = getVolumeInfo(omMetadataManager, volumeName);
+      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      // check volume quota
+      long preAllocatedSpace = newLocationList.size()
+          * ozoneManager.getScmBlockSize()
+          * openKeyInfo.getFactor().getNumber();
+      checkVolumeQuotaInBytes(omVolumeArgs, preAllocatedSpace);
+      // Append new block
       openKeyInfo.appendNewBlocks(newLocationList, false);
 
       // Set modification time.
@@ -206,16 +215,14 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
           new CacheKey<>(openKeyName),
           new CacheValue<>(Optional.of(openKeyInfo), trxnLogIndex));
 
-      long scmBlockSize = ozoneManager.getScmBlockSize();
-      omVolumeArgs = getVolumeInfo(omMetadataManager, volumeName);
       // update usedBytes atomically.
-      omVolumeArgs.getUsedBytes().add(newLocationList.size() * scmBlockSize
-          * openKeyInfo.getFactor().getNumber());
+      omVolumeArgs.getUsedBytes().add(preAllocatedSpace);
+      omBucketInfo.getUsedBytes().add(preAllocatedSpace);
 
       omResponse.setAllocateBlockResponse(AllocateBlockResponse.newBuilder()
           .setKeyLocation(blockLocation).build());
       omClientResponse = new OMAllocateBlockResponse(omResponse.build(),
-          openKeyInfo, clientID, omVolumeArgs);
+          openKeyInfo, clientID, omVolumeArgs, omBucketInfo);
 
       LOG.debug("Allocated block for Volume:{}, Bucket:{}, OpenKey:{}",
           volumeName, bucketName, openKeyName);
@@ -233,8 +240,6 @@ public class OMAllocateBlockRequest extends OMKeyRequest {
 
     auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_BLOCK, auditMap,
         exception, getOmRequest().getUserInfo()));
-
-
 
     return omClientResponse;
   }
