@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.ozone.common;
 
-import org.apache.hadoop.util.Shell;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
+
+import org.apache.hadoop.util.Shell;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link ChecksumByteBuffer} implementation based on Java 9's new CRC32C class.
@@ -31,16 +33,24 @@ import java.util.zip.Checksum;
 public class Java9Crc32CByteBuffer extends DelegatingChecksum
     implements ChecksumByteBuffer {
 
+  private static final Logger LOG =
+    LoggerFactory.getLogger(Java9Crc32CByteBuffer.class);
+
+  private static volatile boolean useJava9Crc32C =
+    Shell.isJavaVersionAtLeast(9);
+
   /**
    * Creates a {@link Java9Crc32CByteBuffer} if running on Java 9 or later,
    * otherwise a {@link PureJavaCrc32CByteBuffer}.
    */
   public static ChecksumByteBuffer create() {
-    if (Shell.isJavaVersionAtLeast(9)) {
+    if (useJava9Crc32C) {
       try {
         return new Java9Crc32CByteBuffer(Factory.createChecksum());
-      } catch (Exception e) {
+      } catch (ExceptionInInitializerError | RuntimeException e) {
         // will return java-based implementation
+        useJava9Crc32C = false;
+        LOG.error("CRC32C creation failed, switching to PureJavaCrc32C", e);
       }
     }
     return new PureJavaCrc32CByteBuffer();
