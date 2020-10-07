@@ -22,6 +22,7 @@ import org.openjdk.jmh.profile.GCProfiler;
 import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -55,29 +56,38 @@ public final class Genesis {
           + "BenchMarkSCM, BenchMarkMetadataStoreReads, "
           + "BenchMarkMetadataStoreWrites, BenchMarkDatanodeDispatcher, "
           + "BenchMarkRocksDbStore}")
-  private static String[] benchmarks;
+  private String[] benchmarks;
 
   @Option(names = "-t", defaultValue = "4",
       description = "Number of threads to use for the benchmark.\n"
           + "This option can be overridden by threads mentioned in benchmark.")
-  private static int numThreads;
+  private int numThreads;
+
+  @Option(names = "-n", defaultValue = "20",
+      description = "Number of measurement iterations to run.\n")
+  private int iterations;
 
   @Option(names = "--seconds",
       description = "Number of seconds to run each benchmark method.\n"
           + "By default no limit is set.")
-  private static int seconds = -1;
+  private int seconds;
 
   private Genesis() {
   }
 
   public static void main(String[] args) throws RunnerException {
-    CommandLine commandLine = new CommandLine(new Genesis());
+    Genesis command = new Genesis();
+    CommandLine commandLine = new CommandLine(command);
     commandLine.parse(args);
     if (commandLine.isUsageHelpRequested()) {
       commandLine.usage(System.out);
       return;
     }
 
+    new Runner(command.buildOptions()).run();
+  }
+
+  private Options buildOptions() {
     OptionsBuilder optionsBuilder = new OptionsBuilder();
     if (benchmarks != null) {
       // The OptionsBuilder#include takes a regular expression as argument.
@@ -90,7 +100,7 @@ public final class Genesis {
       }
     }
     optionsBuilder.warmupIterations(2)
-        .measurementIterations(20)
+        .measurementIterations(iterations)
         .addProfiler(StackProfiler.class)
         .addProfiler(GCProfiler.class)
         .shouldDoGC(true)
@@ -101,7 +111,7 @@ public final class Genesis {
       optionsBuilder.measurementTime(seconds(seconds));
     }
 
-    new Runner(optionsBuilder.build()).run();
+    return optionsBuilder.build();
   }
 }
 
