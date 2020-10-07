@@ -159,7 +159,7 @@ public class Checksum {
 
   public ChecksumData computeChecksum(ChunkBuffer data)
       throws OzoneChecksumException {
-    if (false && checksumType == ChecksumType.NONE) {
+    if (checksumType == ChecksumType.NONE) {
       // Since type is set to NONE, we do not need to compute the checksums
       return new ChecksumData(checksumType, bytesPerChecksum);
     }
@@ -268,9 +268,9 @@ public class Checksum {
     return new ChecksumData(ChecksumType.NONE, 0).getProtoBufMessage();
   }
 
-  public static Supplier<Function<ByteBuffer, ByteString>> maybeJava9Crc32C() {
+  private static Supplier<Function<ByteBuffer, ByteString>> maybeJava9Crc32C() {
     Supplier<ChecksumByteBuffer> constructor;
-    if (false && Shell.isJavaVersionAtLeast(9)) {
+    if (Shell.isJavaVersionAtLeast(9)) {
       constructor = Java9Crc32CByteBuffer::create;
     } else {
       constructor = PureJavaCrc32CByteBuffer::new;
