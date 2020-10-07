@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.common.Checksum;
-import org.apache.hadoop.ozone.common.ChunkBuffer;
-import org.apache.hadoop.ozone.common.Java9Crc32CByteBuffer;
-import org.apache.hadoop.ozone.common.PureJavaCrc32CByteBuffer;
-
-import org.apache.hadoop.util.Shell;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -36,21 +32,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static org.apache.hadoop.ozone.common.Checksum.newChecksumByteBufferFunction;
 
 /**
- * Benchmark for checksum implementations (bypassing {@link Checksum} object).
+ * Benchmark for checksum implementations (using {@link Checksum} object.
  */
-public class BenchmarkChecksum {
+public class BenchmarkChecksumObject {
 
   @State(Scope.Benchmark)
   public static class BenchmarkState {
-
-    @Param({"true", "false"})
-    private boolean asReadOnly;
 
     @Param("10")
     private int count;
@@ -65,11 +54,13 @@ public class BenchmarkChecksum {
     private boolean directBuffer;
 
     private List<ByteBuffer> buffers;
+    private Checksum crc32c;
 
     @Setup
     public void createData() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
       buffers = new ArrayList<>(count);
+      crc32c = new Checksum(ContainerProtos.ChecksumType.CRC32C, kbPerChecksum << 10);
       for (int i = 0; i < count; i++) {
         buffers.add(newData(random));
       }
@@ -93,33 +84,37 @@ public class BenchmarkChecksum {
   }
 
   @Benchmark
-  public void pureJavaCrc32C(BenchmarkState state, Blackhole bh) {
+  public void checksumObjectNone(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
     benchmark(state, bh,
-        () -> newChecksumByteBufferFunction(PureJavaCrc32CByteBuffer::new));
+        new Checksum(ContainerProtos.ChecksumType.NONE, state.kbPerChecksum << 10));
   }
 
   @Benchmark
-  public void newJava9Crc32C(BenchmarkState state, Blackhole bh) {
-    if (!Shell.isJavaVersionAtLeast(9)) {
-      System.exit(1);
-    }
+  public void checksumObjectSha256(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
     benchmark(state, bh,
-        () -> newChecksumByteBufferFunction(Java9Crc32CByteBuffer::create));
+        new Checksum(ContainerProtos.ChecksumType.SHA256, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
+  public void checksumObjectCrc32C(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    benchmark(state, bh,
+        new Checksum(ContainerProtos.ChecksumType.CRC32C, state.kbPerChecksum << 10));
+  }
+
+  @Benchmark
+  public void preCreatedChecksumObjectCrc32C(BenchmarkState state, Blackhole bh)
+      throws OzoneChecksumException {
+    benchmark(state, bh, state.crc32c);
   }
 
   private void benchmark(BenchmarkState state, Blackhole bh,
-      Supplier<Function<ByteBuffer, ByteString>> function) {
+      Checksum checksum) throws OzoneChecksumException {
     for (int i = 0; i < state.count; i++) {
       ByteBuffer buffer = state.buffers.get(i);
-      if (state.asReadOnly) {
-        buffer = buffer.asReadOnlyBuffer();
-      }
-      ChunkBuffer chunkBuffer = ChunkBuffer.wrap(buffer);
-      List<ByteString> checksumData = Checksum.computeChecksum(
-          chunkBuffer, function.get(),
-          state.kbPerChecksum << 10);
-      bh.consume(checksumData);
+      bh.consume(checksum.computeChecksum(buffer));
     }
   }
-
 }
