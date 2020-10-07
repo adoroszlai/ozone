@@ -31,6 +31,10 @@ import java.util.zip.Checksum;
 public class Java9Crc32CByteBuffer extends DelegatingChecksum
     implements ChecksumByteBuffer {
 
+  /**
+   * Creates a {@link Java9Crc32CByteBuffer} if running on Java 9 or later,
+   * otherwise a {@link PureJavaCrc32CByteBuffer}.
+   */
   public static ChecksumByteBuffer create() {
     if (Shell.isJavaVersionAtLeast(9)) {
       try {
@@ -90,7 +94,7 @@ public class Java9Crc32CByteBuffer extends DelegatingChecksum
       } catch (RuntimeException e) {
         throw e;
       } catch (Throwable t) {
-        throw new RuntimeException(t);
+        throw new IllegalStateException(t);
       }
     }
   }
