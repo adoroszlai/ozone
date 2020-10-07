@@ -56,13 +56,13 @@ public class BenchmarkChecksum {
     @Param("10")
     private int count;
 
-    @Param({"1", "2048", "4194304"})
+    @Param({"4194304"})
     private int dataLength;
 
-    @Param({"256", "1024"})
+    @Param({"1024"})
     private int kbPerChecksum;
 
-    @Param({"true", "false"})
+    @Param({"false"})
     private boolean directBuffer;
 
     private List<ByteBuffer> buffers;
