@@ -22,6 +22,7 @@ import org.apache.hadoop.util.PureJavaCrc32C;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.zip.Checksum;
@@ -45,7 +46,7 @@ public class TestChecksumByteBuffer {
   }
 
   @Test
-  public void testNativeCrc32CByteBuffer() {
+  public void testJava9Crc32CByteBuffer() {
     final Checksum expected = new PureJavaCrc32C();
     final ChecksumByteBuffer subject = Java9Crc32CByteBuffer.create();
     new VerifyChecksumByteBuffer(expected, subject).testCorrectness();
@@ -63,18 +64,21 @@ public class TestChecksumByteBuffer {
     void testCorrectness() {
       checkSame();
 
-      checkBytes("hello world!".getBytes(StandardCharsets.UTF_8));
+      byte[] hello = "hello world!".getBytes(StandardCharsets.UTF_8);
+      check(hello, hello.length);
 
       final Random random = new Random();
       final byte[] bytes = new byte[1 << 10];
       for (int i = 0; i < 1000; i++) {
         random.nextBytes(bytes);
-        checkBytes(bytes, random.nextInt(bytes.length));
+        check(bytes, random.nextInt(bytes.length));
       }
     }
 
-    void checkBytes(byte[] bytes) {
-      checkBytes(bytes, bytes.length);
+    void check(byte[] bytes, int length) {
+      checkBytes(bytes, length);
+      checkBuffer(ByteBuffer.allocate(bytes.length), length, bytes);
+      checkBuffer(ByteBuffer.allocateDirect(bytes.length), length, bytes);
     }
 
     void checkBytes(byte[] bytes, int length) {
@@ -106,6 +110,41 @@ public class TestChecksumByteBuffer {
         testee.update(bytes, i, length - i);
         checkSame();
       }
+
+      expected.reset();
+      testee.reset();
+      checkSame();
+    }
+
+    void checkBuffer(ByteBuffer buffer, int length, byte[] bytes) {
+      buffer.rewind();
+      buffer.put(bytes);
+
+      expected.reset();
+      testee.reset();
+      checkSame();
+
+      for (int i = 0; i < length; i++) {
+        buffer.rewind().limit(i);
+        expected.update(bytes, 0, i);
+        testee.update(buffer);
+        checkSame();
+      }
+
+      expected.reset();
+      testee.reset();
+      checkSame();
+
+      for (int i = 1; i < length; i++) {
+        buffer.position(i).limit(length);
+        expected.update(bytes, i, length - i);
+        testee.update(buffer);
+        checkSame();
+      }
+
+      expected.reset();
+      testee.reset();
+      checkSame();
     }
 
     private void checkSame() {
