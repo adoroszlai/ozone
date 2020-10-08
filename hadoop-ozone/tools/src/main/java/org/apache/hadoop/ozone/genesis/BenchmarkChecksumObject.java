@@ -38,6 +38,9 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class BenchmarkChecksumObject {
 
+  /**
+   * State (including parameters) for {@link BenchmarkChecksumObject}.
+   */
   @State(Scope.Benchmark)
   public static class BenchmarkState {
 
@@ -60,7 +63,8 @@ public class BenchmarkChecksumObject {
     public void createData() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
       buffers = new ArrayList<>(count);
-      crc32c = new Checksum(ContainerProtos.ChecksumType.CRC32C, kbPerChecksum << 10);
+      crc32c = new Checksum(ContainerProtos.ChecksumType.CRC32C,
+          kbPerChecksum << 10);
       for (int i = 0; i < count; i++) {
         buffers.add(newData(random));
       }
@@ -87,21 +91,24 @@ public class BenchmarkChecksumObject {
   public void checksumObjectNone(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
     benchmark(state, bh,
-        new Checksum(ContainerProtos.ChecksumType.NONE, state.kbPerChecksum << 10));
+        new Checksum(ContainerProtos.ChecksumType.NONE,
+            state.kbPerChecksum << 10));
   }
 
   @Benchmark
   public void checksumObjectSha256(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
     benchmark(state, bh,
-        new Checksum(ContainerProtos.ChecksumType.SHA256, state.kbPerChecksum << 10));
+        new Checksum(ContainerProtos.ChecksumType.SHA256,
+            state.kbPerChecksum << 10));
   }
 
   @Benchmark
   public void checksumObjectCrc32C(BenchmarkState state, Blackhole bh)
       throws OzoneChecksumException {
     benchmark(state, bh,
-        new Checksum(ContainerProtos.ChecksumType.CRC32C, state.kbPerChecksum << 10));
+        new Checksum(ContainerProtos.ChecksumType.CRC32C,
+            state.kbPerChecksum << 10));
   }
 
   @Benchmark

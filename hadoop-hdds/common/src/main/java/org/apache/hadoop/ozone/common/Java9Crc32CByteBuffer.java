@@ -30,14 +30,14 @@ import org.slf4j.LoggerFactory;
 /**
  * {@link ChecksumByteBuffer} implementation based on Java 9's new CRC32C class.
  */
-public class Java9Crc32CByteBuffer extends DelegatingChecksum
+public final class Java9Crc32CByteBuffer extends DelegatingChecksum
     implements ChecksumByteBuffer {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(Java9Crc32CByteBuffer.class);
+      LoggerFactory.getLogger(Java9Crc32CByteBuffer.class);
 
   private static volatile boolean useJava9Crc32C =
-    Shell.isJavaVersionAtLeast(9);
+      Shell.isJavaVersionAtLeast(9);
 
   /**
    * Creates a {@link Java9Crc32CByteBuffer} if running on Java 9 or later,

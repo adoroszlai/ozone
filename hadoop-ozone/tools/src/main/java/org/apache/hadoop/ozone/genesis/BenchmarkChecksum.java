@@ -46,6 +46,9 @@ import static org.apache.hadoop.ozone.common.Checksum.newChecksumByteBufferFunct
  */
 public class BenchmarkChecksum {
 
+  /**
+   * State (including parameters) for {@link BenchmarkChecksum}.
+   */
   @State(Scope.Benchmark)
   public static class BenchmarkState {
 
