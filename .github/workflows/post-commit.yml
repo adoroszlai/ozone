@@ -19,8 +19,7 @@ on:
   schedule:
     - cron: 30 0,12 * * *
 jobs:
-  build:
-    name: compile
+  compile:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -49,7 +48,13 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
       - name: Run a full build
-        run: hadoop-ozone/dev-support/checks/build.sh
+        run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage
+      - name: Store build for tests
+        uses: actions/upload-artifact@v2
+        if: matrix.java == '8'
+        with:
+          name: ozone-bin
+          path: hadoop-*/dist/target/ozone-*
   bats:
     runs-on: ubuntu-18.04
     steps:
@@ -167,6 +172,7 @@ jobs:
           path: target/findbugs
         continue-on-error: true
   acceptance:
+    needs: compile
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -178,37 +184,19 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
-      - name: Cache for maven dependencies
-        uses: actions/cache@v2
         with:
-          path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: maven-repo-
-      - name: Cache for npm dependencies
-        uses: actions/cache@v2
+          path: ozone
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
         with:
-            path: |
-              ~/.pnpm-store
-              **/node_modules
-            key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-            restore-keys: |
-              ${{ runner.os }}-pnpm-
-      - name: Checkout to /mnt/ozone
+          name: ozone-bin
+          path: ozone
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Move Ozone to /mnt
         run: |
           sudo chmod 777 /mnt
-          git clone 'https://github.com/${{ github.repository }}.git' /mnt/ozone
-          cd /mnt/ozone
-          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
-            git fetch --verbose origin '${{ github.ref }}'
-          else
-            git fetch --verbose origin '${{ github.sha }}'
-          fi
-          git checkout FETCH_HEAD
-          git reset --hard
-      - name: Run a full build
-        run: |
-          cd /mnt/ozone
-          hadoop-ozone/dev-support/checks/build.sh -Pcoverage
+          mv ozone /mnt/
       - name: Install robotframework
         run: sudo pip install robotframework
       - name: Execute tests
