@@ -2747,6 +2747,7 @@ function ozone_set_var_for_compatibility
 
     # shellcheck disable=SC2086
     eval ${targetvar}=\"${sourceval}\"
+    export "${targetvar}"
 
     return 0
   fi
