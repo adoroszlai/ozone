@@ -50,10 +50,9 @@ load ozone-functions_test_helper
   unset target_var
   export source_var="new value"
 
-  run ozone_set_var_for_compatibility target_var source_var "expected message"
+  result=$(ozone_set_var_for_compatibility target_var source_var "expected message")
 
-  echo "status=${status}"
-  echo "output=${output}"
+  echo "status=${result}"
   echo "target_var=${target_var}"
   [[ "$target_var" == "new value" ]]
   [[ "$source_var" == "new value" ]]
