@@ -201,7 +201,7 @@ public class TestDefaultCertificateClient {
 
   @Test
   public void testSignDataStream() throws Exception {
-    String data = RandomStringUtils.random(100, StandardCharsets.UTF_8.name());
+    String data = RandomStringUtils.random(100);
     FileUtils.deleteQuietly(Paths.get(
         omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
         omSecurityConfig.getPrivateKeyFileName()).toFile());
@@ -239,7 +239,7 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void verifySignatureStream() throws Exception {
-    String data = RandomStringUtils.random(500, StandardCharsets.UTF_8.name());
+    String data = RandomStringUtils.random(500);
     byte[] sign = omCertClient.signDataStream(IOUtils.toInputStream(data,
         StandardCharsets.UTF_8));
 
@@ -263,7 +263,7 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void verifySignatureDataArray() throws Exception {
-    String data = RandomStringUtils.random(500, StandardCharsets.UTF_8.name());
+    String data = RandomStringUtils.random(500);
     byte[] sign = omCertClient.signData(data.getBytes());
 
     // Positive tests.
