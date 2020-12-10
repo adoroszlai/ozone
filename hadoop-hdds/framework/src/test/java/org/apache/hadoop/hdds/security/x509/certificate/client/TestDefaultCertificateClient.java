@@ -201,7 +201,7 @@ public class TestDefaultCertificateClient {
 
   @Test
   public void testSignDataStream() throws Exception {
-    String data = RandomStringUtils.random(100, StandardCharsets.UTF_8.name());
+    String data = RandomStringUtils.random(100);
     FileUtils.deleteQuietly(Paths.get(
         omSecurityConfig.getKeyLocation(OM_COMPONENT).toString(),
         omSecurityConfig.getPrivateKeyFileName()).toFile());
@@ -218,7 +218,7 @@ public class TestDefaultCertificateClient {
     generateKeyPairFiles();
     byte[] sign = omCertClient.signDataStream(IOUtils.toInputStream(data,
         StandardCharsets.UTF_8));
-    validateHash(sign, data.getBytes());
+    validateHash(sign, data.getBytes(StandardCharsets.UTF_8));
   }
 
   /**
@@ -239,22 +239,22 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void verifySignatureStream() throws Exception {
-    String data = RandomStringUtils.random(500, StandardCharsets.UTF_8.name());
+    String data = RandomStringUtils.random(500);
     byte[] sign = omCertClient.signDataStream(IOUtils.toInputStream(data,
         StandardCharsets.UTF_8));
 
     // Positive tests.
-    assertTrue(omCertClient.verifySignature(data.getBytes(), sign,
+    assertTrue(omCertClient.verifySignature(data.getBytes(StandardCharsets.UTF_8), sign,
         x509Certificate));
     assertTrue(omCertClient.verifySignature(
         IOUtils.toInputStream(data, StandardCharsets.UTF_8),
         sign, x509Certificate));
 
     // Negative tests.
-    assertFalse(omCertClient.verifySignature(data.getBytes(),
-        "abc".getBytes(), x509Certificate));
+    assertFalse(omCertClient.verifySignature(data.getBytes(StandardCharsets.UTF_8),
+        "abc".getBytes(StandardCharsets.UTF_8), x509Certificate));
     assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(data,
-        StandardCharsets.UTF_8), "abc".getBytes(), x509Certificate));
+        StandardCharsets.UTF_8), "abc".getBytes(StandardCharsets.UTF_8), x509Certificate));
 
   }
 
@@ -263,21 +263,21 @@ public class TestDefaultCertificateClient {
    */
   @Test
   public void verifySignatureDataArray() throws Exception {
-    String data = RandomStringUtils.random(500, StandardCharsets.UTF_8.name());
-    byte[] sign = omCertClient.signData(data.getBytes());
+    String data = RandomStringUtils.random(500);
+    byte[] sign = omCertClient.signData(data.getBytes(StandardCharsets.UTF_8));
 
     // Positive tests.
-    assertTrue(omCertClient.verifySignature(data.getBytes(), sign,
+    assertTrue(omCertClient.verifySignature(data.getBytes(StandardCharsets.UTF_8), sign,
         x509Certificate));
     assertTrue(omCertClient.verifySignature(
         IOUtils.toInputStream(data, StandardCharsets.UTF_8),
         sign, x509Certificate));
 
     // Negative tests.
-    assertFalse(omCertClient.verifySignature(data.getBytes(),
-        "abc".getBytes(), x509Certificate));
+    assertFalse(omCertClient.verifySignature(data.getBytes(StandardCharsets.UTF_8),
+        "abc".getBytes(StandardCharsets.UTF_8), x509Certificate));
     assertFalse(omCertClient.verifySignature(IOUtils.toInputStream(data,
-        StandardCharsets.UTF_8), "abc".getBytes(), x509Certificate));
+        StandardCharsets.UTF_8), "abc".getBytes(StandardCharsets.UTF_8), x509Certificate));
 
   }
 
