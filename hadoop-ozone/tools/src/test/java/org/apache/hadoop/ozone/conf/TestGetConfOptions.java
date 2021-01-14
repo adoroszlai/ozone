@@ -20,9 +20,9 @@ package org.apache.hadoop.ozone.conf;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -49,7 +49,7 @@ public class TestGetConfOptions {
     System.setOut(psOut);
   }
 
-  @After
+  @Before
   public void setUp(){
     bout.reset();
   }
