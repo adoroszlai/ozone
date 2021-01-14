@@ -26,6 +26,14 @@ _realpath() {
   fi
 }
 
+move_file() {
+  local file="$1"
+  dir=$(dirname "${file}")
+  dest_dir=$(_realpath --relative-to="${PWD}" "${dir}/../..") || return
+  mkdir -p "${REPORT_DIR}/${dest_dir}"
+  mv -nv "${file}" "${REPORT_DIR}/${dest_dir}"/
+}
+
 ## generate summary txt file
 find "." -not -path '*/iteration*' -name 'TEST*.xml' -print0 \
     | xargs -n1 -0 "grep" -l -E "<failure|<error" \
@@ -61,12 +69,18 @@ grep -e 'Running org' -e 'Tests run: .* in org' "${REPORT_DIR}/output.log" \
 for failed_test in $(< ${REPORT_DIR}/summary.txt); do
   for file in $(find "." -not -path '*/iteration*' \
       \( -name "${failed_test}.txt" -or -name "${failed_test}-output.txt" -or -name "TEST-${failed_test}.xml" \)); do
-    dir=$(dirname "${file}")
-    dest_dir=$(_realpath --relative-to="${PWD}" "${dir}/../..") || continue
-    mkdir -p "${REPORT_DIR}/${dest_dir}"
-    mv "${file}" "${REPORT_DIR}/${dest_dir}"/
+    move_file "${file}"
   done
 done
+
+# keep all output if any test ran out of space
+if find "." -not -path '*/iteration*' -name '*-output.txt' -print0 \
+    | xargs -0 grep -q -E "No space left on device"; then
+  for file in $(find "." -not -path '*/iteration*' -name '*-output.txt' -print0 \
+      | xargs -I FILE -n1 -0 mv -nv FILE ${REPORT_DIR}/FILE); do
+    move_file "${file}"
+  done
+fi
 
 ## Check if Maven was killed
 if grep -q 'Killed.* mvn .* test ' "${REPORT_DIR}/output.log"; then
