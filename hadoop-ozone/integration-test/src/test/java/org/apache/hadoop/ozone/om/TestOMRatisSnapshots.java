@@ -163,8 +163,6 @@ public class TestOMRatisSnapshots {
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 
-    Thread.sleep(5000);
-
     // The follower OM should be lagging behind the leader OM.
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
