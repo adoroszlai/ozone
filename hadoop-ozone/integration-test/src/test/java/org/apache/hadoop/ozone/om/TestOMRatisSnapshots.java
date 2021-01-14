@@ -166,6 +166,8 @@ public class TestOMRatisSnapshots {
     // Start the inactive OM
     cluster.startInactiveOM(followerNodeId);
 
+    Thread.sleep(5000);
+
     // The recently started OM should be lagging behind the leader OM.
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
