@@ -163,16 +163,16 @@ public class TestOMRatisSnapshots {
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 
-    // Start the inactive OM
-    cluster.startInactiveOM(followerNodeId);
-
     Thread.sleep(5000);
 
-    // The recently started OM should be lagging behind the leader OM.
+    // The follower OM should be lagging behind the leader OM.
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
     assertTrue(
         followerOMLastAppliedIndex < leaderOMSnaphsotIndex);
+
+    // Start the inactive OM
+    cluster.startInactiveOM(followerNodeId);
 
     // Install leader OM's db checkpoint on the lagging OM.
     followerOM.installCheckpoint(leaderOMNodeId, leaderDbCheckpoint);
