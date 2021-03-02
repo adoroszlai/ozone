@@ -35,12 +35,19 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: mnt/ozone
-      - name: Disk usage
+      - name: Disk usage before tests
         run: df -h
+      - name: Create space hog
+        run: |
+          dd if=/dev/zero of=/mnt/hog bs=1M count=6144
+          df -h
       - name: Execute tests
         uses: ./mnt/ozone/.github/buildenv
         with:
           args: ./mnt/ozone/hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
+      - name: Disk usage after tests
+        run: df -h
+        if: always()
       - name: Summary of failures
         run: cat mnt/ozone/target/${{ github.job }}/summary.txt
         if: always()
