@@ -48,6 +48,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Disabled;
@@ -235,7 +236,7 @@ public class TestSCMInstallSnapshotWithHA {
     Assert.assertFalse(followerSM.getLifeCycleState().isPausingOrPaused());
   }
 
-  @Test
+  @RepeatedTest(10)
   public void testInstallCorruptedCheckpointFailure() throws Exception {
     StorageContainerManager leaderSCM = getLeader(cluster);
     String leaderNodeId = leaderSCM.getScmId();
