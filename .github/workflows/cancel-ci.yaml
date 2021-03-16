@@ -16,7 +16,7 @@
 name: Cancelling
 on:
   workflow_run:
-    workflows: ['build-branch']
+    workflows: ['dummy']
     types: ['requested']
 
 jobs:
