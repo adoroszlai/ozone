@@ -192,3 +192,4 @@ IntelliJ may not pick up protoc generated classes as they can be very huge. If t
 3. Restart your IDE
 
 
+1
