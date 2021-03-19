@@ -15,15 +15,12 @@
 name: build-branch
 on:
   push:
-env:
-  SKIP_CI: github.event_name == 'pull_request' && github.event.pull_request.draft
 
 jobs:
   build-info:
     runs-on: ubuntu-18.04
-    if: ${{ env.SKIP_CI != 'true' }}
     outputs:
-      skipCI: ${{ env.SKIP_CI }}
+      skipCI: github.event_name == 'pull_request' && github.event.pull_request.draft
     steps:
       - name: >
           Event: ${{ github.event_name }}
@@ -39,12 +36,4 @@ jobs:
       - build-info
     if: !needs.build-info.outputs.skipCI
     steps:
-      - name: Debug
-        run: echo ${{ env.SKIP_CI }}
-
-  independent:
-    runs-on: ubuntu-18.04
-    if: ${{ env.SKIP_CI != 'true' }}
-    steps:
-      - name: Debug
-        run: echo ${{ env.SKIP_CI }}
+      - run: echo Running CI
