@@ -22,9 +22,24 @@ on:
 env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
 jobs:
-  compile:
+  build-info:
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    outputs:
+      skipCI: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == true }}
+    steps:
+      - name: >
+          Event: ${{ github.event_name }}
+          Branch: ${{ github.head_ref }}
+          Run ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          Ref: ${{ github.ref }}
+        run: printenv
+
+  compile:
+    needs:
+      - build-info
+    runs-on: ubuntu-18.04
+    if: needs.build-info.outputs.skipCI != 'true'
     strategy:
       matrix:
         java: [ 8, 11 ]
@@ -67,8 +82,10 @@ jobs:
           rm -rf ~/.m2/repository/org/apache/hadoop/hadoop-ozone*
         if: always()
   bats:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -91,8 +108,10 @@ jobs:
           path: target/${{ github.job }}
         continue-on-error: true
   rat:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -111,8 +130,10 @@ jobs:
           path: target/rat
         continue-on-error: true
   author:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -129,8 +150,10 @@ jobs:
           path: target/author
         continue-on-error: true
   unit:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -149,8 +172,10 @@ jobs:
           path: target/unit
         continue-on-error: true
   checkstyle:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -169,8 +194,10 @@ jobs:
           path: target/checkstyle
         continue-on-error: true
   findbugs:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -189,9 +216,11 @@ jobs:
           path: target/findbugs
         continue-on-error: true
   acceptance:
-    needs: compile
+    needs:
+      - build-info
+      - compile
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     strategy:
       matrix:
         suite:
@@ -236,8 +265,10 @@ jobs:
           path: /mnt/ozone/target/acceptance
         continue-on-error: true
   integration:
+    needs:
+      - build-info
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     strategy:
       matrix:
         profile:
@@ -268,8 +299,9 @@ jobs:
         continue-on-error: true
   coverage:
     runs-on: ubuntu-18.04
-    if: github.repository == 'apache/ozone' && github.event_name != 'pull_request'
+    if: needs.build-info.outputs.skipCI != 'true' && github.repository == 'apache/ozone' && github.event_name != 'pull_request'
     needs:
+      - build-info
       - acceptance
       - integration
       - unit
@@ -302,9 +334,11 @@ jobs:
           path: target/coverage
         continue-on-error: true
   kubernetes:
-    needs: compile
+    needs:
+      - build-info
+      - compile
     runs-on: ubuntu-18.04
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
