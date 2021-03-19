@@ -24,6 +24,14 @@ jobs:
     if: ${{ env.SKIP_CI != 'true' }}
     outputs:
       skipCI: ${{ env.SKIP_CI }}
+    steps:
+      - name: >
+          Event: ${{ github.event_name }}
+          Branch: ${{ github.head_ref }}
+          Run id: ${{ github.run_id }}
+          Sha: ${{ github.sha }}
+          Ref: ${{ github.ref }}
+        run: printenv
 
   dependent:
     runs-on: ubuntu-18.04
