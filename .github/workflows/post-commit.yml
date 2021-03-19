@@ -15,12 +15,14 @@
 name: build-branch
 on:
   push:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
 
 jobs:
   build-info:
     runs-on: ubuntu-18.04
     outputs:
-      skipCI: github.event_name == 'pull_request' && github.event.pull_request.draft
+      skipCI: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
     steps:
       - name: >
           Event: ${{ github.event_name }}
