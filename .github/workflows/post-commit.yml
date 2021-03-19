@@ -32,11 +32,11 @@ jobs:
     if: !needs.build-info.outputs.skipCI
     steps:
       - name: Debug
-        run: echo SKIP_CI: ${{ env.SKIP_CI }}
+        run: echo ${{ env.SKIP_CI }}
 
   independent:
     runs-on: ubuntu-18.04
     if: ${{ env.SKIP_CI != 'true' }}
     steps:
       - name: Debug
-        run: echo SKIP_CI: ${{ env.SKIP_CI }}
+        run: echo ${{ env.SKIP_CI }}
