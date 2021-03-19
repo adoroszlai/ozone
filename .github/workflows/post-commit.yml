@@ -36,6 +36,6 @@ jobs:
     runs-on: ubuntu-18.04
     needs:
       - build-info
-    if: needs.build-info.outputs.skipCI != true
+    if: needs.build-info.outputs.skipCI != 'true'
     steps:
       - run: echo Running CI
