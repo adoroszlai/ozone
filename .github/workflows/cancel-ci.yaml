@@ -16,7 +16,9 @@
 name: Cancelling
 on:
   workflow_run:
-    workflows: ['dummy']
+    workflows:
+      - dummy
+      - important
     types: ['requested']
 
 jobs:
