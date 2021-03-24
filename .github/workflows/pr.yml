@@ -12,11 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: important
+name: dummy
 on:
-  push:
+  pull_request:
 jobs:
+  check1:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Quickly failing
+        run: sleep 15 && false
   check2:
     runs-on: ubuntu-18.04
     steps:
-      - run: sleep 60
+      - name: Long-running
+        run: sleep 300
