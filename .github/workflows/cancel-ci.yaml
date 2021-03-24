@@ -54,7 +54,7 @@ jobs:
         with:
           cancelMode: failedJobs
           token: ${{ secrets.GITHUB_TOKEN }}
-          sourceRunId: ${{ github.event.workflow_run.id }}
+          sourceRunId: 'dummy'
           notifyPRCancel: true
           skipEventTypes: '["push", "schedule"]'
           jobNameRegexps: '["^.*$"]'
