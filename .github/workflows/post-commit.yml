@@ -20,9 +20,8 @@ jobs:
   check1:
     runs-on: ubuntu-18.04
     steps:
-      - run: sleep 30
+      - run: sleep 10 && false
   check2:
-    needs: check1
     runs-on: ubuntu-18.04
     steps:
-      - run: sleep 30
+      - run: sleep 60
