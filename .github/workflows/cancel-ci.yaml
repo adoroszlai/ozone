@@ -22,8 +22,7 @@ on:
     types: ['requested']
 
 jobs:
-  cancel-duplicates:
-    name: "Cancel duplicate PR builds"
+  cancel:
     runs-on: ubuntu-18.04
     steps:
       - name: Checkout project
@@ -32,29 +31,18 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - uses: ./.github/actions/cancel-workflow-runs
-        name: "Cancel duplicate workflow runs"
+        name: "Cancel duplicate PR builds"
         with:
           cancelMode: allDuplicates
           cancelFutureDuplicates: true
           token: ${{ secrets.GITHUB_TOKEN }}
           sourceRunId: ${{ github.event.workflow_run.id }}
-          notifyPRCancel: true
           skipEventTypes: '["push", "schedule"]'
-  cancel-failing:
-    name: "Cancel failing PR builds"
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          submodules: recursive
       - uses: ./.github/actions/cancel-workflow-runs
-        name: "Cancel failing workflow runs"
+        name: "Cancel failing PR builds"
         with:
           cancelMode: failedJobs
           token: ${{ secrets.GITHUB_TOKEN }}
-          notifyPRCancel: true
           skipEventTypes: '["push", "schedule"]'
           jobNameRegexps: '["^.*$"]'
           workflowFileName: pr.yml
