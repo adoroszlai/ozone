@@ -25,9 +25,11 @@ x-common-config:
   env_file:
     - docker-config
 
-x-replication:
-  &replication
+x-variable-config:
+  &variable
   OZONE-SITE.XML_ozone.replication: ${OZONE_REPLICATION_FACTOR:-1}
+  OZONE-SITE.XML_ozone.om.layout.version: ${OZONE_OM_LAYOUT_VERSION:-V0}
+  OZONE-SITE.XML_ozone.om.enable.filesystem.paths: ${OZONE_OM_ENABLE_FILESYSTEM_PATHS:-false}
 
 services:
   datanode:
@@ -36,7 +38,7 @@ services:
       - 9864
       - 9882
     environment:
-      <<: *replication
+      <<: *variable
       OZONE_OPTS:
     command: ["ozone","datanode"]
   om:
@@ -44,7 +46,7 @@ services:
     environment:
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS:
-      <<: *replication
+      <<: *variable
     ports:
       - 9874:9874
       - 9862:9862
@@ -58,13 +60,13 @@ services:
       ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       OZONE-SITE.XML_hdds.scm.safemode.min.datanode: ${OZONE_SAFEMODE_MIN_DATANODES:-1}
       OZONE_OPTS:
-      <<: *replication
+      <<: *variable
     command: ["ozone","scm"]
   s3g:
     <<: *common-config
     environment:
       OZONE_OPTS:
-      <<: *replication
+      <<: *variable
     ports:
       - 9878:9878
     command: ["ozone","s3g"]
@@ -74,5 +76,5 @@ services:
       - 9888:9888
     environment:
       OZONE_OPTS:
-      <<: *replication
+      <<: *variable
     command: ["ozone","recon"]
