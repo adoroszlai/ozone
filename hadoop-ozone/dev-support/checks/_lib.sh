@@ -20,6 +20,14 @@ check_name="${check_name%.sh}"
 : ${TOOLS_DIR:=$(pwd)/.dev-tools} # directory for tools
 : ${OZONE_PREFER_LOCAL_TOOL:=true} # skip install if tools are already available (eg. via package manager)
 
+require_tool() {
+  local tool="$1"
+  if ! which "$tool" >& /dev/null; then
+    echo "$tool is required for check $check_name, please install it manually" >&2
+    exit 1
+  fi
+}
+
 ## @description  Install a dependency.  Only first argument is mandatory.
 ## @param name of the tool
 ## @param the directory for binaries, relative to the tool directory; added to PATH.
@@ -68,15 +76,6 @@ _install_bats() {
   curl -LSs https://github.com/bats-core/bats-core/archive/v1.2.1.tar.gz | tar -xz -f -
 }
 
-install_k3s() {
-  _install_tool k3s
-}
-
-_install_k3s() {
-  curl -sfL https://get.k3s.io | sh -
-  sudo chmod a+r $KUBECONFIG
-}
-
 install_flekszible() {
   _install_tool flekszible bin
 }
@@ -88,11 +87,11 @@ _install_flekszible() {
 }
 
 install_virtualenv() {
-  _install_tool virtualenv
+  _install_tool virtualenv local/bin
 }
 
 _install_virtualenv() {
-  sudo pip3 install virtualenv
+  pip3 install --target local virtualenv
 }
 
 install_robot() {
@@ -102,5 +101,5 @@ install_robot() {
 _install_robot() {
   virtualenv venv
   source venv/bin/activate
-  pip install robotframework
+  pip3 install robotframework
 }

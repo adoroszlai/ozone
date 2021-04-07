@@ -23,14 +23,10 @@ export KUBECONFIG
 
 source "${DIR}/_lib.sh"
 
+require_tool kubectl
 install_flekszible
 install_virtualenv
 install_robot
-if [[ "$(uname -s)" = "Darwin" ]]; then
-  echo "Skip installing k3s, not supported on Mac.  Make sure a working Kubernetes cluster is available." >&2
-else
-  install_k3s
-fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/kubernetes"}
 
