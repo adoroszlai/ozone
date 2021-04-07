@@ -17,10 +17,6 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-: ${KUBECONFIG:=/etc/rancher/k3s/k3s.yaml}
-
-export KUBECONFIG
-
 source "${DIR}/_lib.sh"
 
 require_tool kubectl
