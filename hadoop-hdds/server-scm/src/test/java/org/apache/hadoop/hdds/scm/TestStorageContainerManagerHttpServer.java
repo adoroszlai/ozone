@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,36 +23,31 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManagerHttpServer;
+import org.apache.hadoop.hdds.server.http.HttpConfig;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test http server os SCM with various HTTP option.
  */
-@RunWith(value = Parameterized.class)
-public class TestStorageContainerManagerHttpServer {
+class TestStorageContainerManagerHttpServer {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStorageContainerManagerHttpServer.class);
@@ -63,22 +58,8 @@ public class TestStorageContainerManagerHttpServer {
   private static OzoneConfiguration conf;
   private static URLConnectionFactory connectionFactory;
 
-  @Parameters public static Collection<Object[]> policy() {
-    Object[][] params = new Object[][] {
-        {HttpConfig.Policy.HTTP_ONLY},
-        {HttpConfig.Policy.HTTPS_ONLY},
-        {HttpConfig.Policy.HTTP_AND_HTTPS} };
-    return Arrays.asList(params);
-  }
-
-  private final HttpConfig.Policy policy;
-
-  public TestStorageContainerManagerHttpServer(Policy policy) {
-    super();
-    this.policy = policy;
-  }
-
-  @BeforeClass public static void setUp() throws Exception {
+  @BeforeAll
+  static void setUp() throws Exception {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
@@ -95,13 +76,19 @@ public class TestStorageContainerManagerHttpServer {
         KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
-  @AfterClass public static void tearDown() throws Exception {
+  @AfterAll
+  static void tearDown() throws Exception {
     connectionFactory.destroy();
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
-  @Test public void testHttpPolicy() throws Exception {
+  //@ParameterizedTest
+  //@EnumSource(HttpConfig.Policy.class)
+  //void testHttpPolicy(HttpConfig.Policy policy) throws Exception {
+  @RepeatedTest(10)
+  void testHttpPolicy() throws Exception {
+    HttpConfig.Policy policy = HttpConfig.Policy.HTTP_ONLY;
     conf.set(OzoneConfigKeys.OZONE_HTTP_POLICY_KEY, policy.name());
     conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
@@ -144,6 +131,7 @@ public class TestStorageContainerManagerHttpServer {
       LOG.info("Cannot access {}", url, e);
       return false;
     }
+    LOG.info("Can access {}", url);
     return true;
   }
 
