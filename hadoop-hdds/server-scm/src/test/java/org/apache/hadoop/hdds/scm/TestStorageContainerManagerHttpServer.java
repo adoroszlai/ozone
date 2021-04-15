@@ -86,7 +86,7 @@ class TestStorageContainerManagerHttpServer {
   //@ParameterizedTest
   //@EnumSource(HttpConfig.Policy.class)
   //void testHttpPolicy(HttpConfig.Policy policy) throws Exception {
-  @RepeatedTest(10)
+  @RepeatedTest(50)
   void testHttpPolicy() throws Exception {
     HttpConfig.Policy policy = HttpConfig.Policy.HTTP_ONLY;
     conf.set(OzoneConfigKeys.OZONE_HTTP_POLICY_KEY, policy.name());
