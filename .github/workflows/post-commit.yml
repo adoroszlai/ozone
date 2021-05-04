@@ -44,7 +44,7 @@ jobs:
         with:
           java-version: ${{ env.DEFAULT_JAVA_VERSION }}
       - name: Download dependencies (with retries)
-        run: for i in `seq 1 5`; do mvn --no-transfer-progress -DoverWriteIfNewer=false dependency:go-offline && break; done
+        run: for i in `seq 1 5`; do mvn -DoverWriteIfNewer=false dependency:go-offline && break; done
 
   compile:
     needs: populate-maven-cache
