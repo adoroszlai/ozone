@@ -21,8 +21,32 @@ on:
     - cron: 30 0,12 * * *
 env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
+  DEFAULT_JAVA_VERSION: 8
 jobs:
+  populate-maven-cache:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 30
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+      - name: Cache for maven dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-${{ env.DEFAULT_JAVA_VERSION }}
+          restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-
+      - name: Setup java
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ env.DEFAULT_JAVA_VERSION }}
+      - name: Download dependencies (with retries)
+        run: for i in `seq 1 5`; do mvn -DoverWriteIfNewer=false dependency:go-offline && break; done
+
   compile:
+    needs: populate-maven-cache
     runs-on: ubuntu-18.04
     timeout-minutes: 30
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
