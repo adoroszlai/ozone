@@ -22,7 +22,7 @@ on:
 env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
   DEFAULT_JAVA_VERSION: 8
-  OTHER_JAVA_VERSIONS: [ 11 ]
+  OTHER_JAVA_VERSIONS: '[ 11 ]'
   MAVEN_OPTIONS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
 jobs:
   compile:
