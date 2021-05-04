@@ -117,7 +117,7 @@ jobs:
           - 8 # cannot refer to ${{ env.DEFAULT_JAVA_VERSION }}
         include:
           - check: build
-            java: ${{ env.OTHER_JAVA_VERSIONS }}
+            java: [ 11 ]
       fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
