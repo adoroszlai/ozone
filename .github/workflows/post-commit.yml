@@ -21,7 +21,7 @@ on:
     - cron: 30 0,12 * * *
 env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
-  DEFAULT_JAVA_VERSION: 8
+  DEFAULT_JAVA_VERSION: 8 # also in basic.strategy.matrix.java
   OTHER_JAVA_VERSIONS: '[ 11 ]'
   MAVEN_OPTIONS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
 jobs:
@@ -114,7 +114,7 @@ jobs:
           - rat
           - unit
         java:
-          - ${{ env.DEFAULT_JAVA_VERSION }}
+          - 8 # cannot refer to ${{ env.DEFAULT_JAVA_VERSION }}
         include:
           - check: build
             java: ${{ env.OTHER_JAVA_VERSIONS }}
