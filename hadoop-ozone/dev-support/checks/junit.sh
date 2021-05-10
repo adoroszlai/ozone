@@ -37,7 +37,7 @@ else
 fi
 
 if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
-  mvn ${MAVEN_OPTIONS} -DskipTests clean install
+  mvn ${MAVEN_OPTIONS} -DskipTests "$@" clean install
 fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
@@ -68,6 +68,10 @@ for i in $(seq 1 ${ITERATIONS}); do
 
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
+  fi
+
+  if [[ "${FAIL_FAST:-}" == "true" ]] && [[ ${irc} != 0 ]]; then
+    break
   fi
 done
 
