@@ -45,7 +45,7 @@ jobs:
             maven-repo-
         if: ${{ !contains('author,bats,docs', matrix.check) }}
       - name: Execute tests
-        run: bash hadoop-ozone/dev-support/checks/junit.sh -Dtest=TestRatisPipelineProvider -am -pl :hadoop-hdds-server-scm
+        run: bash hadoop-ozone/dev-support/checks/junit.sh -Dtest='TestRatisPipelineProvider#testCreatePipelineWithFactorThree' -am -pl :hadoop-hdds-server-scm
         env:
           ITERATIONS: 100
       - name: Summary of failures

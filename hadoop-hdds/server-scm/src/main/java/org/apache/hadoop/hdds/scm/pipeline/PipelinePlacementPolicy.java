@@ -95,7 +95,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
       try {
         pipeline = stateManager.getPipeline(pid);
       } catch (PipelineNotFoundException e) {
-        LOG.debug("Pipeline not found in pipeline state manager during" +
+        LOG.warn("Pipeline not found in pipeline state manager during" +
             " pipeline creation. PipelineID: {}", pid, e);
         continue;
       }
@@ -110,9 +110,11 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
                   == nodesRequired &&
                   pipeline.getPipelineState()
                       == Pipeline.PipelineState.CLOSED)) {
+        LOG.info("Deduct 1 from dn {} for pipeline {}", datanodeDetails.getUuidString(), pipeline);
         pipelineNumDeductable++;
       }
     }
+    LOG.info("DN {} has {} pipelines - {}", datanodeDetails.getUuidString(), pipelines.size(), pipelineNumDeductable);
     return pipelines.size() - pipelineNumDeductable;
   }
 
@@ -161,6 +163,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
         .filter(d ->
             (d.getPipelines() < nodeManager.pipelineLimit(d.getDn())))
         .sorted(Comparator.comparingInt(DnWithPipelines::getPipelines))
+        .peek(d -> LOG.info("Pipelines on dn {}: {}", d.getDn().getUuidString(), d.getPipelines()))
         .map(d -> d.getDn())
         .collect(Collectors.toList());
 
