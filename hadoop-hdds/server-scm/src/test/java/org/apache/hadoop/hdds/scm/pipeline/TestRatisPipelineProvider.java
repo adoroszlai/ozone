@@ -35,11 +35,13 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.joining;
 import static org.apache.commons.collections.CollectionUtils.intersection;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -91,11 +93,16 @@ public class TestRatisPipelineProvider {
     assertPipelineProperties(pipeline1, factor, REPLICATION_TYPE,
         Pipeline.PipelineState.ALLOCATED);
     // New pipeline should not overlap with the previous created pipeline
-    assertTrue(
-        intersection(pipeline.getNodes(), pipeline1.getNodes())
-            .size() < factor.getNumber());
+    Set<DatanodeDetails> nodes1 = pipeline.getNodeSet();
+    Set<DatanodeDetails> nodes2 = pipeline1.getNodeSet();
+    Collection<?> intersection = intersection(pipeline.getNodes(), pipeline1.getNodes());
+    Collection<?> intersection2 = intersection(nodes1, nodes2);
+    assertTrue(nodes1.stream().map(DatanodeDetails::getUuidString).sorted().collect(joining(", "))
+        + " vs " + nodes2.stream().map(DatanodeDetails::getUuidString).sorted().collect(joining(", "))
+        + " intersection: " + intersection + " / " + intersection2,
+        intersection.size() < factor.getNumber());
     if (pipeline.getReplicationConfig().getRequiredNodes() == 3) {
-      assertNotEquals(pipeline.getNodeSet(), pipeline1.getNodeSet());
+      assertNotEquals(nodes1, nodes2);
     }
     stateManager.addPipeline(pipeline1);
     nodeManager.addPipeline(pipeline1);
