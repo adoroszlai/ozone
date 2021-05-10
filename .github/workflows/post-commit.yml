@@ -42,14 +42,6 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
-      - name: Cache for maven dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-${{ matrix.java }}
-          restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}
-            maven-repo-
       - name: Setup java
         uses: actions/setup-java@v1
         with:
@@ -63,12 +55,6 @@ jobs:
           name: ozone-bin
           path: hadoop-ozone/dist/target/hadoop-ozone*.tar.gz
           retention-days: 1
-      - name: Delete temporary build artifacts before caching
-        run: |
-          #Never cache local artifacts
-          rm -rf ~/.m2/repository/org/apache/hadoop/hadoop-hdds*
-          rm -rf ~/.m2/repository/org/apache/hadoop/hadoop-ozone*
-        if: always()
   basic:
     runs-on: ubuntu-18.04
     timeout-minutes: 40
@@ -87,16 +73,6 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
-      - name: Cache for maven dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}
-          restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
-            maven-repo-
-        if: ${{ !contains('author,bats,docs', matrix.check) }}
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh
       - name: Summary of failures
@@ -109,12 +85,6 @@ jobs:
           name: ${{ matrix.check }}
           path: target/${{ matrix.check }}
         continue-on-error: true
-      - name: Delete temporary build artifacts before caching
-        run: |
-          #Never cache local artifacts
-          rm -rf ~/.m2/repository/org/apache/hadoop/hadoop-hdds*
-          rm -rf ~/.m2/repository/org/apache/hadoop/hadoop-ozone*
-        if: always()
   dependency:
     needs: compile
     runs-on: ubuntu-18.04
@@ -231,15 +201,6 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
-      - name: Cache for maven dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}
-          restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
-            maven-repo-
       - name: Download artifacts
         uses: actions/download-artifact@v2
         with:
