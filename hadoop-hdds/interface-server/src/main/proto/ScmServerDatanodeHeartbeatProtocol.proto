@@ -357,6 +357,7 @@ message CloseContainerCommandProto {
   required int64 cmdId = 3;
   // Force will be used when closing a container out side of ratis.
   optional bool force = 4 [default = false];
+  optional string encodedToken = 5;
 }
 
 /**

@@ -331,7 +331,7 @@ public class TestCloseContainerByPipeline {
     // Send close container command from SCM to datanode with forced flag as
     // true
     SCMCommand<?> command = new CloseContainerCommand(
-        containerID, pipeline.getId(), true);
+        containerID, pipeline.getId(), true, "");
     command.setTerm(
         cluster.getStorageContainerManager().getScmContext().getTermOfLeader());
     cluster.getStorageContainerManager().getScmNodeManager()

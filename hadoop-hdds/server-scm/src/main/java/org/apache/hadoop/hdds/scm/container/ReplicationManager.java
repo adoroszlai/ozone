@@ -997,11 +997,14 @@ public class ReplicationManager implements MetricsSource, SCMService {
                                 final DatanodeDetails datanode,
                                 final boolean force) {
 
+    ContainerID containerID = container.containerID();
     LOG.info("Sending close container command for container {}" +
-            " to datanode {}.", container.containerID(), datanode);
+            " to datanode {}.", containerID, datanode);
+    String token = scmContext.getScm().getContainerTokenGenerator()
+        .generateEncodedToken(getClass().getSimpleName(), containerID);
     CloseContainerCommand closeContainerCommand =
         new CloseContainerCommand(container.getContainerID(),
-            container.getPipelineID(), force);
+            container.getPipelineID(), force, token);
     try {
       closeContainerCommand.setTerm(scmContext.getTermOfLeader());
     } catch (NotLeaderException nle) {

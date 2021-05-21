@@ -213,11 +213,12 @@ public class TestCloseContainerCommandHandler {
   }
 
   private CloseContainerCommand forceCloseWithPipeline() {
-    return new CloseContainerCommand(CONTAINER_ID, pipelineID, true);
+    return new CloseContainerCommand(CONTAINER_ID, pipelineID, true, "");
   }
 
   private CloseContainerCommand forceCloseWithoutPipeline() {
-    return new CloseContainerCommand(CONTAINER_ID, nonExistentPipelineID, true);
+    return new CloseContainerCommand(CONTAINER_ID, nonExistentPipelineID,
+        true, "");
   }
 
   /**
