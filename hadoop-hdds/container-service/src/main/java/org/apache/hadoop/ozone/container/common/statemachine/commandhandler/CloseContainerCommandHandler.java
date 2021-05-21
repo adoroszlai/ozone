@@ -99,7 +99,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
           ContainerCommandRequestProto request =
               getContainerCommandRequestProto(datanodeDetails,
                   closeCommand.getContainerID(),
-                  closeCommand.getEncodedToken());
+                  command.getEncodedToken());
           ozoneContainer.getWriteChannel()
               .submitRequest(request, closeCommand.getPipelineID());
         } else {

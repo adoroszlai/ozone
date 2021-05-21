@@ -1003,7 +1003,8 @@ public class ReplicationManager implements MetricsSource, SCMService {
             " to datanode {}.", containerID, datanode);
     CloseContainerCommand closeContainerCommand =
         new CloseContainerCommand(container.getContainerID(),
-            container.getPipelineID(), force, getContainerToken(containerID));
+            container.getPipelineID(), force);
+    closeContainerCommand.setEncodedToken(getContainerToken(containerID));
     try {
       closeContainerCommand.setTerm(scmContext.getTermOfLeader());
     } catch (NotLeaderException nle) {

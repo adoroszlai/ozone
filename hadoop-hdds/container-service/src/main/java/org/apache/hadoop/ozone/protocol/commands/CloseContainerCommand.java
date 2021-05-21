@@ -31,20 +31,17 @@ public class CloseContainerCommand
 
   private final PipelineID pipelineID;
   private boolean force;
-  private final String encodedToken;
 
   public CloseContainerCommand(final long containerID,
       final PipelineID pipelineID) {
-    this(containerID, pipelineID, false, "");
+    this(containerID, pipelineID, false);
   }
 
   public CloseContainerCommand(final long containerID,
-      final PipelineID pipelineID, boolean force,
-      String encodedToken) {
+      final PipelineID pipelineID, boolean force) {
     super(containerID);
     this.pipelineID = pipelineID;
     this.force = force;
-    this.encodedToken = encodedToken;
   }
 
   /**
@@ -64,7 +61,6 @@ public class CloseContainerCommand
         .setCmdId(getId())
         .setPipelineID(pipelineID.getProtobuf())
         .setForce(force)
-        .setEncodedToken(encodedToken)
         .build();
   }
 
@@ -73,8 +69,7 @@ public class CloseContainerCommand
     Preconditions.checkNotNull(closeContainerProto);
     return new CloseContainerCommand(closeContainerProto.getCmdId(),
         PipelineID.getFromProtobuf(closeContainerProto.getPipelineID()),
-        closeContainerProto.getForce(),
-        closeContainerProto.getEncodedToken());
+        closeContainerProto.getForce());
   }
 
   public long getContainerID() {

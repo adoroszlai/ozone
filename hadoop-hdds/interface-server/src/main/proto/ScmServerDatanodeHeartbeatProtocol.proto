@@ -309,6 +309,7 @@ message SCMCommandProto {
   // If running upon Ratis, holds term of underlying RaftServer iff current
   // SCM is a leader. If running without Ratis, holds SCMContext.INVALID_TERM.
   optional int64 term = 15;
+  optional string encodedToken = 16;
 }
 
 /**
@@ -357,7 +358,6 @@ message CloseContainerCommandProto {
   required int64 cmdId = 3;
   // Force will be used when closing a container out side of ratis.
   optional bool force = 4 [default = false];
-  optional string encodedToken = 5;
 }
 
 /**
