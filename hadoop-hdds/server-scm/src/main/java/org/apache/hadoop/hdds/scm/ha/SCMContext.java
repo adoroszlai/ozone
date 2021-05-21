@@ -46,8 +46,8 @@ public final class SCMContext {
    */
   public static final long INVALID_TERM = -1;
 
-  private static final SCMContext EMPTY_CONTEXT
-      = new SCMContext.Builder().build();
+  private static final SCMContext EMPTY_CONTEXT = new SCMContext(
+      false, INVALID_TERM, new SafeModeStatus(false, true), null);
 
   /**
    * Used by non-HA mode SCM, Recon and Unit Tests.
@@ -173,7 +173,6 @@ public final class SCMContext {
    * @return StorageContainerManager
    */
   public StorageContainerManager getScm() {
-    Preconditions.checkNotNull(scm, "scm == null");
     return scm;
   }
 
@@ -214,6 +213,7 @@ public final class SCMContext {
     }
 
     public SCMContext build() {
+      Preconditions.checkNotNull(scm, "scm == null");
       return new SCMContext(
           isLeader,
           term,

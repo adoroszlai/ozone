@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
@@ -81,9 +82,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       if (container.getState() == LifeCycleState.CLOSING) {
         SCMCommand<?> command = new CloseContainerCommand(
             containerID.getId(), container.getPipelineID(), false,
-            scmContext.getScm().getContainerTokenGenerator()
-                .generateEncodedToken(getClass().getSimpleName(), containerID)
-            );
+            getEncodedToken(containerID));
         command.setTerm(scmContext.getTermOfLeader());
 
         getNodes(container).forEach(node ->
@@ -100,6 +99,14 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     } catch (IOException | InvalidStateTransitionException ex) {
       LOG.error("Failed to close the container {}.", containerID, ex);
     }
+  }
+
+  private String getEncodedToken(ContainerID containerID) {
+    StorageContainerManager scm = scmContext.getScm();
+    return scm != null
+        ? scm.getContainerTokenGenerator()
+            .generateEncodedToken(getClass().getSimpleName(), containerID)
+        : ""; // unit test
   }
 
   /**
