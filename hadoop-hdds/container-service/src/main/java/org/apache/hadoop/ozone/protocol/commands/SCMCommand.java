@@ -36,7 +36,7 @@ public abstract class SCMCommand<T extends GeneratedMessage> implements
   // SCM is a leader. If running without Ratis, holds SCMContext.INVALID_TERM.
   private long term;
 
-  private String encodedToken;
+  private String encodedToken = "";
 
   SCMCommand() {
     this.id = HddsIdFactory.getLongId();

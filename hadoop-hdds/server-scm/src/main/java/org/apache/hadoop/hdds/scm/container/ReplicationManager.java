@@ -1004,7 +1004,6 @@ public class ReplicationManager implements MetricsSource, SCMService {
     CloseContainerCommand closeContainerCommand =
         new CloseContainerCommand(container.getContainerID(),
             container.getPipelineID(), force);
-    closeContainerCommand.setEncodedToken(getContainerToken(containerID));
     try {
       closeContainerCommand.setTerm(scmContext.getTermOfLeader());
     } catch (NotLeaderException nle) {
@@ -1012,6 +1011,7 @@ public class ReplicationManager implements MetricsSource, SCMService {
           + " since current SCM is not leader.", nle);
       return;
     }
+    closeContainerCommand.setEncodedToken(getContainerToken(containerID));
     eventPublisher.fireEvent(SCMEvents.DATANODE_COMMAND,
         new CommandForDatanode<>(datanode.getUuid(), closeContainerCommand));
   }
