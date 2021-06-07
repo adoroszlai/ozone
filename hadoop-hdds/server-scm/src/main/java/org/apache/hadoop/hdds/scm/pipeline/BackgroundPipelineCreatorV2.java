@@ -150,7 +150,7 @@ public class BackgroundPipelineCreatorV2 implements SCMService {
    * Stop RatisPipelineUtilsThread.
    */
   public void stop() {
-    if (running.compareAndSet(true, false)) {
+    if (!running.compareAndSet(true, false)) {
       LOG.warn("{} is not running, just ignore.", THREAD_NAME);
       return;
     }
