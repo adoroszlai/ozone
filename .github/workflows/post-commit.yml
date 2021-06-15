@@ -42,7 +42,7 @@ jobs:
             maven-repo-${{ hashFiles('mnt/ozone/**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: mnt/ozone/hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestOzoneManagerHA*'
+        run: mnt/ozone/hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestOzoneManagerConfiguration,TestOzoneFileInterfaces'
         env:
           ITERATIONS: 10
       - name: Summary of failures
