@@ -90,7 +90,6 @@ public abstract class TestInputStreamBase {
   public static Collection<Object[]> layouts() {
     return Arrays.asList(new Object[][] {
         {ChunkLayOutVersion.FILE_PER_CHUNK, BYTES_PER_CHECKSUM},
-        {ChunkLayOutVersion.FILE_PER_CHUNK, CHUNK_SIZE},
         {ChunkLayOutVersion.FILE_PER_BLOCK, BYTES_PER_CHECKSUM},
         {ChunkLayOutVersion.FILE_PER_BLOCK, CHUNK_SIZE}
     });
