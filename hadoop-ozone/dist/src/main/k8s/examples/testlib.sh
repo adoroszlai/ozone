@@ -17,14 +17,15 @@
 
 retry() {
    n=0
-   until [ $n -ge 100 ]
+   max=10
+   until [ $n -ge $max ]
    do
       "$@" && break
       n=$[$n+1]
       echo "$n '$@' is failed..."
       sleep ${RETRY_SLEEP:-3}
    done
-   if [ $n -eq 100 ]; then
+   if [ $n -ge $max ]; then
       return 255
    fi
 }
