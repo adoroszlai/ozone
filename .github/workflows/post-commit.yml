@@ -98,6 +98,7 @@ jobs:
       - name: Execute tests
         run: |
           cd /mnt/ozone/hadoop-ozone/dist/target/ozone-* && sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
+          export OZONE_TEST_SELECTOR=examples/ozone/
           cd /mnt/ozone && hadoop-ozone/dev-support/checks/kubernetes.sh
       - name: Archive build results
         uses: actions/upload-artifact@v2
