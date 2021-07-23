@@ -81,6 +81,7 @@ start_k8s_env() {
 get_logs() {
   mkdir -p logs
   for pod in $(kubectl get pods -o custom-columns=NAME:.metadata.name | tail -n +2); do
+    kubectl get pod "${pod}" --output=yaml > "logs/pod-${pod}.yaml"
     kubectl logs "${pod}" > "logs/pod-${pod}.log"
   done
 }
