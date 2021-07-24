@@ -56,7 +56,7 @@ all_pods_are_running() {
       echo "$RUNNING_COUNT pods are running. Waiting for more."
       return 1
    elif [ "$RUNNING_COUNT" -ne "$ALL_COUNT" ]; then
-      echo "$RUNNING_COUNT pods are running out from the $ALL_COUNT"
+      echo "$RUNNING_COUNT pods are running out of $ALL_COUNT"
       return 2
    else
       STARTED=true
@@ -85,7 +85,7 @@ get_logs() {
   mkdir -p logs
   for pod in $(kubectl get pods -o custom-columns=NAME:.metadata.name | tail -n +2); do
     kubectl get pod "${pod}" --output=yaml > "logs/pod-${pod}.yaml"
-    kubectl logs "${pod}" > "logs/pod-${pod}.log"
+    kubectl logs "${pod}" > "logs/pod-${pod}.log" || true
   done
 }
 
