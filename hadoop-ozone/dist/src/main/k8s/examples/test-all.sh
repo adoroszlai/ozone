@@ -42,7 +42,7 @@ for test in $(find "$SCRIPT_DIR" -name test.sh | grep "${OZONE_TEST_SELECTOR:-""
 
   cp "$TEST_DIR"/result/output.xml "$ALL_RESULT_DIR"/"${TEST_NAME}".xml
   mkdir -p "$ALL_RESULT_DIR"/"${TEST_NAME}"
-  mv "$TEST_DIR"/logs/*log "$ALL_RESULT_DIR"/"${TEST_NAME}"/
+  mv "$TEST_DIR"/logs/*.* "$ALL_RESULT_DIR"/"${TEST_NAME}"/
 done
 
 rebot -N "smoketests" -d "$ALL_RESULT_DIR/" "$ALL_RESULT_DIR/*.xml"
