@@ -33,7 +33,7 @@ if start_k8s_env; then
   combine_reports
 fi
 
-get_logs
+get_logs || true
 
 stop_k8s_env
 
