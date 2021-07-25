@@ -83,6 +83,7 @@ start_k8s_env() {
 
 get_logs() {
   mkdir -p logs
+  kubectl logs scm-0 init > "logs/pod-${pod}-init.log" || true
   for pod in $(kubectl get pods -o custom-columns=NAME:.metadata.name | tail -n +2); do
     kubectl describe pod "${pod}" > "logs/pod-${pod}.txt"
     kubectl logs "${pod}" > "logs/pod-${pod}.log" || true
