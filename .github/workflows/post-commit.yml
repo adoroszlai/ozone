@@ -78,6 +78,17 @@ jobs:
     runs-on: ubuntu-18.04
     timeout-minutes: 60
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    strategy:
+      matrix:
+        flekszible:
+          - 1.8.1
+          - 1.9.0
+          - 2.0.0
+          - 2.0.3
+          - 2.1.0
+          - 2.2.0
+          - 2.3.0
+      fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -100,12 +111,15 @@ jobs:
       - name: Execute tests
         run: |
           cd /mnt/ozone/hadoop-ozone/dist/target/ozone-* && sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          export OZONE_TEST_SELECTOR=examples/ozone/
+          export OZONE_TEST_SELECTOR=
           cd /mnt/ozone && hadoop-ozone/dev-support/checks/kubernetes.sh
+        env:
+          OZONE_TEST_SELECTOR: examples/ozone/
+          FLEKSZIBLE_VERSION: ${{ matrix.flekszible }}
       - name: Archive build results
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: kubernetes
+          name: kubernetes-with-flekszible-${{ matrix.flekszible }}
           path: /mnt/ozone/target/kubernetes
         continue-on-error: true
