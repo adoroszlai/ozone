@@ -47,7 +47,7 @@ spec:
                 - datanode
             topologyKey: "kubernetes.io/hostname"
       securityContext:
-        fsGroup: 1000
+        fsGroup: 1001
       containers:
       - name: datanode
         image: "@docker.image@"
