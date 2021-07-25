@@ -95,7 +95,7 @@ jobs:
         run: |
           mkdir -p /mnt/ozone/hadoop-ozone/dist/target
           tar xzvf ozone*.tar.gz -C /mnt/ozone/hadoop-ozone/dist/target
-          ls -la /mnt/ozone/hadoop-ozone/dist/target/etc/hadoop
+          ls -la /mnt/ozone/hadoop-ozone/dist/target/ozone-1.2.0-SNAPSHOT/etc/hadoop
       - name: Execute tests
         run: |
           cd /mnt/ozone/hadoop-ozone/dist/target/ozone-* && sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
