@@ -26,6 +26,15 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  debug:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - name: Debug
+        run: |
+          id
+          id 1000
   compile:
     runs-on: ubuntu-18.04
     timeout-minutes: 30
@@ -82,12 +91,6 @@ jobs:
       matrix:
         flekszible:
           - 1.8.1
-          - 1.9.0
-          - 2.0.0
-          - 2.0.3
-          - 2.1.0
-          - 2.2.0
-          - 2.3.0
       fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
@@ -107,7 +110,6 @@ jobs:
           mkdir -p /mnt/ozone/hadoop-ozone/dist/target
           tar xzvf ozone*.tar.gz -C /mnt/ozone/hadoop-ozone/dist/target
           ls -la /mnt/ozone/hadoop-ozone/dist/target/ozone-1.2.0-SNAPSHOT/etc/hadoop
-          id
       - name: Execute tests
         run: |
           cd /mnt/ozone/hadoop-ozone/dist/target/ozone-* && sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
