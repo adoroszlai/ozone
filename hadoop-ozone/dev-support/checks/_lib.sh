@@ -83,13 +83,14 @@ install_flekszible() {
 }
 
 _install_flekszible() {
+  : ${FLEKSZIBLE_VERSION:=1.9.0}
+
   mkdir bin
 
   local os=$(uname -s)
   local arch=$(uname -m)
-  local version=1.9.0
 
-  curl -LSs https://github.com/elek/flekszible/releases/download/v${version}/flekszible_${version}_${os}_${arch}.tar.gz | tar -xz -f - -C bin
+  curl -LSs https://github.com/elek/flekszible/releases/download/v${FLEKSZIBLE_VERSION}/flekszible_${FLEKSZIBLE_VERSION}_${os}_${arch}.tar.gz | tar -xz -f - -C bin
 
   chmod +x bin/flekszible
 }
