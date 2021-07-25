@@ -17,7 +17,7 @@
 
 retry() {
    n=0
-   max=10
+   max=100
    until [ $n -ge $max ]
    do
       "$@" && break
