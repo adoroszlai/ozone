@@ -73,7 +73,6 @@ install_k3s() {
 }
 
 _install_k3s() {
-  export INSTALL_K3S_VERSION='v1.21.2+k3s1'
   curl -sfL https://get.k3s.io | sh -
   sudo chmod a+r $KUBECONFIG
 }
