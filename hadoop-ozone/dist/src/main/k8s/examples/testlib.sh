@@ -114,7 +114,7 @@ regenerate_resources() {
     OZONE_ROOT=$(realpath ../../..)
   fi
 
-  flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20210520-1 -t ozone/onenode
+  flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
 }
 
 revert_resources() {
