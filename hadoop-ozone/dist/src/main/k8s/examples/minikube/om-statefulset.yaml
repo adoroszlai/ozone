@@ -38,7 +38,7 @@ spec:
         prometheus.io/path: /prom
     spec:
       securityContext:
-        fsGroup: 1001
+        fsGroup: 1000
       containers:
       - name: om
         image: '@docker.image@'
