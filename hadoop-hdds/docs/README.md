@@ -33,7 +33,7 @@ hugo serve
 This maven project will create the rendered HTML page during the build (ONLY if hugo is available).
 And the dist project will include the documentation.
 
-You can adjust the menu hierarchy with adjusting the header of the markdown file:
+You can adjust the menu hierarchy with adjusting the header of the markdown file.
 
 To show it in the main header add the menu entry:
 
