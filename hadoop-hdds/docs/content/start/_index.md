@@ -37,7 +37,7 @@ Kubernetes or bare-metal.
 
 <h2>Running Ozone from Docker Hub</h2>
 
-You can try out Ozone using docker hub without downloading the official release. This makes it easy to explore Ozone.
+You can try Ozone using docker hub without downloading the official release. This makes it easy to explore Ozone.
 <br />
   {{<card title="Starting ozone inside a single container" link="start/StartFromDockerHub.md" link-text="Ozone In Docker" image="start/docker.png">}}
   The simplest and easiest way to start an ozone cluster
