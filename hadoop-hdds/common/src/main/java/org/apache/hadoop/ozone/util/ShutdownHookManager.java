@@ -96,7 +96,7 @@ public final class ShutdownHookManager {
             @Override
             public void run() {
               if (MGR.shutdownInProgress.getAndSet(true)) {
-                LOG.info("Shutdown process invoked again: ignoring");
+                LOG.info("Shutdown process invoked a second time: ignoring");
                 return;
               }
               long started = System.currentTimeMillis();

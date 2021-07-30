@@ -21,11 +21,10 @@ retry() {
    do
       "$@" && break
       n=$[$n+1]
-      echo "$n '$@' failed..."
+      echo "$n '$@' is failed..."
       sleep ${RETRY_SLEEP:-3}
    done
-   if [ $n -ge 100 ]; then
-      echo "Give up '$@' after $n attempts..."
+   if [ $n -eq 100 ]; then
       return 255
    fi
 }
