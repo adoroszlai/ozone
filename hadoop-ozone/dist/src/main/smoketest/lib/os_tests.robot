@@ -36,3 +36,11 @@ Execute and checkrc
 
 Execute and checkrc RC mismatch
     Run Keyword And Expect Error    *    Execute and checkrc    echo failure && exit 3    1
+
+Create Random File
+    ${file1} =          Create Random File
+    File Should Exist   ${file1}
+    ${file2} =          Create Random File
+    File Should Exist   ${file2}
+    Should Not Be Equal    ${file1}    ${file2}
+    Execute             diff -q ${file1} ${file2}
