@@ -38,37 +38,36 @@ jobs:
     steps:
       - name: Initial disk usage
         run: df -h
-      - name: Setup link to SSD
-        run: sudo mkdir mnt && sudo mount --bind /mnt `pwd`/mnt && sudo chmod 777 mnt
       - name: Checkout project
         uses: actions/checkout@v2
-        with:
-          path: mnt/ozone
       - name: Cache for maven dependencies
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('mnt/ozone/**/pom.xml') }}-8-${{ matrix.profile }}
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.profile }}
           restore-keys: |
-            maven-repo-${{ hashFiles('mnt/ozone/**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('mnt/ozone/**/pom.xml') }}
+            maven-repo-${{ hashFiles('**/pom.xml') }}-8
+            maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Disk usage before tests
         run: df -h
       - name: Execute tests
-        run: mnt/ozone/hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
+        run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
       - name: Summary of failures
-        run: cat mnt/ozone/target/${{ github.job }}/summary.txt
+        run: cat target/${{ github.job }}/summary.txt
         if: always()
       - name: Disk usage after tests
-        run: df -h
+        run: |
+          df -h
+          du -sh hadoop-ozone/integration-test/target/*
+          find hadoop-ozone/integration-test/target -type f | xargs ls -Ssk
         if: always()
       - name: Archive build results
         uses: actions/upload-artifact@v2
         if: always()
         with:
           name: it-${{ matrix.profile }}
-          path: mnt/ozone/target/integration
+          path: target/integration
         continue-on-error: true
       - name: Delete temporary build artifacts before caching
         run: |
