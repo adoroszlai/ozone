@@ -57,15 +57,12 @@ grep -e 'Running org' -e 'Tests run: .* in org' "${REPORT_DIR}/output.log" \
   | tee -a "${REPORT_DIR}/summary.txt"
 
 
-#Collect of all of the report files of FAILED tests
-for failed_test in $(< ${REPORT_DIR}/summary.txt); do
-  for file in $(find "." -not -path '*/iteration*' \
-      \( -name "${failed_test}.txt" -or -name "${failed_test}-output.txt" -or -name "TEST-${failed_test}.xml" \)); do
-    dir=$(dirname "${file}")
-    dest_dir=$(_realpath --relative-to="${PWD}" "${dir}/../..") || continue
-    mkdir -p "${REPORT_DIR}/${dest_dir}"
-    mv "${file}" "${REPORT_DIR}/${dest_dir}"/
-  done
+#Collect all report files
+for file in $(find "." -path '*target/surefire-reports/*.txt'); do
+  dir=$(dirname "${file}")
+  dest_dir=$(_realpath --relative-to="${PWD}" "${dir}/../..") || continue
+  mkdir -p "${REPORT_DIR}/${dest_dir}"
+  mv "${file}" "${REPORT_DIR}/${dest_dir}"/
 done
 
 ## Check if Maven was killed
