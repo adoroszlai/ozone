@@ -28,44 +28,27 @@ jobs:
     runs-on: ubuntu-18.04
     timeout-minutes: 150
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    strategy:
-      matrix:
-        profile:
-          - client
-          - filesystem-hdds
-          - ozone
-      fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
-      - name: Initial disk usage
-        run: df -h
       - name: Checkout project
         uses: actions/checkout@v2
       - name: Cache for maven dependencies
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.profile }}
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8
           restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
-      - name: Disk usage before tests
-        run: df -h
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
+        run: hadoop-ozone/dev-support/checks/integration.sh
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
-        if: always()
-      - name: Disk usage after tests
-        run: |
-          df -h
-          du -sh hadoop-ozone/integration-test/target/test-dir/*
         if: always()
       - name: Archive build results
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: it-${{ matrix.profile }}
+          name: integration
           path: target/integration
         continue-on-error: true
       - name: Delete temporary build artifacts before caching

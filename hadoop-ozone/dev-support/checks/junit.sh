@@ -36,42 +36,19 @@ else
   MAVEN_OPTIONS="${MAVEN_OPTIONS} --fail-at-end"
 fi
 
-if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
-  mvn ${MAVEN_OPTIONS} -DskipTests clean install
-fi
+mvn ${MAVEN_OPTIONS} -DskipTests clean install
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 mkdir -p "$REPORT_DIR"
 
-rc=0
-for i in $(seq 1 ${ITERATIONS}); do
-  if [[ ${ITERATIONS} -gt 1 ]]; then
-    original_report_dir="${REPORT_DIR}"
-    REPORT_DIR="${original_report_dir}/iteration${i}"
-    mkdir -p "${REPORT_DIR}"
-  fi
+for f in $(find hadoop-ozone/integration-test/src/test/java -name '*.java' | sed 's/\.java//' | grep -v 'package-info' | sort); do
+  t=$(basename "$f")
+
+  rm -fr hadoop-ozone/integration-test/target/test-dir
 
   mvn ${MAVEN_OPTIONS} "$@" test \
-    | tee "${REPORT_DIR}/output.log"
-  irc=$?
+      -Dtest="$t" \
+    | tee -a "${REPORT_DIR}/output.log"
 
-  # shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
-  source "${DIR}/_mvn_unit_report.sh"
-  if [[ ${irc} == 0 ]] && [[ -s "${REPORT_DIR}/summary.txt" ]]; then
-    irc=1
-  fi
-
-  if [[ ${ITERATIONS} -gt 1 ]]; then
-    REPORT_DIR="${original_report_dir}"
-    echo "Iteration ${i} exit code: ${irc}" | tee -a "${REPORT_DIR}/summary.txt"
-  fi
-
-  if [[ ${rc} == 0 ]]; then
-    rc=${irc}
-  fi
+  du -chs hadoop-ozone/integration-test/target/test-dir/*
 done
-
-#Archive combined jacoco records
-mvn -B -N jacoco:merge -Djacoco.destFile=$REPORT_DIR/jacoco-combined.exec
-
-exit ${rc}
