@@ -232,7 +232,7 @@ public class GrpcOzoneManagerServer {
   /**
    * Config for OM GRPC server.
    */
-  @ConfigGroup(prefix = "ozone.om.protocolPB")
+  @ConfigGroup(prefix = "ozone.om.grpc")
   public static final class GrpcOzoneManagerServerConfig {
     @Config(key = "port", defaultValue = "8981",
         description = "Port used for"
