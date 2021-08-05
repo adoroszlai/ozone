@@ -229,6 +229,9 @@ public class GrpcOzoneManagerServer {
   public int getPort() {
     return port; }
 
+  /**
+   * Config for OM GRPC server.
+   */
   @ConfigGroup(prefix = "ozone.om.protocolPB")
   public static final class GrpcOzoneManagerServerConfig {
     @Config(key = "port", defaultValue = "8981",
