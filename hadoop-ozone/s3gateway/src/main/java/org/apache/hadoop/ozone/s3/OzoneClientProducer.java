@@ -124,11 +124,11 @@ public class OzoneClientProducer {
       ozoneClient =
           OzoneClientCache.getOzoneClientInstance(omServiceID,
               ozoneConfiguration);
-    } catch (Throwable t) {
+    } catch (Exception e) {
       // For any other critical errors during object creation throw Internal
       // error.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Error during Client Creation: ", t);
+        LOG.debug("Error during Client Creation: ", e);
       }
       throw wrapOS3Exception(INTERNAL_ERROR);
     }

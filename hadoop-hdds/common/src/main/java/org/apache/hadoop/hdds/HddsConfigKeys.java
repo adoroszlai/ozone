@@ -33,11 +33,15 @@ public final class HddsConfigKeys {
   public static final String HDDS_CONTAINER_REPORT_INTERVAL =
       "hdds.container.report.interval";
   public static final String HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT =
+      "60m";
+  public static final String HDDS_CRL_STATUS_REPORT_INTERVAL =
+      "hdds.crl.status.report.interval";
+  public static final String HDDS_CRL_STATUS_REPORT_INTERVAL_DEFAULT =
       "60s";
   public static final String HDDS_PIPELINE_REPORT_INTERVAL =
-          "hdds.pipeline.report.interval";
+      "hdds.pipeline.report.interval";
   public static final String HDDS_PIPELINE_REPORT_INTERVAL_DEFAULT =
-          "60s";
+      "60s";
   public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL =
       "hdds.command.status.report.interval";
   public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT =

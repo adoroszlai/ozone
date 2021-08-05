@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
@@ -211,7 +212,7 @@ public class BasicRootedOzoneClientAdapterImpl
       boolean createIfNotExist) throws IOException {
     Preconditions.checkNotNull(volumeStr);
     Preconditions.checkNotNull(bucketStr);
-    
+
     if (bucketStr.isEmpty()) {
       // throw FileNotFoundException in this case to make Hadoop common happy
       throw new FileNotFoundException(
@@ -222,31 +223,23 @@ public class BasicRootedOzoneClientAdapterImpl
     try {
       bucket = proxy.getBucketDetails(volumeStr, bucketStr);
     } catch (OMException ex) {
-      // Note: always create bucket if volumeStr matches "tmp" so -put works
       if (createIfNotExist) {
-        // Note: getBucketDetails always throws BUCKET_NOT_FOUND, even if
-        // the volume doesn't exist.
-        if (ex.getResult().equals(BUCKET_NOT_FOUND)) {
-          OzoneVolume volume;
+        // getBucketDetails can throw VOLUME_NOT_FOUND when the parent volume
+        // doesn't exist and ACL is enabled; it can only throw BUCKET_NOT_FOUND
+        // when ACL is disabled. Both exceptions need to be handled.
+        switch (ex.getResult()) {
+        case VOLUME_NOT_FOUND:
+        case BUCKET_NOT_FOUND:
           try {
-            volume = proxy.getVolumeDetails(volumeStr);
-          } catch (OMException getVolEx) {
-            if (getVolEx.getResult().equals(VOLUME_NOT_FOUND)) {
-              // Volume doesn't exist. Create it
-              try {
-                objectStore.createVolume(volumeStr);
-              } catch (OMException newVolEx) {
-                // Ignore the case where another client created the volume
-                if (!newVolEx.getResult().equals(VOLUME_ALREADY_EXISTS)) {
-                  throw newVolEx;
-                }
-              }
-            } else {
-              throw getVolEx;
+            objectStore.createVolume(volumeStr);
+          } catch (OMException newVolEx) {
+            // Ignore the case where another client created the volume
+            if (!newVolEx.getResult().equals(VOLUME_ALREADY_EXISTS)) {
+              throw newVolEx;
             }
-            // Try get volume again
-            volume = proxy.getVolumeDetails(volumeStr);
           }
+
+          OzoneVolume volume = proxy.getVolumeDetails(volumeStr);
           // Create the bucket
           try {
             volume.createBucket(bucketStr);
@@ -256,6 +249,10 @@ public class BasicRootedOzoneClientAdapterImpl
               throw newBucEx;
             }
           }
+          break;
+        default:
+          // Throw unhandled exception
+          throw ex;
         }
         // Try get bucket again
         bucket = proxy.getBucketDetails(volumeStr, bucketStr);
@@ -431,10 +428,13 @@ public class BasicRootedOzoneClientAdapterImpl
    * Helper method to delete an object specified by key name in bucket.
    *
    * @param path path to a key to be deleted
+   * @param recursive recursive deletion of all sub path keys if true,
+   *                  otherwise non-recursive
    * @return true if the key is deleted, false otherwise
    */
   @Override
-  public boolean deleteObject(String path) {
+  public boolean deleteObject(String path, boolean recursive)
+      throws IOException {
     LOG.trace("issuing delete for path to key: {}", path);
     incrementCounter(Statistic.OBJECTS_DELETED, 1);
     OFSPath ofsPath = new OFSPath(path);
@@ -444,12 +444,23 @@ public class BasicRootedOzoneClientAdapterImpl
     }
     try {
       OzoneBucket bucket = getBucket(ofsPath, false);
-      bucket.deleteKey(keyName);
+      bucket.deleteDirectory(keyName, recursive);
       return true;
+    } catch (OMException ome) {
+      LOG.error("delete key failed {}", ome.getMessage());
+      if (OMException.ResultCodes.DIRECTORY_NOT_EMPTY == ome.getResult()) {
+        throw new PathIsNotEmptyDirectoryException(ome.getMessage());
+      }
+      return false;
     } catch (IOException ioe) {
       LOG.error("delete key failed " + ioe.getMessage());
       return false;
     }
+  }
+
+  @Override
+  public boolean deleteObject(String path) throws IOException {
+    return deleteObject(path, false);
   }
 
   /**
@@ -872,7 +883,8 @@ public class BasicRootedOzoneClientAdapterImpl
   private FileStatusAdapter toFileStatusAdapter(OzoneFileStatus status,
       String owner, URI defaultUri, Path workingDir, String ofsPathPrefix) {
     OmKeyInfo keyInfo = status.getKeyInfo();
-    short replication = (short) keyInfo.getFactor().getNumber();
+    short replication = (short) keyInfo.getReplicationConfig()
+        .getRequiredNodes();
     return new FileStatusAdapter(
         keyInfo.getDataSize(),
         new Path(ofsPathPrefix + OZONE_URI_DELIMITER + keyInfo.getKeyName())
@@ -1024,5 +1036,11 @@ public class BasicRootedOzoneClientAdapterImpl
         FsPermission.getDirDefault().toShort(),
         null, null, null, new BlockLocation[0]
     );
+  }
+
+  @Override
+  public boolean isFSOptimizedBucket() {
+    // TODO: Need to refine this part.
+    return false;
   }
 }

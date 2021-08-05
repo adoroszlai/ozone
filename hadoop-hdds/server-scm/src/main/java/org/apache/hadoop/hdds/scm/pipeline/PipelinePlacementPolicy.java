@@ -45,9 +45,10 @@ import java.util.stream.Collectors;
  * and network topology to supply pipeline creation.
  * <p>
  * 1. get a list of healthy nodes
- * 2. filter out nodes that are not too heavily engaged in other pipelines
- * 3. Choose an anchor node among the viable nodes.
- * 4. Choose other nodes around the anchor node based on network topology
+ * 2. filter out nodes that have space less than container size.
+ * 3. filter out nodes that are not too heavily engaged in other pipelines
+ * 4. Choose an anchor node among the viable nodes.
+ * 5. Choose other nodes around the anchor node based on network topology
  */
 public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
   @VisibleForTesting
@@ -121,7 +122,8 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
   /**
    * Filter out viable nodes based on
    * 1. nodes that are healthy
-   * 2. nodes that are not too heavily engaged in other pipelines
+   * 2. nodes that have enough space
+   * 3. nodes that are not too heavily engaged in other pipelines
    * The results are sorted based on pipeline count of each node.
    *
    * @param excludedNodes - excluded nodes
@@ -130,11 +132,14 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
    * @throws SCMException when viable nodes are not enough in numbers
    */
   List<DatanodeDetails> filterViableNodes(
-      List<DatanodeDetails> excludedNodes, int nodesRequired)
+      List<DatanodeDetails> excludedNodes, int nodesRequired,
+      long metadataSizeRequired, long dataSizeRequired)
       throws SCMException {
     // get nodes in HEALTHY state
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(NodeStatus.inServiceHealthy());
+    healthyNodes = filterNodesWithSpace(healthyNodes, nodesRequired,
+        metadataSizeRequired, dataSizeRequired);
     boolean multipleRacks = multipleRacksAvailable(healthyNodes);
     if (excludedNodes != null) {
       healthyNodes.removeAll(excludedNodes);
@@ -217,18 +222,20 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
    * @param excludedNodes - excluded nodes
    * @param favoredNodes  - list of nodes preferred.
    * @param nodesRequired - number of datanodes required.
-   * @param sizeRequired  - size required for the container or block.
+   * @param dataSizeRequired - size required for the container.
+   * @param metadataSizeRequired - size required for Ratis metadata.
    * @return a list of chosen datanodeDetails
    * @throws SCMException when chosen nodes are not enough in numbers
    */
   @Override
   public List<DatanodeDetails> chooseDatanodes(
       List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
-      int nodesRequired, final long sizeRequired) throws SCMException {
+      int nodesRequired, long metadataSizeRequired, long dataSizeRequired)
+      throws SCMException {
     // Get a list of viable nodes based on criteria
     // and make sure excludedNodes are excluded from list.
-    List<DatanodeDetails> healthyNodes =
-        filterViableNodes(excludedNodes, nodesRequired);
+    List<DatanodeDetails> healthyNodes = filterViableNodes(excludedNodes,
+        nodesRequired, metadataSizeRequired, dataSizeRequired);
 
     // Randomly picks nodes when all nodes are equal or factor is ONE.
     // This happens when network topology is absent or
@@ -283,6 +290,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     DatanodeDetails anchor = chooseNode(healthyNodes);
     if (anchor != null) {
       results.add(anchor);
+      removePeers(anchor, healthyNodes);
       exclude.add(anchor);
     } else {
       LOG.warn("Unable to find healthy node for anchor(first) node.");
@@ -302,6 +310,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
       // Rack awareness is detected.
       rackAwareness = true;
       results.add(nextNode);
+      removePeers(nextNode, healthyNodes);
       exclude.add(nextNode);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Second node chosen: {}", nextNode);
@@ -332,6 +341,7 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
 
       if (pick != null) {
         results.add(pick);
+        removePeers(pick, healthyNodes);
         exclude.add(pick);
         LOG.debug("Remaining node chosen: {}", pick);
       } else {
@@ -369,6 +379,9 @@ public final class PipelinePlacementPolicy extends SCMCommonPlacementPolicy {
     DatanodeDetails selectedNode =
             healthyNodes.get(getRand().nextInt(healthyNodes.size()));
     healthyNodes.remove(selectedNode);
+    if (selectedNode != null) {
+      removePeers(selectedNode, healthyNodes);
+    }
     return selectedNode;
   }
 

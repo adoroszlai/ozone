@@ -107,9 +107,7 @@ public class BenchMarkContainerStateMap {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(CLOSED)
             .setPipelineID(pipeline.getId())
-            .setReplicationType(pipeline.getType())
-            .setReplicationFactor(ReplicationConfig
-                .getLegacyFactor(pipeline.getReplicationConfig()))
+            .setReplicationConfig(pipeline.getReplicationConfig())
             .setUsedBytes(0)
             .setNumberOfKeys(0)
             .setStateEnterTime(Time.now())
@@ -128,9 +126,7 @@ public class BenchMarkContainerStateMap {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(OPEN)
             .setPipelineID(pipeline.getId())
-            .setReplicationType(pipeline.getType())
-            .setReplicationFactor(ReplicationConfig
-                .getLegacyFactor(pipeline.getReplicationConfig()))
+            .setReplicationConfig(pipeline.getReplicationConfig())
             .setUsedBytes(0)
             .setNumberOfKeys(0)
             .setStateEnterTime(Time.now())
@@ -148,9 +144,7 @@ public class BenchMarkContainerStateMap {
       ContainerInfo containerInfo = new ContainerInfo.Builder()
           .setState(OPEN)
           .setPipelineID(pipeline.getId())
-          .setReplicationType(pipeline.getType())
-          .setReplicationFactor(ReplicationConfig
-              .getLegacyFactor(pipeline.getReplicationConfig()))
+          .setReplicationConfig(pipeline.getReplicationConfig())
           .setUsedBytes(0)
           .setNumberOfKeys(0)
           .setStateEnterTime(Time.now())
@@ -181,10 +175,7 @@ public class BenchMarkContainerStateMap {
     return new ContainerInfo.Builder()
         .setState(CLOSED)
         .setPipelineID(pipeline.getId())
-        .setReplicationType(
-            pipeline.getReplicationConfig().getReplicationType())
-        .setReplicationFactor(
-            ReplicationConfig.getLegacyFactor(pipeline.getReplicationConfig()))
+        .setReplicationConfig(pipeline.getReplicationConfig())
         .setUsedBytes(0)
         .setNumberOfKeys(0)
         .setStateEnterTime(Time.now())
@@ -201,7 +192,8 @@ public class BenchMarkContainerStateMap {
       state.stateMap.addContainer(getContainerInfo(state));
     }
     bh.consume(state.stateMap
-        .getMatchingContainerIDs(OPEN, OzoneConsts.OZONE, ReplicationFactor.ONE,
-            ReplicationType.STAND_ALONE));
+        .getMatchingContainerIDs(OPEN, OzoneConsts.OZONE,
+            ReplicationConfig.fromTypeAndFactor(
+                ReplicationType.STAND_ALONE, ReplicationFactor.ONE)));
   }
 }

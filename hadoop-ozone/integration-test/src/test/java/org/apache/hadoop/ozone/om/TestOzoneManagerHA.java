@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Rule;
@@ -73,6 +73,7 @@ public abstract class TestOzoneManagerHA {
   private OzoneConfiguration conf;
   private String clusterId;
   private String scmId;
+  private String omId;
   private String omServiceId;
   private static int numOfOMs = 3;
   private static final int LOG_PURGE_GAP = 50;
@@ -137,6 +138,7 @@ public abstract class TestOzoneManagerHA {
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     omServiceId = "om-service-test1";
+    omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.set(OzoneConfigKeys.OZONE_ADMINISTRATORS,
         OZONE_ADMINISTRATORS_WILDCARD);
@@ -168,6 +170,7 @@ public abstract class TestOzoneManagerHA {
         .setClusterId(clusterId)
         .setScmId(scmId)
         .setOMServiceId(omServiceId)
+        .setOmId(omId)
         .setNumOfOzoneManagers(numOfOMs)
         .build();
     cluster.waitForClusterToBeReady();

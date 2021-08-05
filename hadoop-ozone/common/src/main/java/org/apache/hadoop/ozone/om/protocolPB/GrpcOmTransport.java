@@ -71,7 +71,7 @@ public class GrpcOmTransport implements OmTransport {
         OZONE_OM_ADDRESS_KEY);
     this.host = omHost.orElse("0.0.0.0");
     this.omFailoverProxyProvider = new OMFailoverProxyProvider(conf, ugi,
-        omServiceId);
+        omServiceId, OzoneManagerProtocolPB.class);
 
     NettyChannelBuilder channelBuilder =
         NettyChannelBuilder.forAddress(this.host, port)

@@ -309,9 +309,12 @@ public interface ClientProtocol {
    * @param volumeName Name of the Volume
    * @param bucketName Name of the Bucket
    * @param keyName Name of the Key
+   * @param recursive recursive deletion of all sub path keys if true,
+   *                  otherwise non-recursive
    * @throws IOException
    */
-  void deleteKey(String volumeName, String bucketName, String keyName)
+  void deleteKey(String volumeName, String bucketName, String keyName,
+                 boolean recursive)
       throws IOException;
 
   /**
@@ -733,4 +736,20 @@ public interface ClientProtocol {
    */
   void setBucketQuota(String volumeName, String bucketName,
       long quotaInNamespace, long quotaInBytes) throws IOException;
+
+  /**
+   * Returns OzoneKey that contains the application generated/visible
+   * metadata for an Ozone Object.
+   *
+   * If Key exists, return returns OzoneKey.
+   * If Key does not exist, throws an exception with error code KEY_NOT_FOUND
+   *
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @return OzoneKey which gives basic information about the key.
+   * @throws IOException
+   */
+  OzoneKey headObject(String volumeName, String bucketName,
+      String keyName) throws IOException;
 }

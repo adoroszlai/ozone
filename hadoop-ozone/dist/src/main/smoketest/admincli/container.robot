@@ -29,6 +29,11 @@ Create test data
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user     testuser     testuser.keytab
                         Execute          ozone freon ockg -n1 -t1 -p container
 
+Container is closed
+    [arguments]     ${container}
+    ${output} =         Execute          ozone admin container info "${container}"
+                        Should contain   ${output}   CLOSED
+
 *** Test Cases ***
 Create container
     ${output} =         Execute          ozone admin container create
@@ -59,16 +64,17 @@ Verbose container info
                         Should contain   ${output}   Pipeline Info
 
 Close container
-                        Execute          ozone admin container close "${CONTAINER}"
-    ${output} =         Execute          ozone admin container info "${CONTAINER}"
+    ${container} =      Execute          ozone admin container list --state OPEN | jq -r 'select(.replicationConfig.replicationFactor == "THREE") | .containerID' | head -1
+                        Execute          ozone admin container close "${container}"
+    ${output} =         Execute          ozone admin container info "${container}"
                         Should contain   ${output}   CLOS
+    Wait until keyword succeeds    1min    10sec    Container is closed    ${container}
 
 Incomplete command
     ${output} =         Execute And Ignore Error     ozone admin container
                         Should contain   ${output}   Incomplete command
                         Should contain   ${output}   list
                         Should contain   ${output}   info
-                        Should contain   ${output}   delete
                         Should contain   ${output}   create
                         Should contain   ${output}   close
 
@@ -81,6 +87,3 @@ Cannot close container without admin privilege
 
 Cannot create container without admin privilege
     Requires admin privilege    ozone admin container create
-
-Cannot delete container without admin privilege
-    Requires admin privilege    ozone admin container delete "${CONTAINER}"

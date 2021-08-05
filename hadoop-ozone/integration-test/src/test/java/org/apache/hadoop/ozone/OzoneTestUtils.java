@@ -30,7 +30,7 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.test.LambdaTestUtils.VoidCallable;
+import org.apache.ozone.test.LambdaTestUtils.VoidCallable;
 
 import org.apache.ratis.util.function.CheckedConsumer;
 import org.junit.Assert;
@@ -43,6 +43,23 @@ public final class OzoneTestUtils {
    * Never Constructed.
    */
   private OzoneTestUtils() {
+  }
+
+  /**
+   * Triggers Close container event for containers which contain the blocks
+   * listed in omKeyLocationInfoGroups.
+   *
+   * @param omKeyLocationInfoGroups locationInfos for a key.
+   * @param scm StorageContainerManager instance.
+   * @throws Exception
+   */
+  public static void triggerCloseContainerEvent(
+      List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups,
+      StorageContainerManager scm) throws Exception {
+    performOperationOnKeyContainers((blockID) -> scm.getEventQueue()
+            .fireEvent(SCMEvents.CLOSE_CONTAINER,
+                ContainerID.valueOf(blockID.getContainerID())),
+        omKeyLocationInfoGroups);
   }
 
   /**

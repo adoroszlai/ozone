@@ -42,7 +42,7 @@ import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.ExitManager;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.server.protocol.TermIndex;
 
 import static org.junit.Assert.assertTrue;
@@ -93,6 +93,7 @@ public class TestSCMInstallSnapshotWithHA {
     scmhaConfiguration.setRatisSnapshotThreshold(SNAPSHOT_THRESHOLD);
     conf.setFromObject(scmhaConfiguration);
 
+
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -135,6 +136,13 @@ public class TestSCMInstallSnapshotWithHA {
     // The recently started  should be lagging behind the leader .
     SCMStateMachine followerSM =
         followerSCM.getScmHAManager().getRatisServer().getSCMStateMachine();
+    
+    // Wait & retry for follower to update transactions to leader
+    // snapshot index.
+    // Timeout error if follower does not load update within 3s
+    GenericTestUtils.waitFor(() -> {
+      return followerSM.getLastAppliedTermIndex().getIndex() >= 200;
+    }, 100, 3000);
     long followerLastAppliedIndex =
         followerSM.getLastAppliedTermIndex().getIndex();
     assertTrue(followerLastAppliedIndex >= 200);

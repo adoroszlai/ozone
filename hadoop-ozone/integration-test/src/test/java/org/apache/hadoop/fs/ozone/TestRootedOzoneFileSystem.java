@@ -35,6 +35,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OFSPath;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -42,26 +43,33 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.TrashPolicyOzone;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.ozone.test.GenericTestUtils;
+import org.apache.ozone.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,12 +79,13 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
-import static org.apache.hadoop.fs.FileSystem.LOG;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
@@ -85,8 +94,10 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Ozone file system tests that are not covered by contract tests.
@@ -95,19 +106,33 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class TestRootedOzoneFileSystem {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRootedOzoneFileSystem.class);
+
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
-        new Object[]{true, true},
-        new Object[]{true, false},
-        new Object[]{false, true},
-        new Object[]{false, false});
+        new Object[]{true, true, true},
+        new Object[]{true, true, false},
+        new Object[]{true, false, false},
+        new Object[]{false, true, false},
+        new Object[]{false, false, false}
+    );
   }
 
   public TestRootedOzoneFileSystem(boolean setDefaultFs,
-      boolean enableOMRatis) {
+      boolean enableOMRatis, boolean isAclEnabled) {
     enabledFileSystemPaths = setDefaultFs;
     omRatisEnabled = enableOMRatis;
+    enableAcl = isAclEnabled;
+  }
+
+  public static FileSystem getFs() {
+    return fs;
+  }
+
+  public static Path getBucketPath() {
+    return bucketPath;
   }
 
   @Rule
@@ -115,6 +140,8 @@ public class TestRootedOzoneFileSystem {
 
   private static boolean enabledFileSystemPaths;
   private static boolean omRatisEnabled;
+  private static boolean isBucketFSOptimized = false;
+  private static boolean enableAcl;
 
   private static OzoneConfiguration conf;
   private static MiniOzoneCluster cluster = null;
@@ -130,14 +157,26 @@ public class TestRootedOzoneFileSystem {
   // Store path commonly used by tests that test functionality within a bucket
   private static Path bucketPath;
   private static String rootPath;
+  private static BucketLayout bucketLayout;
 
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    conf.setInt(FS_TRASH_INTERVAL_KEY, 1);
+    conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, (float) 0.15);
+    // Trash with 9 second deletes and 6 seconds checkpoints
+    conf.setFloat(FS_TRASH_INTERVAL_KEY, (float) 0.15); // 9 seconds
+    conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, (float) 0.1); // 6 seconds
     conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, omRatisEnabled);
-    conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS,
-        enabledFileSystemPaths);
+    if (isBucketFSOptimized) {
+      bucketLayout = BucketLayout.FILE_SYSTEM_OPTIMIZED;
+      TestOMRequestUtils.configureFSOptimizedPaths(conf,
+          true, OMConfigKeys.OZONE_OM_METADATA_LAYOUT_PREFIX);
+    } else {
+      bucketLayout = BucketLayout.LEGACY;
+      conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS,
+          enabledFileSystemPaths);
+    }
+    conf.setBoolean(OzoneConfigKeys.OZONE_ACL_ENABLED, enableAcl);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
         .build();
@@ -145,7 +184,8 @@ public class TestRootedOzoneFileSystem {
     objectStore = cluster.getClient().getObjectStore();
     
     // create a volume and a bucket to be used by RootedOzoneFileSystem (OFS)
-    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    OzoneBucket bucket =
+        TestDataUtil.createVolumeAndBucket(cluster, bucketLayout);
     volumeName = bucket.getVolumeName();
     volumePath = new Path(OZONE_URI_DELIMITER, volumeName);
     bucketName = bucket.getName();
@@ -177,6 +217,10 @@ public class TestRootedOzoneFileSystem {
 
   private OMMetrics getOMMetrics() {
     return cluster.getOzoneManager().getMetrics();
+  }
+
+  protected static void setIsBucketFSOptimized(boolean isBucketFSO) {
+    isBucketFSOptimized = isBucketFSO;
   }
 
   @Test
@@ -1060,7 +1104,9 @@ public class TestRootedOzoneFileSystem {
 
     // Create a new bucket in the same volume
     final String bucketName2 = "trashroottest2";
-    volume1.createBucket(bucketName2);
+    BucketArgs.Builder builder = BucketArgs.newBuilder();
+    builder.setBucketLayout(bucketLayout);
+    volume1.createBucket(bucketName2, builder.build());
     Path bucketPath2 = new Path(volumePath, bucketName2);
     Path trashRoot2 = new Path(bucketPath2, TRASH_PREFIX);
     Path user1Trash2 = new Path(trashRoot2, username);
@@ -1080,7 +1126,8 @@ public class TestRootedOzoneFileSystem {
     Assert.assertEquals(3, fs.getTrashRoots(true).size());
 
     // Create a new volume and a new bucket
-    OzoneBucket bucket3 = TestDataUtil.createVolumeAndBucket(cluster);
+    OzoneBucket bucket3 =
+        TestDataUtil.createVolumeAndBucket(cluster, bucketLayout);
     OzoneVolume volume3 = objectStore.getVolume(bucket3.getVolumeName());
     // Need to setOwner to current test user so it has permission to list vols
     volume3.setOwner(username);
@@ -1198,6 +1245,7 @@ public class TestRootedOzoneFileSystem {
    * 3.Create a second Key in different bucket and verify deletion.
    * @throws Exception
    */
+  @Ignore
   @Test
   public void testTrash() throws Exception {
     String testKeyName = "keyToBeDeleted";
@@ -1206,7 +1254,8 @@ public class TestRootedOzoneFileSystem {
       stream.write(1);
     }
     // create second bucket and write a key in it.
-    OzoneBucket bucket2 = TestDataUtil.createVolumeAndBucket(cluster);
+    OzoneBucket bucket2 =
+        TestDataUtil.createVolumeAndBucket(cluster, bucketLayout);
     String volumeName2 = bucket2.getVolumeName();
     Path volumePath2 = new Path(OZONE_URI_DELIMITER, volumeName2);
     String bucketName2 = bucket2.getName();
@@ -1225,6 +1274,11 @@ public class TestRootedOzoneFileSystem {
 
     long prevNumTrashRenames = getOMMetrics().getNumTrashRenames();
     long prevNumTrashFileRenames = getOMMetrics().getNumTrashFilesRenames();
+
+    long prevNumTrashAtomicDirDeletes = getOMMetrics()
+        .getNumTrashAtomicDirDeletes();
+    long prevNumTrashAtomicDirRenames = getOMMetrics()
+        .getNumTrashAtomicDirRenames();
 
     // Call moveToTrash. We can't call protected fs.rename() directly
     trash.moveToTrash(keyPath1);
@@ -1254,11 +1308,17 @@ public class TestRootedOzoneFileSystem {
       }
     }, 1000, 180000);
 
-    // This condition should pass after the checkpoint
-    Assert.assertTrue(getOMMetrics()
-        .getNumTrashRenames() > prevNumTrashRenames);
-    Assert.assertTrue(getOMMetrics()
-        .getNumTrashFilesRenames() > prevNumTrashFileRenames);
+    if (isBucketFSOptimized){
+      Assert.assertTrue(getOMMetrics()
+          .getNumTrashAtomicDirRenames() > prevNumTrashAtomicDirRenames);
+    } else {
+      // This condition should pass after the checkpoint
+      Assert.assertTrue(getOMMetrics()
+          .getNumTrashRenames() > prevNumTrashRenames);
+      // With new layout version, file renames wouldn't be counted
+      Assert.assertTrue(getOMMetrics()
+          .getNumTrashFilesRenames() > prevNumTrashFileRenames);
+    }
 
     // wait for deletion of checkpoint dir
     GenericTestUtils.waitFor(()-> {
@@ -1273,10 +1333,16 @@ public class TestRootedOzoneFileSystem {
     }, 1000, 120000);
 
     // This condition should succeed once the checkpoint directory is deleted
-    GenericTestUtils.waitFor(
-        () -> getOMMetrics().getNumTrashDeletes() > prevNumTrashDeletes
-            && getOMMetrics().getNumTrashFilesDeletes()
-            > prevNumTrashFileDeletes, 100, 180000);
+    if(isBucketFSOptimized){
+      GenericTestUtils.waitFor(
+          () -> getOMMetrics().getNumTrashAtomicDirDeletes() >
+              prevNumTrashAtomicDirDeletes, 100, 180000);
+    } else {
+      GenericTestUtils.waitFor(
+          () -> getOMMetrics().getNumTrashDeletes() > prevNumTrashDeletes
+              && getOMMetrics().getNumTrashFilesDeletes()
+              >= prevNumTrashFileDeletes, 100, 180000);
+    }
     // Cleanup
     ofs.delete(trashRoot, true);
     ofs.delete(trashRoot2, true);
@@ -1309,4 +1375,141 @@ public class TestRootedOzoneFileSystem {
     LambdaTestUtils.intercept(InvalidPathException.class, "Invalid path Name",
         () -> fs.create(path, false));
   }
+
+
+  @Test
+  public void testRenameFile() throws Exception {
+    final String dir = "/dir" + new Random().nextInt(1000);
+    Path dirPath = new Path(getBucketPath() +dir);
+    getFs().mkdirs(dirPath);
+
+    Path file1Source = new Path(getBucketPath() + dir
+        + "/file1_Copy");
+    ContractTestUtils.touch(getFs(), file1Source);
+    Path file1Destin = new Path(getBucketPath() + dir + "/file1");
+    assertTrue("Renamed failed", getFs().rename(file1Source, file1Destin));
+    assertTrue("Renamed failed: /dir/file1", getFs().exists(file1Destin));
+    FileStatus[] fStatus = getFs().listStatus(dirPath);
+    assertEquals("Renamed failed", 1, fStatus.length);
+    getFs().delete(getBucketPath(), true);
+  }
+
+
+
+  /**
+   * Rename file to an existed directory.
+   */
+  @Test
+  public void testRenameFileToDir() throws Exception {
+    final String dir = "/dir" + new Random().nextInt(1000);
+    Path dirPath = new Path(getBucketPath() +dir);
+    getFs().mkdirs(dirPath);
+
+    Path file1Destin = new Path(getBucketPath() + dir  + "/file1");
+    ContractTestUtils.touch(getFs(), file1Destin);
+    Path abcRootPath = new Path(getBucketPath() + "/a/b/c");
+    getFs().mkdirs(abcRootPath);
+    assertTrue("Renamed failed", getFs().rename(file1Destin, abcRootPath));
+    assertTrue("Renamed filed: /a/b/c/file1", getFs().exists(new Path(
+        abcRootPath, "file1")));
+    getFs().delete(getBucketPath(), true);
+  }
+
+  /**
+   * Rename to the source's parent directory, it will succeed.
+   * 1. Rename from /root_dir/dir1/dir2 to /root_dir.
+   * Expected result : /root_dir/dir2
+   * <p>
+   * 2. Rename from /root_dir/dir1/file1 to /root_dir.
+   * Expected result : /root_dir/file1.
+   */
+  @Test
+  public void testRenameToParentDir() throws Exception {
+    final String root = "/root_dir";
+    final String dir1 = root + "/dir1";
+    final String dir2 = dir1 + "/dir2";
+    final Path dir2SourcePath = new Path(getBucketPath() + dir2);
+    getFs().mkdirs(dir2SourcePath);
+    final Path destRootPath = new Path(getBucketPath() + root);
+
+    Path file1Source = new Path(getBucketPath() + dir1 + "/file2");
+    ContractTestUtils.touch(getFs(), file1Source);
+
+    // rename source directory to its parent directory(destination).
+    assertTrue("Rename failed", getFs().rename(dir2SourcePath, destRootPath));
+    final Path expectedPathAfterRename =
+        new Path(getBucketPath() + root + "/dir2");
+    assertTrue("Rename failed",
+        getFs().exists(expectedPathAfterRename));
+
+    // rename source file to its parent directory(destination).
+    assertTrue("Rename failed", getFs().rename(file1Source, destRootPath));
+    final Path expectedFilePathAfterRename =
+        new Path(getBucketPath() + root + "/file2");
+    assertTrue("Rename failed",
+        getFs().exists(expectedFilePathAfterRename));
+    getFs().delete(getBucketPath(), true);
+  }
+
+  /**
+   *  Cannot rename a directory to its own subdirectory.
+   */
+  @Test
+  public void testRenameDirToItsOwnSubDir() throws Exception {
+    final String root = "/root";
+    final String dir1 = root + "/dir1";
+    final Path dir1Path = new Path(getBucketPath() + dir1);
+    // Add a sub-dir1 to the directory to be moved.
+    final Path subDir1 = new Path(dir1Path, "sub_dir1");
+    getFs().mkdirs(subDir1);
+    LOG.info("Created dir1 {}", subDir1);
+
+    final Path sourceRoot = new Path(getBucketPath() + root);
+    LOG.info("Rename op-> source:{} to destin:{}", sourceRoot, subDir1);
+    //  rename should fail and return false
+    try{
+      getFs().rename(sourceRoot, subDir1);
+      fail("Should throw exception : Cannot rename a directory to" +
+          " its own subdirectory");
+    } catch (IllegalArgumentException e){
+      //expected
+    }
+  }
+
+  /**
+   * Cleanup keyTable and directoryTable explicitly as FS delete operation
+   * is not yet supported.
+   * Fails if the (a) parent of dst does not exist or (b) parent is a file.
+   */
+  @Test
+  public void testRenameDestinationParentDoesntExist() throws Exception {
+    final String root = "/root_dir";
+    final String dir1 = root + "/dir1";
+    final String dir2 = dir1 + "/dir2";
+    final Path dir2SourcePath = new Path(getBucketPath() + dir2);
+    getFs().mkdirs(dir2SourcePath);
+    // (a) parent of dst does not exist.  /root_dir/b/c
+    final Path destinPath = new Path(getBucketPath()
+        + root + "/b/c");
+
+    // rename should throw exception
+    try {
+      getFs().rename(dir2SourcePath, destinPath);
+      fail("Should fail as parent of dst does not exist!");
+    } catch (FileNotFoundException fnfe){
+      //expected
+    }
+    // (b) parent of dst is a file. /root_dir/file1/c
+    Path filePath = new Path(getBucketPath() + root + "/file1");
+    ContractTestUtils.touch(getFs(), filePath);
+    Path newDestinPath = new Path(filePath, "c");
+    // rename shouldthrow exception
+    try{
+      getFs().rename(dir2SourcePath, newDestinPath);
+      fail("Should fail as parent of dst is a file!");
+    } catch (IOException e){
+      //expected
+    }
+  }
+
 }
