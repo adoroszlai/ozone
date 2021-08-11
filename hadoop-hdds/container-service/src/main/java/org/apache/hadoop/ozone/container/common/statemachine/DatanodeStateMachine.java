@@ -477,8 +477,13 @@ public class DatanodeStateMachine implements Closeable {
    * be sent by datanode.
    */
   public void triggerHeartbeat() {
-    if (stateMachineThread != null && isDaemonStarted()) {
-      stateMachineThread.interrupt();
+    if (stateMachineThread != null) {
+      long execCount = getContext().getExecutionCount();
+      boolean daemonStarted = execCount > 0;
+      LOG.info("ZZZ trigger heartbeat? exec count: {}", execCount);
+      if (daemonStarted) {
+        stateMachineThread.interrupt();
+      }
     }
   }
 

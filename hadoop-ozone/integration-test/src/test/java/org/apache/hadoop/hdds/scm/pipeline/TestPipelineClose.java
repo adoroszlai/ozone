@@ -44,10 +44,12 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.protocol.RaftGroupId;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -59,18 +61,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.Rule;
-import org.junit.rules.Timeout;
 
 /**
  * Tests for Pipeline Closing.
  */
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
 public class TestPipelineClose {
-
-  /**
-    * Set a timeout for each test.
-    */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
   private MiniOzoneCluster cluster;
   private OzoneConfiguration conf;
@@ -85,7 +81,7 @@ public class TestPipelineClose {
    *
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
@@ -112,7 +108,7 @@ public class TestPipelineClose {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @After
+  @AfterEach
   public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -203,7 +199,7 @@ public class TestPipelineClose {
     }
   }
 
-  @Test
+  @RepeatedTest(20)
   public void testPipelineCloseWithLogFailure() throws IOException {
 
     EventQueue eventQ = (EventQueue) scm.getEventQueue();
