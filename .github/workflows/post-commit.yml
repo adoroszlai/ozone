@@ -38,6 +38,8 @@ jobs:
             maven-repo-
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestPipelineClose
+        env:
+          ITERATIONS: 10
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: always()
