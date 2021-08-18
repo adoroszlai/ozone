@@ -829,7 +829,9 @@ public class StateContext {
    * Return current heartbeat frequency in ms.
    */
   public long getHeartbeatFrequency() {
-    return heartbeatFrequency.get();
+    long freq = heartbeatFrequency.get();
+    LOG.info("ZZZ returning heartbeat freq. {}", freq);
+    return freq;
   }
 
   public void addEndpoint(InetSocketAddress endpoint) {
