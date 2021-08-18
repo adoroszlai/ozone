@@ -199,7 +199,7 @@ public class TestPipelineClose {
     }
   }
 
-  @RepeatedTest(20)
+  @RepeatedTest(200)
   public void testPipelineCloseWithLogFailure() throws IOException {
 
     EventQueue eventQ = (EventQueue) scm.getEventQueue();
