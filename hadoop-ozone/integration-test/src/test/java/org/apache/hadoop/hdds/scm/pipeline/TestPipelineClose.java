@@ -60,11 +60,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.junit.Rule;
-
 /**
  * Tests for Pipeline Closing.
  */
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
 public class TestPipelineClose {
 
   private MiniOzoneCluster cluster;
