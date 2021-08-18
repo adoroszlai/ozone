@@ -82,12 +82,12 @@ public class TestPipelineClose {
   @BeforeEach
   public void init() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
     conf.setTimeDuration(HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL, 1000,
         TimeUnit.MILLISECONDS);
     pipelineDestroyTimeoutInMillis = 1000;
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_DESTROY_TIMEOUT,
         pipelineDestroyTimeoutInMillis, TimeUnit.MILLISECONDS);
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
@@ -236,7 +236,7 @@ public class TestPipelineClose {
     xceiverRatis.handleNodeLogFailure(groupId, null);
 
     // verify SCM receives a pipeline action report "immediately"
-    Mockito.verify(pipelineActionTest, Mockito.timeout(5000))
+    Mockito.verify(pipelineActionTest, Mockito.timeout(100))
         .onMessage(
             actionCaptor.capture(),
             Mockito.any(EventPublisher.class));
