@@ -65,7 +65,6 @@ import org.junit.Rule;
 /**
  * Tests for Pipeline Closing.
  */
-@Timeout(value = 15, unit = TimeUnit.MINUTES)
 public class TestPipelineClose {
 
   private MiniOzoneCluster cluster;
