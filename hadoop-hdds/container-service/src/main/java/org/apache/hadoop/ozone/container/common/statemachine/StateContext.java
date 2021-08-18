@@ -822,6 +822,7 @@ public class StateContext {
 
   public void configureHeartbeatFrequency(){
     heartbeatFrequency.set(getScmHeartbeatInterval(conf));
+    LOG.info("ZZZ set heartbeat freq. to {}", heartbeatFrequency.get());
   }
 
   /**
