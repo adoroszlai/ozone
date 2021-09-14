@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.ratis.statemachine.SnapshotInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -37,6 +39,10 @@ import static org.apache.hadoop.ozone.OzoneConsts.TRANSACTION_INFO_KEY;
  * operation in DB.
  */
 public class SCMHADBTransactionBufferImpl implements SCMHADBTransactionBuffer {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SCMHADBTransactionBufferImpl.class);
+
   private final StorageContainerManager scm;
   private SCMMetadataStore metadataStore;
   private BatchOperation currentBatchOperation;
@@ -72,6 +78,7 @@ public class SCMHADBTransactionBufferImpl implements SCMHADBTransactionBuffer {
           "Updating DB buffer transaction info by an older transaction info, "
           + "current: " + this.latestTrxInfo + ", updating to: " + info);
     }
+    LOG.info("ZZZ Update latest tx info: {} -> {}", latestTrxInfo, info);
     this.latestTrxInfo = info;
   }
 
@@ -129,6 +136,7 @@ public class SCMHADBTransactionBufferImpl implements SCMHADBTransactionBuffer {
               .build();
     }
     latestSnapshot = latestTrxInfo.toSnapshotInfo();
+    LOG.info("ZZZ Init latest tx info: {}", latestTrxInfo);
   }
 
   @Override
