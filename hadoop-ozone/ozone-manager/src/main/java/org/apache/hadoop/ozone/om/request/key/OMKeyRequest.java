@@ -31,6 +31,7 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -126,9 +127,10 @@ public abstract class OMKeyRequest extends OMClientRequest {
     String remoteUser = getRemoteUser().getShortUserName();
     List<AllocatedBlock> allocatedBlocks;
     try {
-      allocatedBlocks = scmClient.getBlockClient()
-          .allocateBlock(scmBlockSize, numBlocks, replicationType,
-              replicationFactor, omID, excludeList);
+      allocatedBlocks = scmClient.getBlockClient().allocateBlock(scmBlockSize,
+          numBlocks, ReplicationConfig.fromTypeAndFactor(replicationType,
+              replicationFactor),
+          omID, excludeList);
     } catch (SCMException ex) {
       if (ex.getResult()
           .equals(SCMException.ResultCodes.SAFE_MODE_EXCEPTION)) {
@@ -395,7 +397,19 @@ public abstract class OMKeyRequest extends OMClientRequest {
             BUCKET_LOCK, volumeName, bucketName);
 
         bucketInfo = omMetadataManager.getBucketTable().get(
-            omMetadataManager.getBucketKey(volumeName, bucketName));
+            omMetadataManager.getBucketKey(volumeName,
+                bucketName));
+
+        // If bucket is symlink, resolveBucketLink to figure out real
+        // volume/bucket.
+        if (bucketInfo.isLink()) {
+          ResolvedBucket resolvedBucket = ozoneManager.resolveBucketLink(
+              Pair.of(keyArgs.getVolumeName(), keyArgs.getBucketName()));
+
+          bucketInfo = omMetadataManager.getBucketTable().get(
+              omMetadataManager.getBucketKey(resolvedBucket.realVolume(),
+                  resolvedBucket.realBucket()));
+        }
 
       } finally {
         if (acquireLock) {
@@ -438,9 +452,14 @@ public abstract class OMKeyRequest extends OMClientRequest {
       acquireLock = omMetadataManager.getLock().acquireReadLock(
           BUCKET_LOCK, volumeName, bucketName);
       try {
+
+        ResolvedBucket resolvedBucket = ozoneManager.resolveBucketLink(
+            Pair.of(keyArgs.getVolumeName(), keyArgs.getBucketName()));
+
         OmKeyInfo omKeyInfo = omMetadataManager.getOpenKeyTable().get(
-            omMetadataManager.getMultipartKey(volumeName, bucketName,
-                keyArgs.getKeyName(), keyArgs.getMultipartUploadID()));
+            omMetadataManager.getMultipartKey(resolvedBucket.realVolume(),
+                resolvedBucket.realBucket(), keyArgs.getKeyName(),
+                keyArgs.getMultipartUploadID()));
 
         if (omKeyInfo != null && omKeyInfo.getFileEncryptionInfo() != null) {
           newKeyArgs.setFileEncryptionInfo(

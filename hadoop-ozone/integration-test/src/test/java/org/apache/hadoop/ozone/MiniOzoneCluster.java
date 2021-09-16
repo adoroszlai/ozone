@@ -76,6 +76,11 @@ public interface MiniOzoneCluster {
   OzoneConfiguration getConf();
 
   /**
+   * Set the configuration for the MiniOzoneCluster.
+   */
+  void setConf(OzoneConfiguration newConf);
+
+  /**
    * Waits for the cluster to be ready, this call blocks till all the
    * configured {@link HddsDatanodeService} registers with
    * {@link StorageContainerManager}.
@@ -290,7 +295,7 @@ public interface MiniOzoneCluster {
     protected static final int DEFAULT_PIPELIME_LIMIT = 3;
     protected static final int DEFAULT_RATIS_RPC_TIMEOUT_SEC = 1;
 
-    protected final OzoneConfiguration conf;
+    protected OzoneConfiguration conf;
     protected String path;
 
     protected String clusterId;
@@ -334,6 +339,11 @@ public interface MiniOzoneCluster {
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
       setClusterId(UUID.randomUUID().toString());
+    }
+
+    public Builder setConf(OzoneConfiguration config) {
+      this.conf = config;
+      return this;
     }
 
     /**
