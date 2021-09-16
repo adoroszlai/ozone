@@ -37,8 +37,8 @@ import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.ozone.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Assert;
 
@@ -68,14 +68,14 @@ import static org.junit.Assert.fail;
  */
 public abstract class TestOzoneManagerHA {
 
-  private MiniOzoneOMHAClusterImpl cluster = null;
-  private ObjectStore objectStore;
-  private OzoneConfiguration conf;
-  private String clusterId;
-  private String scmId;
-  private String omId;
-  private String omServiceId;
-  private static int numOfOMs = 3;
+  private static MiniOzoneOMHAClusterImpl cluster = null;
+  private static ObjectStore objectStore;
+  private static OzoneConfiguration conf;
+  private static String clusterId;
+  private static String scmId;
+  private static String omId;
+  private static String omServiceId;
+  private static final int numOfOMs = 3;
   private static final int LOG_PURGE_GAP = 50;
   /* Reduce max number of retries to speed up unit test. */
   private static final int OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS = 5;
@@ -132,8 +132,8 @@ public abstract class TestOzoneManagerHA {
    *
    * @throws IOException
    */
-  @Before
-  public void init() throws Exception {
+  @BeforeClass
+  public static void init() throws Exception {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
@@ -161,9 +161,7 @@ public abstract class TestOzoneManagerHA {
 
     conf.setFromObject(omHAConfig);
 
-    /**
-     * config for key deleting service.
-     */
+    // config for key deleting service.
     conf.set(OZONE_BLOCK_DELETING_SERVICE_INTERVAL, "10s");
     conf.set(OZONE_KEY_DELETING_LIMIT_PER_TASK, "2");
     cluster = (MiniOzoneOMHAClusterImpl) MiniOzoneCluster.newOMHABuilder(conf)
@@ -181,8 +179,8 @@ public abstract class TestOzoneManagerHA {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @After
-  public void shutdown() {
+  @AfterClass
+  public static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
