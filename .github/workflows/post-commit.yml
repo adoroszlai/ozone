@@ -86,6 +86,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
       - name: Cache for maven dependencies
+        id: maven-cache
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
@@ -98,6 +99,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
       - name: List cache contents
+        if: steps.maven-cache.outputs.cache-hit == 'true'
         run: |
           cd ~/.m2/repository
           find * -name '*.jar' | sort
