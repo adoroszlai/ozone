@@ -115,9 +115,6 @@ jobs:
         uses: actions/checkout@v2
       - name: Execute tests
         run: |
-          pushd hadoop-ozone/dist/target/ozone-*
-          sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          popd
           ./hadoop-ozone/dev-support/checks/kubernetes.sh
       - name: Archive build results
         uses: actions/upload-artifact@v2
