@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.BlockOutputStream;
 import org.apache.hadoop.hdds.scm.storage.RatisBlockOutputStream;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClusterProvider;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -55,8 +57,10 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 import org.apache.ratis.protocol.exceptions.GroupMismatchException;
 import org.apache.ratis.protocol.exceptions.RaftRetryFailureException;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -72,27 +76,21 @@ public class TestBlockOutputStreamWithFailures {
   @Rule
   public Timeout timeout = Timeout.seconds(300);
 
+  private static MiniOzoneClusterProvider clusterProvider;
   private MiniOzoneCluster cluster;
-  private OzoneConfiguration conf = new OzoneConfiguration();
+  private static OzoneConfiguration conf = new OzoneConfiguration();
   private OzoneClient client;
   private ObjectStore objectStore;
-  private int chunkSize;
-  private int flushSize;
-  private int maxFlushSize;
-  private int blockSize;
-  private String volumeName;
-  private String bucketName;
+  private static int chunkSize;
+  private static int flushSize;
+  private static int maxFlushSize;
+  private static int blockSize;
+  private static String volumeName;
+  private static String bucketName;
   private String keyString;
 
-  /**
-   * Create a MiniDFSCluster for testing.
-   * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true
-   *
-   * @throws IOException
-   */
-  @Before
-  public void init() throws Exception {
+  @BeforeClass
+  public static void createClusterProvider() throws Exception {
     chunkSize = 100;
     flushSize = 2 * chunkSize;
     maxFlushSize = 2 * flushSize;
@@ -128,12 +126,19 @@ public class TestBlockOutputStreamWithFailures {
     ratisClientConfig.setWatchRequestTimeout(Duration.ofSeconds(30));
     conf.setFromObject(ratisClientConfig);
 
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(7)
+    MiniOzoneCluster.Builder builder = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(7)
         .setTotalPipelineNumLimit(10).setBlockSize(blockSize)
         .setChunkSize(chunkSize).setStreamBufferFlushSize(flushSize)
         .setStreamBufferMaxSize(maxFlushSize)
-        .setStreamBufferSizeUnit(StorageUnit.BYTES).build();
-    cluster.waitForClusterToBeReady();
+        .setStreamBufferSizeUnit(StorageUnit.BYTES);
+    clusterProvider = new MiniOzoneClusterProvider(conf, builder, 8);
+  }
+
+  @Before
+  public void createCluster() throws IOException, InterruptedException,
+      TimeoutException {
+    cluster = clusterProvider.provide();
     cluster.waitForPipelineTobeReady(HddsProtos.ReplicationFactor.THREE,
             180000);
     //the easiest way to create an open container is creating a key
@@ -150,14 +155,16 @@ public class TestBlockOutputStreamWithFailures {
     return UUID.randomUUID().toString();
   }
 
-  /**
-   * Shutdown MiniDFSCluster.
-   */
   @After
-  public void shutdown() {
+  public void destroyCluster() throws InterruptedException, IOException {
     if (cluster != null) {
-      cluster.shutdown();
+      clusterProvider.destroy(cluster);
     }
+  }
+
+  @AfterClass
+  public static void shutdown() throws InterruptedException {
+    clusterProvider.shutdown();
   }
 
   @Test
