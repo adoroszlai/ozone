@@ -65,11 +65,11 @@ _install_tool() {
 }
 
 install_bats() {
-  _install_tool bats bats-core-1.2.1/bin
+  _install_tool bats bats-core-1.2.3/bin
 }
 
 _install_bats() {
-  curl -LSs https://github.com/bats-core/bats-core/archive/v1.2.1.tar.gz | tar -xz -f -
+  curl -LSs https://github.com/bats-core/bats-core/archive/v1.2.3.tar.gz | tar -xz -f -
 }
 
 install_k3s() {
@@ -77,7 +77,7 @@ install_k3s() {
 }
 
 _install_k3s() {
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.21.2+k3s1" sh -
+  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.25.2+k3s1" sh -
   sudo chmod a+r $KUBECONFIG
 }
 
@@ -101,7 +101,7 @@ install_hugo() {
 }
 
 _install_hugo() {
-  : ${HUGO_VERSION:=0.83.1}
+  : ${HUGO_VERSION:=0.88.2}
 
   local os=$(uname -s)
   local arch=$(uname -m)
