@@ -82,7 +82,7 @@ function get_changed_files() {
 }
 
 function set_outputs_run_everything_and_exit() {
-    BASIC_CHECKS="author bats checkstyle docs findbugs rat unit"
+    BASIC_CHECKS="author bats checkstyle docs rat"
     compose_tests_needed=true
     dependency_check_needed=true
     integration_tests_needed=true
