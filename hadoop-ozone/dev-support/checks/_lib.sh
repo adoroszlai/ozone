@@ -47,7 +47,7 @@ _install_tool() {
       echo "Installed ${tool} in ${dir}"
     else
       echo "Failed to install ${tool}"
-      return 1
+      exit 1
     fi
     popd
   fi
