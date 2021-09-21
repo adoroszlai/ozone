@@ -1,0 +1,51 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: update-maven-cache
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/maven-cache-update.yml'
+      - 'pom.xml'
+      - '**/pom.xml'
+  schedule:
+    - cron: 42 6,18 * * *
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
+jobs:
+  update:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+      - name: Cache for Maven dependencies
+        id: maven-cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-v2
+          # Build cache from scratch, no restore-keys
+      - name: Setup java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Download dependencies
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        run: |
+          mvn -V -B --no-transfer-progress -DskipTests -Dskip.npx -Dskip.installnpx -DexcludeGroupIds=org.apache.ozone package dependency:go-offline
+          rm -rf ~/.m2/repository/org/apache/ozone

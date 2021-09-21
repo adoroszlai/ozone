@@ -91,6 +91,7 @@ jobs:
           path: ~/.m2/repository
           key: maven-repo-${{ hashFiles('**/pom.xml') }}-${{ matrix.java }}
           restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Setup java
@@ -131,6 +132,7 @@ jobs:
           path: ~/.m2/repository
           key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}
           restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
             maven-repo-${{ hashFiles('**/pom.xml') }}-8
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
@@ -281,6 +283,7 @@ jobs:
           path: ~/.m2/repository
           key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.profile }}
           restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
             maven-repo-${{ hashFiles('**/pom.xml') }}-8
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
@@ -319,6 +322,7 @@ jobs:
           path: ~/.m2/repository
           key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ github.job }}
           restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
             maven-repo-${{ hashFiles('**/pom.xml') }}-8
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
