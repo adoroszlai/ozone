@@ -97,6 +97,10 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: List cache contents
+        run: |
+          cd ~/.m2/repository
+          find * -name '*.jar' | sort
       - name: Run a full build
         run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist
       - name: Delete temporary build artifacts before caching
