@@ -38,9 +38,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-v2
+          key: maven-repo-v2-${{ hashFiles('**/pom.xml') }}
           # Build cache from scratch, no restore-keys
       - name: Setup java
+        if: steps.maven-cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v1
         with:
           java-version: 8

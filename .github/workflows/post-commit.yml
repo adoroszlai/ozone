@@ -89,10 +89,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-${{ matrix.java }}
+          key: maven-repo-${{ github.sha }}-${{ github.job }}-${{ matrix.java }}
           restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
-            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-
             maven-repo-
       - name: Setup java
         uses: actions/setup-java@v1
@@ -130,11 +130,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}
+          key: maven-repo-${{ github.sha }}-${{ github.job }}-${{ matrix.check }}
           restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-
             maven-repo-
         if: ${{ !contains('author,bats,docs', matrix.check) }}
       - name: Execute tests
@@ -281,11 +280,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.profile }}
+          key: maven-repo-${{ github.sha }}-${{ github.job }}-${{ matrix.profile }}
           restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-
             maven-repo-
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
@@ -320,11 +318,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ github.job }}
+          key: maven-repo-${{ github.sha }}-${{ github.job }}
           restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-v2
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-${{ hashFiles('**/pom.xml') }}
+            maven-repo-v2-
             maven-repo-
       - name: Download artifacts
         uses: actions/download-artifact@v2
