@@ -49,4 +49,13 @@ jobs:
         if: steps.maven-cache.outputs.cache-hit != 'true'
         run: |
           mvn -V -B --no-transfer-progress -DskipTests -Dskip.npx -Dskip.installnpx -DexcludeGroupIds=org.apache.ozone package dependency:go-offline
-          rm -rf ~/.m2/repository/org/apache/ozone
+      - name: Avoid caching Ozone artifacts
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -fr ~/.m2/repository/org/apache/ozone
+      - name: Print the contents of the cache for debug
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ~/.m2/repository
+          du -sh .
+          find * -type f | sort
