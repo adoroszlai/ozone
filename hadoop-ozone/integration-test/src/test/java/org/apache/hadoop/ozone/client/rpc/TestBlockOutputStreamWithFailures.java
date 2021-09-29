@@ -107,6 +107,8 @@ public class TestBlockOutputStreamWithFailures {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 10, TimeUnit.SECONDS);
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 10, TimeUnit.SECONDS);
     conf.setQuietMode(false);
+    conf.setStorageSize(ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE, 128,
+        StorageUnit.MB);
     conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, 4,
         StorageUnit.MB);
     conf.setInt(ScmConfigKeys.OZONE_DATANODE_PIPELINE_LIMIT, 2);
