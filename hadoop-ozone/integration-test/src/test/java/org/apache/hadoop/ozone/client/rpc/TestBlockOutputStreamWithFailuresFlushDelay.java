@@ -129,7 +129,7 @@ public class TestBlockOutputStreamWithFailuresFlushDelay {
     ratisClientConfig.setWatchRequestTimeout(Duration.ofSeconds(30));
     conf.setFromObject(ratisClientConfig);
 
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3)
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(7)
         .setTotalPipelineNumLimit(10).setBlockSize(blockSize)
         .setChunkSize(chunkSize).setStreamBufferFlushSize(flushSize)
         .setStreamBufferMaxSize(maxFlushSize)
