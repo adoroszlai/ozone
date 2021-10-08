@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDirectoryInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -67,7 +68,7 @@ public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
 
   @BeforeClass
   public static void init() {
-    setIsBucketFSOptimized(true);
+    setBucketLayout(BucketLayout.FILE_SYSTEM_OPTIMIZED);
   }
 
   public TestOzoneFileSystemWithFSO(boolean setDefaultFs,
@@ -438,7 +439,7 @@ public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
     // wait for DB updates
     GenericTestUtils.waitFor(() -> {
       try {
-        return omMgr.getOpenKeyTable().isEmpty();
+        return omMgr.getOpenKeyTable(getBucketLayout()).isEmpty();
       } catch (IOException e) {
         LOG.error("DB failure!", e);
         Assert.fail("DB failure!");
@@ -475,5 +476,10 @@ public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
     Assert.assertEquals("Wrong representation!",
         dbKey + ":" + dirInfo.getObjectID(), dirInfo.toString());
     return dirInfo.getObjectID();
+  }
+
+  @Override
+  public BucketLayout getBucketLayout() {
+    return BucketLayout.FILE_SYSTEM_OPTIMIZED;
   }
 }

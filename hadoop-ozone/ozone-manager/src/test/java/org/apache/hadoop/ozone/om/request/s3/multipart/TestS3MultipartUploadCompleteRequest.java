@@ -89,9 +89,10 @@ public class TestS3MultipartUploadCompleteRequest
 
     List<Part> partList = new ArrayList<>();
 
-    String partName = getPartName(volumeName, bucketName, keyName, clientID);
+    String partName = getPartName(volumeName, bucketName, keyName,
+        multipartUploadID, 1);
     partList.add(Part.newBuilder().setPartName(partName).setPartNumber(1)
-            .build());
+        .build());
 
     OMRequest completeMultipartRequest = doPreExecuteCompleteMPU(volumeName,
         bucketName, keyName, multipartUploadID, partList);
@@ -109,7 +110,8 @@ public class TestS3MultipartUploadCompleteRequest
     String multipartKey = getMultipartKey(volumeName, bucketName, keyName,
             multipartUploadID);
 
-    Assert.assertNull(omMetadataManager.getOpenKeyTable().get(multipartKey));
+    Assert.assertNull(
+        omMetadataManager.getOpenKeyTable(getBucketLayout()).get(multipartKey));
     Assert.assertNull(
         omMetadataManager.getMultipartInfoTable().get(multipartKey));
     Assert.assertNotNull(omMetadataManager.getKeyTable().get(
@@ -153,9 +155,14 @@ public class TestS3MultipartUploadCompleteRequest
 
     List<Part> partList = new ArrayList<>();
 
-    String partName = getPartName(volumeName, bucketName, keyName, clientID);
+    String partName= getPartName(volumeName, bucketName, keyName,
+        multipartUploadID, 23);
+
     partList.add(Part.newBuilder().setPartName(partName).setPartNumber(23)
             .build());
+
+    partName = getPartName(volumeName, bucketName, keyName,
+        multipartUploadID, 1);
     partList.add(Part.newBuilder().setPartName(partName).setPartNumber(1)
             .build());
 
@@ -262,11 +269,12 @@ public class TestS3MultipartUploadCompleteRequest
   }
 
   private String getPartName(String volumeName, String bucketName,
-      String keyName, long clientID) throws IOException {
+      String keyName, String uploadID, int partNumber) {
 
     String dbOzoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
-            keyName);
-    return dbOzoneKey + clientID;
+        keyName);
+    return S3MultipartUploadCommitPartRequest.getPartName(dbOzoneKey, uploadID,
+        partNumber);
   }
 
   protected String getOzoneDBKey(String volumeName, String bucketName,

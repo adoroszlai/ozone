@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.util.UUID;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,6 +54,16 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
 
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);
+
+    OMRequest preExecuteRequest =
+        omBucketSetPropertyRequest.preExecute(ozoneManager);
+    // When preExecute() of bucket setProperty,
+    // the new modification time is greater than origin one.
+    long originModTime = omRequest.getSetBucketPropertyRequest()
+        .getModificationTime();
+    long newModTime = preExecuteRequest.getSetBucketPropertyRequest()
+        .getModificationTime();
+    Assert.assertTrue(newModTime > originModTime);
 
     // As user info gets added.
     Assert.assertNotEquals(omRequest,
@@ -140,16 +151,23 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
 
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);
-    int countException = 0;
-    try {
-      omBucketSetPropertyRequest.validateAndUpdateCache(ozoneManager, 1,
-          ozoneManagerDoubleBufferHelper);
-    } catch (IllegalArgumentException ex) {
-      countException++;
-      GenericTestUtils.assertExceptionContains(
-          "Total buckets quota in this volume should not be " +
-              "greater than volume quota", ex);
-    }
-    Assert.assertEquals(1, countException);
+
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
+        .captureLogs(LogFactory.getLog(OMBucketSetPropertyRequest.class));
+
+    OMClientResponse omClientResponse = omBucketSetPropertyRequest
+        .validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
+
+    //capture the error log
+    Assert.assertTrue(logs.getOutput().contains(
+        "Setting bucket property failed for bucket"));
+
+    Assert.assertFalse(omClientResponse.getOMResponse().getSuccess());
+    Assert.assertEquals(omClientResponse.getOMResponse().getStatus(),
+        OzoneManagerProtocolProtos.Status.QUOTA_EXCEEDED);
+    Assert.assertTrue(omClientResponse.getOMResponse().getMessage().
+        contains("Total buckets quota in this volume " +
+            "should not be greater than volume quota"));
   }
 }

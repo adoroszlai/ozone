@@ -36,19 +36,21 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.StringUtils.string2Bytes;
 import static org.apache.hadoop.hdds.client.ReplicationFactor.THREE;
 
-import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.request.file.OMFileRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -297,9 +299,16 @@ public class TestOzoneClientMultipartUploadWithFSO {
     Assert.assertNotNull(commitUploadPartInfo);
     Assert.assertNotNull(commitUploadPartInfo.getPartName());
 
-    // PartName should be different from old part Name.
-    Assert.assertNotEquals("Part names should be different", partName,
-            commitUploadPartInfo.getPartName());
+    // PartName should be same from old part Name.
+    // AWS S3 for same content generates same partName during upload part.
+    // In AWS S3 ETag is generated from md5sum. In Ozone right now we
+    // don't do this. For now to make things work for large file upload
+    // through aws s3 cp, the partName are generated in a predictable fashion.
+    // So, when a part is override partNames will still be same irrespective
+    // of content in ozone s3. This will make S3 Mpu completeMPU pass when
+    // comparing part names and large file uploads work using aws cp.
+    Assert.assertEquals("Part names should be same", partName,
+        commitUploadPartInfo.getPartName());
   }
 
   @Test
@@ -549,6 +558,12 @@ public class TestOzoneClientMultipartUploadWithFSO {
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
     OzoneBucket bucket = volume.getBucket(bucketName);
+    OzoneManager ozoneManager = cluster.getOzoneManager();
+    String buckKey = ozoneManager.getMetadataManager()
+        .getBucketKey(volume.getName(), bucket.getName());
+    OmBucketInfo buckInfo =
+        ozoneManager.getMetadataManager().getBucketTable().get(buckKey);
+    BucketLayout bucketLayout = buckInfo.getBucketLayout();
 
     String uploadID = initiateMultipartUpload(bucket, keyName, STAND_ALONE,
         ONE);
@@ -565,7 +580,8 @@ public class TestOzoneClientMultipartUploadWithFSO {
     String multipartOpenKey =
         getMultipartOpenKey(uploadID, volumeName, bucketName, keyName,
             metadataMgr);
-    OmKeyInfo omKeyInfo = metadataMgr.getOpenKeyTable().get(multipartOpenKey);
+    OmKeyInfo omKeyInfo =
+        metadataMgr.getOpenKeyTable(bucketLayout).get(multipartOpenKey);
     OmMultipartKeyInfo omMultipartKeyInfo =
         metadataMgr.getMultipartInfoTable().get(multipartKey);
     Assert.assertNull(omKeyInfo);
@@ -914,13 +930,20 @@ public class TestOzoneClientMultipartUploadWithFSO {
   private String verifyUploadedPart(String volumeName, String bucketName,
       String keyName, String uploadID, String partName,
       OMMetadataManager metadataMgr) throws IOException {
+    OzoneManager ozoneManager = cluster.getOzoneManager();
+    String buckKey = ozoneManager.getMetadataManager()
+        .getBucketKey(volumeName, bucketName);
+    OmBucketInfo buckInfo =
+        ozoneManager.getMetadataManager().getBucketTable().get(buckKey);
+    BucketLayout bucketLayout = buckInfo.getBucketLayout();
     String multipartOpenKey =
         getMultipartOpenKey(uploadID, volumeName, bucketName, keyName,
             metadataMgr);
 
     String multipartKey = metadataMgr.getMultipartKey(volumeName, bucketName,
         keyName, uploadID);
-    OmKeyInfo omKeyInfo = metadataMgr.getOpenKeyTable().get(multipartOpenKey);
+    OmKeyInfo omKeyInfo =
+        metadataMgr.getOpenKeyTable(bucketLayout).get(multipartOpenKey);
     OmMultipartKeyInfo omMultipartKeyInfo =
         metadataMgr.getMultipartInfoTable().get(multipartKey);
 
@@ -1019,6 +1042,10 @@ public class TestOzoneClientMultipartUploadWithFSO {
     byte[] chars = new byte[size];
     Arrays.fill(chars, val);
     return chars;
+  }
+
+  public BucketLayout getBucketLayout() {
+    return BucketLayout.FILE_SYSTEM_OPTIMIZED;
   }
 
 }

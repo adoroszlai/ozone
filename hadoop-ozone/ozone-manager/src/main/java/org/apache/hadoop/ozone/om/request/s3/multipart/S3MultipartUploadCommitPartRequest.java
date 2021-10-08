@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.request.s3.multipart;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.OMAction;
@@ -166,7 +167,8 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       // Set the UpdateID to current transactionLogIndex
       omKeyInfo.setUpdateID(trxnLogIndex, ozoneManager.isRatisEnabled());
 
-      partName = ozoneKey + clientID;
+      int partNumber = keyArgs.getMultipartNumber();
+      partName = getPartName(ozoneKey, uploadID, partNumber);
 
       if (multipartKeyInfo == null) {
         // This can occur when user started uploading part by the time commit
@@ -180,7 +182,6 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
             OMException.ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       }
 
-      int partNumber = keyArgs.getMultipartNumber();
       oldPartKeyInfo = multipartKeyInfo.getPartKeyInfo(partNumber);
 
       // Build this multipart upload part info.
@@ -212,7 +213,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
           new CacheValue<>(Optional.of(multipartKeyInfo),
               trxnLogIndex));
 
-      omMetadataManager.getOpenKeyTable().addCacheEntry(
+      omMetadataManager.getOpenKeyTable(getBucketLayout()).addCacheEntry(
           new CacheKey<>(openKey),
           new CacheValue<>(Optional.absent(), trxnLogIndex));
 
@@ -259,6 +260,12 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
     return omClientResponse;
   }
 
+  @VisibleForTesting
+  public static String getPartName(String ozoneKey, String uploadID,
+      long partNumber) {
+    return ozoneKey + "-" + uploadID + "-" + partNumber;
+  }
+
   @SuppressWarnings("checkstyle:ParameterNumber")
   protected S3MultipartUploadCommitPartResponse getOmClientResponse(
       OzoneManager ozoneManager,
@@ -275,7 +282,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
   protected OmKeyInfo getOmKeyInfo(OMMetadataManager omMetadataManager,
       String openKey, String keyName) throws IOException {
 
-    return omMetadataManager.getOpenKeyTable().get(openKey);
+    return omMetadataManager.getOpenKeyTable(getBucketLayout()).get(openKey);
   }
 
   protected String getOpenKey(String volumeName, String bucketName,

@@ -18,12 +18,24 @@
 package org.apache.hadoop.ozone.om.ratis.utils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.protobuf.ServiceException;
+import java.io.File;
+import java.nio.file.Paths;
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.utils.HAUtils;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.codec.OMDBDefinition;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.exceptions.OMLeaderNotReadyException;
+import org.apache.hadoop.ozone.om.exceptions.OMNotLeaderException;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer.RaftServerStatus;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
@@ -72,6 +84,9 @@ import org.apache.hadoop.ozone.om.request.s3.security.S3RevokeSecretRequest;
 import org.apache.hadoop.ozone.om.request.security.OMCancelDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMGetDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.security.OMRenewDelegationTokenRequest;
+import org.apache.hadoop.ozone.om.request.upgrade.OMCancelPrepareRequest;
+import org.apache.hadoop.ozone.om.request.upgrade.OMFinalizeUpgradeRequest;
+import org.apache.hadoop.ozone.om.request.upgrade.OMPrepareRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
@@ -84,11 +99,17 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.rocksdb.RocksDBException;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_DIR;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_DIR;
 
 /**
  * Utility class used by OzoneManager HA.
@@ -98,6 +119,9 @@ public final class OzoneManagerRatisUtils {
   // TODO: Temporary workaround for OM upgrade path and will be replaced once
   //  upgrade HDDS-3698 story reaches consensus.
   private static boolean isBucketFSOptimized = false;
+
+  private static final Logger LOG = LoggerFactory
+      .getLogger(OzoneManagerRatisUtils.class);
 
   private OzoneManagerRatisUtils() {
   }
@@ -118,8 +142,18 @@ public final class OzoneManagerRatisUtils {
    * @return OMClientRequest
    * @throws IOException
    */
-  public static OMClientRequest createClientRequest(OMRequest omRequest) {
+  public static OMClientRequest createClientRequest(OMRequest omRequest,
+      OzoneManager ozoneManager) {
+
+    // Handling of exception by createClientRequest(OMRequest, OzoneManger):
+    // Either the code will take FSO or non FSO path, both classes has a
+    // validateAndUpdateCache() function which also contains
+    // validateBucketAndVolume() function which validates bucket and volume and
+    // throws necessary exceptions if required. validateAndUpdateCache()
+    // function has catch block which catches the exception if required and
+    // handles it appropriately.
     Type cmdType = omRequest.getCmdType();
+    OzoneManagerProtocolProtos.KeyArgs keyArgs;
     switch (cmdType) {
     case CreateVolume:
       return new OMVolumeCreateRequest(omRequest);
@@ -146,41 +180,55 @@ public final class OzoneManagerRatisUtils {
     case SetBucketProperty:
       return new OMBucketSetPropertyRequest(omRequest);
     case AllocateBlock:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getAllocateBlockRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMAllocateBlockRequestWithFSO(omRequest);
       }
       return new OMAllocateBlockRequest(omRequest);
     case CreateKey:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCreateKeyRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMKeyCreateRequestWithFSO(omRequest);
       }
       return new OMKeyCreateRequest(omRequest);
     case CommitKey:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCommitKeyRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMKeyCommitRequestWithFSO(omRequest);
       }
       return new OMKeyCommitRequest(omRequest);
     case DeleteKey:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getDeleteKeyRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMKeyDeleteRequestWithFSO(omRequest);
       }
       return new OMKeyDeleteRequest(omRequest);
     case DeleteKeys:
       return new OMKeysDeleteRequest(omRequest);
     case RenameKey:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getRenameKeyRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMKeyRenameRequestWithFSO(omRequest);
       }
       return new OMKeyRenameRequest(omRequest);
     case RenameKeys:
       return new OMKeysRenameRequest(omRequest);
     case CreateDirectory:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCreateDirectoryRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMDirectoryCreateRequestWithFSO(omRequest);
       }
       return new OMDirectoryCreateRequest(omRequest);
     case CreateFile:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCreateFileRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new OMFileCreateRequestWithFSO(omRequest);
       }
       return new OMFileCreateRequest(omRequest);
@@ -189,29 +237,37 @@ public final class OzoneManagerRatisUtils {
     case PurgePaths:
       return new OMPathsPurgeRequestWithFSO(omRequest);
     case InitiateMultiPartUpload:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getInitiateMultiPartUploadRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new S3InitiateMultipartUploadRequestWithFSO(omRequest);
       }
       return new S3InitiateMultipartUploadRequest(omRequest);
     case CommitMultiPartUpload:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCommitMultiPartUploadRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new S3MultipartUploadCommitPartRequestWithFSO(omRequest);
       }
       return new S3MultipartUploadCommitPartRequest(omRequest);
     case AbortMultiPartUpload:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getAbortMultiPartUploadRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new S3MultipartUploadAbortRequestWithFSO(omRequest);
       }
       return new S3MultipartUploadAbortRequest(omRequest);
     case CompleteMultiPartUpload:
-      if (isBucketFSOptimized()) {
+      keyArgs = omRequest.getCompleteMultiPartUploadRequest().getKeyArgs();
+      if (isBucketFSOptimized(keyArgs.getVolumeName(), keyArgs.getBucketName(),
+          ozoneManager)) {
         return new S3MultipartUploadCompleteRequestWithFSO(omRequest);
       }
       return new S3MultipartUploadCompleteRequest(omRequest);
     case AddAcl:
     case RemoveAcl:
     case SetAcl:
-      return getOMAclRequest(omRequest);
+      return getOMAclRequest(omRequest, ozoneManager);
     case GetDelegationToken:
       return new OMGetDelegationTokenRequest(omRequest);
     case CancelDelegationToken:
@@ -222,6 +278,12 @@ public final class OzoneManagerRatisUtils {
       return new S3GetSecretRequest(omRequest);
     case RecoverTrash:
       return new OMTrashRecoverRequest(omRequest);
+    case FinalizeUpgrade:
+      return new OMFinalizeUpgradeRequest(omRequest);
+    case Prepare:
+      return new OMPrepareRequest(omRequest);
+    case CancelPrepare:
+      return new OMCancelPrepareRequest(omRequest);
     case RevokeS3Secret:
       return new S3RevokeSecretRequest(omRequest);
     default:
@@ -230,7 +292,8 @@ public final class OzoneManagerRatisUtils {
     }
   }
 
-  private static OMClientRequest getOMAclRequest(OMRequest omRequest) {
+  private static OMClientRequest getOMAclRequest(OMRequest omRequest,
+      OzoneManager ozoneManager) {
     Type cmdType = omRequest.getCmdType();
     if (Type.AddAcl == cmdType) {
       ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
@@ -239,10 +302,13 @@ public final class OzoneManagerRatisUtils {
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketAddAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
-        if (isBucketFSOptimized()){
+        OMKeyAddAclRequest aclReq = new OMKeyAddAclRequest(omRequest);
+        BucketLayout bucketLayout = aclReq.getBucketLayout(ozoneManager);
+        if (BucketLayout.FILE_SYSTEM_OPTIMIZED
+            .equals(bucketLayout)) {
           return new OMKeyAddAclRequestWithFSO(omRequest);
         }
-        return new OMKeyAddAclRequest(omRequest);
+        return aclReq;
       } else {
         return new OMPrefixAddAclRequest(omRequest);
       }
@@ -253,10 +319,13 @@ public final class OzoneManagerRatisUtils {
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketRemoveAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
-        if (isBucketFSOptimized()){
+        OMKeyRemoveAclRequest aclReq = new OMKeyRemoveAclRequest(omRequest);
+        BucketLayout bucketLayout = aclReq.getBucketLayout(ozoneManager);
+        if (BucketLayout.FILE_SYSTEM_OPTIMIZED
+            .equals(bucketLayout)) {
           return new OMKeyRemoveAclRequestWithFSO(omRequest);
         }
-        return new OMKeyRemoveAclRequest(omRequest);
+        return aclReq;
       } else {
         return new OMPrefixRemoveAclRequest(omRequest);
       }
@@ -267,10 +336,13 @@ public final class OzoneManagerRatisUtils {
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketSetAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
-        if (isBucketFSOptimized()){
+        OMKeySetAclRequest aclReq = new OMKeySetAclRequest(omRequest);
+        BucketLayout bucketLayout = aclReq.getBucketLayout(ozoneManager);
+        if (BucketLayout.FILE_SYSTEM_OPTIMIZED
+            .equals(bucketLayout)) {
           return new OMKeySetAclRequestWithFSO(omRequest);
         }
-        return new OMKeySetAclRequest(omRequest);
+        return aclReq;
       } else {
         return new OMPrefixSetAclRequest(omRequest);
       }
@@ -338,6 +410,121 @@ public final class OzoneManagerRatisUtils {
    */
   public static boolean isBucketFSOptimized() {
     return isBucketFSOptimized;
+  }
+
+  /**
+   * Get the local directory where ratis logs will be stored.
+   */
+  public static String getOMRatisDirectory(ConfigurationSource conf) {
+    String storageDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_STORAGE_DIR);
+
+    if (Strings.isNullOrEmpty(storageDir)) {
+      storageDir = ServerUtils.getDefaultRatisDirectory(conf);
+    }
+    return storageDir;
+  }
+
+  /**
+   * Get the local directory where ratis snapshots will be stored.
+   */
+  public static String getOMRatisSnapshotDirectory(ConfigurationSource conf) {
+    String snapshotDir = conf.get(OZONE_OM_RATIS_SNAPSHOT_DIR);
+
+    // If ratis snapshot directory is not set, fall back to ozone.metadata.dir.
+    if (Strings.isNullOrEmpty(snapshotDir)) {
+      LOG.warn("{} is not configured. Falling back to {} config",
+          OZONE_OM_RATIS_SNAPSHOT_DIR, OZONE_METADATA_DIRS);
+      File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
+      snapshotDir = Paths.get(metaDirPath.getPath(),
+          OM_RATIS_SNAPSHOT_DIR).toString();
+    }
+    return snapshotDir;
+  }
+
+  public static void checkLeaderStatus(RaftServerStatus raftServerStatus,
+      RaftPeerId raftPeerId) throws ServiceException {
+    switch (raftServerStatus) {
+    case LEADER_AND_READY: return;
+
+    case LEADER_AND_NOT_READY: throw createLeaderNotReadyException(raftPeerId);
+
+    case NOT_LEADER: throw createNotLeaderException(raftPeerId);
+
+    default: throw new IllegalStateException(
+        "Unknown Ratis Server state: " + raftServerStatus);
+    }
+  }
+
+  private static ServiceException createNotLeaderException(
+      RaftPeerId raftPeerId) {
+
+    // TODO: Set suggest leaderID. Right now, client is not using suggest
+    // leaderID. Need to fix this.
+
+    OMNotLeaderException notLeaderException =
+        new OMNotLeaderException(raftPeerId);
+
+    LOG.debug(notLeaderException.getMessage());
+
+    return new ServiceException(notLeaderException);
+  }
+
+  private static ServiceException createLeaderNotReadyException(
+      RaftPeerId raftPeerId) {
+
+    OMLeaderNotReadyException leaderNotReadyException =
+        new OMLeaderNotReadyException(raftPeerId.toString() + " is Leader " +
+            "but not ready to process request yet.");
+
+    LOG.debug(leaderNotReadyException.getMessage());
+
+    return new ServiceException(leaderNotReadyException);
+  }
+
+  /**
+   * All the client requests are executed through
+   * OzoneManagerStateMachine#runCommand function and ensures sequential
+   * execution path.
+   * Below is the call trace to perform OM client request operation:
+   * OzoneManagerStateMachine#applyTransaction ->
+   * OzoneManagerStateMachine#runCommand ->
+   * OzoneManagerRequestHandler#handleWriteRequest ->
+   * OzoneManagerRatisUtils#createClientRequest ->
+   * OzoneManagerRatisUtils#getOmBucketInfo ->
+   * omMetadataManager().getBucketTable().get(buckKey)
+   */
+
+  private static OmBucketInfo getOmBucketInfo(OzoneManager ozoneManager,
+      OmBucketInfo buckInfo, String volName, String buckName) {
+    String buckKey =
+        ozoneManager.getMetadataManager().getBucketKey(volName, buckName);
+    try {
+      buckInfo =
+          ozoneManager.getMetadataManager().getBucketTable().get(buckKey);
+    } catch (IOException e) {
+      LOG.debug("Failed to get the value for the key: " + buckKey);
+    }
+    return buckInfo;
+  }
+
+  private static BucketLayout getBucketLayout(OmBucketInfo buckInfo,
+      String volName, String buckName) {
+    if (buckInfo != null) {
+      return buckInfo.getBucketLayout();
+    } else {
+      LOG.error("Bucket not found: {}/{} ", volName, buckName);
+      // TODO: Handle bucket validation
+    }
+    return BucketLayout.LEGACY;
+  }
+
+  private static boolean isBucketFSOptimized(String volName, String buckName,
+      OzoneManager ozoneManager) {
+    BucketLayout bucketLayout = null;
+    OmBucketInfo buckInfo = null;
+    buckInfo = getOmBucketInfo(ozoneManager, buckInfo, volName, buckName);
+    bucketLayout = getBucketLayout(buckInfo, volName, buckName);
+    return BucketLayout.FILE_SYSTEM_OPTIMIZED.equals(bucketLayout);
   }
 
 }

@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.ContainerManagerV2;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -338,8 +338,7 @@ public final class TestHelper {
   }
 
   public static HddsDatanodeService getDatanodeService(OmKeyLocationInfo info,
-      MiniOzoneCluster cluster)
-      throws IOException {
+      MiniOzoneCluster cluster) throws IOException {
     DatanodeDetails dnDetails =  info.getPipeline().
         getFirstNode();
     return cluster.getHddsDatanodes().get(cluster.
@@ -360,7 +359,7 @@ public final class TestHelper {
   }
 
   public static int countReplicas(long containerID, MiniOzoneCluster cluster) {
-    ContainerManagerV2 containerManager = cluster.getStorageContainerManager()
+    ContainerManager containerManager = cluster.getStorageContainerManager()
         .getContainerManager();
     try {
       Set<ContainerReplica> replicas = containerManager
@@ -383,7 +382,6 @@ public final class TestHelper {
   public static void waitForReplicaCount(long containerID, int count,
       MiniOzoneCluster cluster) throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> countReplicas(containerID, cluster) == count,
-        1000, 30_000);
+        1000, 30000);
   }
-
 }

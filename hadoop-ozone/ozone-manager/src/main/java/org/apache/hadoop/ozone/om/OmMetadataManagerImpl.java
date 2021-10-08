@@ -71,6 +71,7 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.ozone.storage.proto
@@ -171,6 +172,26 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public static final String DELETED_DIR_TABLE = "deletedDirectoryTable";
   public static final String TRANSACTION_INFO_TABLE =
       "transactionInfoTable";
+  public static final String META_TABLE = "metaTable";
+
+  static final String[] ALL_TABLES = new String[] {
+      USER_TABLE,
+      VOLUME_TABLE,
+      BUCKET_TABLE,
+      KEY_TABLE,
+      DELETED_TABLE,
+      OPEN_KEY_TABLE,
+      MULTIPARTINFO_TABLE,
+      S3_SECRET_TABLE,
+      DELEGATION_TOKEN_TABLE,
+      PREFIX_TABLE,
+      TRANSACTION_INFO_TABLE,
+      DIRECTORY_TABLE,
+      FILE_TABLE,
+      DELETED_DIR_TABLE,
+      OPEN_FILE_TABLE,
+      META_TABLE
+  };
 
   private DBStore store;
 
@@ -191,6 +212,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table fileTable;
   private Table openFileTable;
   private Table transactionInfoTable;
+  private Table metaTable;
   private boolean isRatisEnabled;
   private boolean ignorePipelineinKey;
   private Table deletedDirTable;
@@ -258,10 +280,17 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   @Override
   public Table<String, OmKeyInfo> getKeyTable() {
+    // TODO: Refactor the below function by reading bucketLayout.
+    //  Jira: HDDS-5636
     if (OzoneManagerRatisUtils.isBucketFSOptimized()) {
       return fileTable;
     }
     return keyTable;
+  }
+
+  @Override
+  public Table<String, OmKeyInfo> getFileTable() {
+    return fileTable;
   }
 
   @Override
@@ -275,8 +304,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<String, OmKeyInfo> getOpenKeyTable() {
-    if (OzoneManagerRatisUtils.isBucketFSOptimized()) {
+  public Table getOpenKeyTable(BucketLayout bucketLayout) {
+    if (bucketLayout.equals(BucketLayout.FILE_SYSTEM_OPTIMIZED)) {
       return openFileTable;
     }
     return openKeyTable;
@@ -389,6 +418,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(OPEN_FILE_TABLE)
         .addTable(DELETED_DIR_TABLE)
         .addTable(TRANSACTION_INFO_TABLE)
+        .addTable(META_TABLE)
         .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec(true))
         .addCodec(RepeatedOmKeyInfo.class,
@@ -473,6 +503,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     transactionInfoTable = this.store.getTable(TRANSACTION_INFO_TABLE,
         String.class, TransactionInfo.class);
     checkTableStatus(transactionInfoTable, TRANSACTION_INFO_TABLE);
+
+    metaTable = this.store.getTable(META_TABLE, String.class, String.class);
+    checkTableStatus(metaTable, META_TABLE);
   }
 
   /**
@@ -1104,18 +1137,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
             Duration.of(openKeyExpireThresholdMS, ChronoUnit.MILLIS);
     List<String> expiredKeys = Lists.newArrayList();
 
-    try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
-                 keyValueTableIterator = getOpenKeyTable().iterator()) {
+    try (
+        TableIterator<String, ? extends KeyValue<String, OmKeyInfo>>
+            keyValueTableIterator = getOpenKeyTable(
+            getBucketLayout()).iterator()) {
 
       while (keyValueTableIterator.hasNext() && expiredKeys.size() < count) {
         KeyValue<String, OmKeyInfo> openKeyValue = keyValueTableIterator.next();
         String openKey = openKeyValue.getKey();
         OmKeyInfo openKeyInfo = openKeyValue.getValue();
 
-        Duration openKeyAge =
-                Duration.between(
-                        Instant.ofEpochMilli(openKeyInfo.getCreationTime()),
-                        Instant.now());
+        Duration openKeyAge = Duration
+            .between(Instant.ofEpochMilli(openKeyInfo.getCreationTime()),
+                Instant.now());
 
         if (openKeyAge.compareTo(expirationDuration) >= 0) {
           expiredKeys.add(openKey);
@@ -1207,6 +1241,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     return transactionInfoTable;
   }
 
+  @Override
+  public Table<String, String> getMetaTable() {
+    return metaTable;
+  }
+
   /**
    * Update store used by subclass.
    *
@@ -1261,5 +1300,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     openKey.append(OM_KEY_PREFIX).append(fileName);
     openKey.append(OM_KEY_PREFIX).append(uploadId);
     return openKey.toString();
+  }
+
+  public BucketLayout getBucketLayout() {
+    return BucketLayout.DEFAULT;
   }
 }

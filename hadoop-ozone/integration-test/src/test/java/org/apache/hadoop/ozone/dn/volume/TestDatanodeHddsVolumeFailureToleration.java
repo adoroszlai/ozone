@@ -21,11 +21,12 @@ package org.apache.hadoop.ozone.dn.volume;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeConfiguration;
-import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
+import org.apache.hadoop.ozone.container.common.volume.StorageVolume;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.dn.DatanodeTestUtils;
 import org.junit.After;
@@ -38,8 +39,18 @@ import org.junit.rules.Timeout;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NODE_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PIPELINE_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 
 /**
@@ -59,11 +70,22 @@ public class TestDatanodeHddsVolumeFailureToleration {
   public void init() throws Exception {
     ozoneConfig = new OzoneConfiguration();
     ozoneConfig.set(OZONE_SCM_CONTAINER_SIZE, "1GB");
+    ozoneConfig.setStorageSize(OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN,
+        0, StorageUnit.MB);
     ozoneConfig.setInt(OZONE_REPLICATION, ReplicationFactor.ONE.getValue());
+    ozoneConfig.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        100, TimeUnit.MILLISECONDS);
+    ozoneConfig.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 1, SECONDS);
+    ozoneConfig.setTimeDuration(HDDS_PIPELINE_REPORT_INTERVAL, 1, SECONDS);
+    ozoneConfig.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1, SECONDS);
+    ozoneConfig.setTimeDuration(HDDS_NODE_REPORT_INTERVAL, 1, SECONDS);
+    ozoneConfig.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, SECONDS);
+    ozoneConfig.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
+
     // set tolerated = 1
     DatanodeConfiguration dnConf =
         ozoneConfig.getObject(DatanodeConfiguration.class);
-    dnConf.setFailedVolumesTolerated(1);
+    dnConf.setFailedDataVolumesTolerated(1);
     ozoneConfig.setFromObject(dnConf);
     cluster = MiniOzoneCluster.newBuilder(ozoneConfig)
         .setNumDatanodes(1)
@@ -81,13 +103,14 @@ public class TestDatanodeHddsVolumeFailureToleration {
   }
 
   @Test
-  public void testTolerationOnStartupSuccess() throws Exception {
+  public void testDNCorrectlyHandlesVolumeFailureOnStartup() throws Exception {
     HddsDatanodeService dn = datanodes.get(0);
     OzoneContainer oc = dn.getDatanodeStateMachine().getContainer();
     MutableVolumeSet volSet = oc.getVolumeSet();
-    HddsVolume vol0 = volSet.getVolumesList().get(0);
-    // keep the file for restore since we'll do restart
-    File volRootDir0 = vol0.getHddsRootDir();
+    StorageVolume vol0 = volSet.getVolumesList().get(0);
+    StorageVolume vol1 = volSet.getVolumesList().get(1);
+    File volRootDir0 = vol0.getStorageDir();
+    File volRootDir1 = vol1.getStorageDir();
 
     // simulate bad volumes <= tolerated
     DatanodeTestUtils.simulateBadRootDir(volRootDir0);
@@ -97,22 +120,7 @@ public class TestDatanodeHddsVolumeFailureToleration {
 
     // no exception is good
 
-    // restore bad volumes
-    DatanodeTestUtils.restoreBadRootDir(volRootDir0);
-  }
-
-  @Test
-  public void testTolerationOnStartupFailure() throws Exception {
-    HddsDatanodeService dn = datanodes.get(0);
-    OzoneContainer oc = dn.getDatanodeStateMachine().getContainer();
-    MutableVolumeSet volSet = oc.getVolumeSet();
-    HddsVolume vol0 = volSet.getVolumesList().get(0);
-    HddsVolume vol1 = volSet.getVolumesList().get(1);
-    File volRootDir0 = vol0.getHddsRootDir();
-    File volRootDir1 = vol1.getHddsRootDir();
-
-    // simulate bad volumes > tolerated
-    DatanodeTestUtils.simulateBadRootDir(volRootDir0);
+    // fail a second volume
     DatanodeTestUtils.simulateBadRootDir(volRootDir1);
 
     // restart datanode to test

@@ -161,6 +161,12 @@ public final class OMConfigKeys {
       OZONE_OM_RATIS_SERVER_FAILURE_TIMEOUT_DURATION_DEFAULT
       = TimeDuration.valueOf(120, TimeUnit.SECONDS);
 
+  public static final String OZONE_OM_RATIS_SERVER_ELECTION_PRE_VOTE =
+      "ozone.om.ratis.server.leaderelection.pre-vote";
+  public static final boolean
+      OZONE_OM_RATIS_SERVER_ELECTION_PRE_VOTE_DEFAULT = false;
+
+
   // OM SnapshotProvider configurations
   public static final String OZONE_OM_RATIS_SNAPSHOT_DIR =
       "ozone.om.ratis.snapshot.dir";
@@ -220,6 +226,13 @@ public final class OMConfigKeys {
   // hadoop-policy.xml, "*" allows all users/groups to access.
   public static final String OZONE_OM_SECURITY_CLIENT_PROTOCOL_ACL =
       "ozone.om.security.client.protocol.acl";
+
+  // Comma separated acls (users, groups) allowing clients accessing
+  // OM admin protocol.
+  // When hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String OZONE_OM_SECURITY_ADMIN_PROTOCOL_ACL =
+      "ozone.om.security.admin.protocol.acl";
 
   public static final String OZONE_OM_KEYNAME_CHARACTER_CHECK_ENABLED_KEY =
           "ozone.om.keyname.character.check.enabled";

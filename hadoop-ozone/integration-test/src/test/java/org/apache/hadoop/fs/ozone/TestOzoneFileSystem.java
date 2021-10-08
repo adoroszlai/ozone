@@ -53,6 +53,7 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OzonePrefixPathImpl;
 import org.apache.hadoop.ozone.om.TrashPolicyOzone;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
@@ -97,6 +98,8 @@ import org.slf4j.LoggerFactory;
 @RunWith(Parameterized.class)
 public class TestOzoneFileSystem {
 
+  private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
+
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
@@ -134,7 +137,7 @@ public class TestOzoneFileSystem {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOzoneFileSystem.class);
 
-  private static boolean isBucketFSOptimized = false;
+  private static BucketLayout bucketLayout = BucketLayout.LEGACY;
   private static boolean enabledFileSystemPaths;
   private static boolean omRatisEnabled;
 
@@ -147,14 +150,13 @@ public class TestOzoneFileSystem {
 
   private void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, (float) 0.15);
-    // Trash with 9 second deletes and 6 seconds checkpoints
-    conf.setFloat(FS_TRASH_INTERVAL_KEY, (float) 0.15); // 9 seconds
-    conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, (float) 0.1); // 6 seconds
+    conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
+    conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
+    conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, TRASH_INTERVAL / 2);
 
     conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, omRatisEnabled);
     conf.setBoolean(OZONE_ACL_ENABLED, true);
-    if (isBucketFSOptimized) {
+    if (bucketLayout.equals(BucketLayout.FILE_SYSTEM_OPTIMIZED)) {
       TestOMRequestUtils.configureFSOptimizedPaths(conf, enabledFileSystemPaths,
           OMConfigKeys.OZONE_OM_METADATA_LAYOUT_PREFIX);
     } else {
@@ -167,7 +169,8 @@ public class TestOzoneFileSystem {
     cluster.waitForClusterToBeReady();
 
     // create a volume and a bucket to be used by OzoneFileSystem
-    OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(cluster);
+    OzoneBucket bucket =
+        TestDataUtil.createVolumeAndBucket(cluster, bucketLayout);
     volumeName = bucket.getVolumeName();
     bucketName = bucket.getName();
 
@@ -213,8 +216,8 @@ public class TestOzoneFileSystem {
     return fs;
   }
 
-  public static void setIsBucketFSOptimized(boolean isBucketFSO) {
-    isBucketFSOptimized = isBucketFSO;
+  public static void setBucketLayout(BucketLayout bLayout) {
+    bucketLayout = bLayout;
   }
 
   public static String getBucketName() {
@@ -223,6 +226,10 @@ public class TestOzoneFileSystem {
 
   public static String getVolumeName() {
     return volumeName;
+  }
+
+  public BucketLayout getBucketLayout() {
+    return BucketLayout.DEFAULT;
   }
 
   @Test
@@ -1240,7 +1247,7 @@ public class TestOzoneFileSystem {
     Assert.assertTrue(trash.getConf().getClass(
         "fs.trash.classname", TrashPolicy.class).
         isAssignableFrom(TrashPolicyOzone.class));
-    Assert.assertEquals((float) 0.15, trash.getConf().
+    assertEquals(TRASH_INTERVAL, trash.getConf().
         getFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, 0), 0);
     // Call moveToTrash. We can't call protected fs.rename() directly
     trash.moveToTrash(path);
