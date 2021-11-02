@@ -83,6 +83,7 @@ start_k8s_env() {
 get_logs() {
   mkdir -p logs
   for pod in $(kubectl get pods -o custom-columns=NAME:.metadata.name | tail -n +2); do
+    kubectl describe pod "${pod}" > logs/"pod-${pod}.describe"
     for initContainer in $(kubectl get pod -o jsonpath='{.spec.initContainers[*].name}' "${pod}"); do
       kubectl logs "${pod}" "${initContainer}" > logs/"pod-${pod}-${initContainer}.log"
     done
