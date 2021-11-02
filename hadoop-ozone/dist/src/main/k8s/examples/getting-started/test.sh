@@ -26,14 +26,14 @@ rm -rf result
 
 regenerate_resources
 
-start_k8s_env
-
-execute_robot_test scm-0 smoketest/basic/basic.robot
-
-combine_reports
-
-get_logs
-
-stop_k8s_env
+if start_k8s_env; then
+  execute_robot_test scm-0 smoketest/basic/basic.robot
+  combine_reports
+  get_logs
+  stop_k8s_env
+else
+  kubectl get pods -o wide
+  kubectl get pods -o json
+fi
 
 revert_resources
