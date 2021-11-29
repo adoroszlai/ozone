@@ -728,6 +728,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       OmKeyInfo omKeyInfo = entry.getValue().getCacheValue();
       // Making sure that entry is not for delete key request.
       if (key.startsWith(keyPrefix) && omKeyInfo != null) {
+        LOG.debug("Found cached key {} in bucket {}", key, keyPrefix);
         return false;
       }
     }
@@ -743,11 +744,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         if (cacheValue != null) {
           if (kv.getKey().startsWith(keyPrefix)
               && cacheValue.getCacheValue() != null) {
+            LOG.debug("Found key {} with cache value in bucket {}",
+                kv.getKey(), keyPrefix);
             return false; // we found at least one key with this vol/bucket
             // prefix.
           }
         } else {
           if (kv.getKey().startsWith(keyPrefix)) {
+            LOG.debug("Found key {} without cache value in bucket {}",
+                kv.getKey(), keyPrefix);
             return false; // we found at least one key with this vol/bucket
             // prefix.
           }
