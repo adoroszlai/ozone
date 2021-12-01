@@ -94,6 +94,7 @@ public class CreatePipelineCommandHandler implements CommandHandler {
             d -> !d.getUuid().equals(dn.getUuid()))
             .forEach(d -> {
               final RaftPeer peer = RatisHelper.toRaftPeer(d);
+              LOG.info("ZZZ retry policy: {} ", RatisHelper.createRetryPolicy(conf));
               try (RaftClient client = RatisHelper.newRaftClient(peer, conf,
                   ozoneContainer.getTlsClientConfig())) {
                 client.getGroupManagementApi(peer.getId()).add(group);
