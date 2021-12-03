@@ -369,7 +369,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartOzoneManager() throws IOException {
+  public void restartOzoneManager() throws IOException, InterruptedException,
+      TimeoutException {
     ozoneManager.stop();
     ozoneManager.restart();
   }

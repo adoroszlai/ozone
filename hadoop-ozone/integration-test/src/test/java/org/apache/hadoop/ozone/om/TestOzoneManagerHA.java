@@ -51,6 +51,7 @@ import java.net.ConnectException;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.HashMap;
+import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
@@ -192,7 +193,7 @@ public abstract class TestOzoneManagerHA {
    */
   @After
   public void resetCluster()
-      throws IOException {
+      throws IOException, InterruptedException, TimeoutException {
     if (cluster != null) {
       cluster.restartOzoneManager();
     }

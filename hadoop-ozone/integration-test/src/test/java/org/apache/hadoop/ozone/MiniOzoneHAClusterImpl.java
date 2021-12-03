@@ -236,10 +236,11 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   }
 
   @Override
-  public void restartOzoneManager() throws IOException {
+  public void restartOzoneManager() throws IOException, InterruptedException,
+      TimeoutException {
     for (OzoneManager ozoneManager : this.omhaService.getServices()) {
       ozoneManager.stop();
-      ozoneManager.restart();
+      restartOzoneManager(ozoneManager, true);
     }
   }
 

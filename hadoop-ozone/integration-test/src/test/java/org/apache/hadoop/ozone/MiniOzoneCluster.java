@@ -210,7 +210,8 @@ public interface MiniOzoneCluster {
    *
    * @throws IOException
    */
-  void restartOzoneManager() throws IOException;
+  void restartOzoneManager() throws IOException, InterruptedException,
+      TimeoutException;
 
   /**
    * Restarts Recon instance.
