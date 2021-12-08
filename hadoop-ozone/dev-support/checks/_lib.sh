@@ -77,7 +77,9 @@ install_k3s() {
 }
 
 _install_k3s() {
-  curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.21.2+k3s1" sh -
+  curl -fL -o k3s.sh -v https://get.k3s.io
+  INSTALL_K3S_VERSION="v1.21.2+k3s1" sh k3s.sh
+  find /etc/rancher | sort
   sudo chmod a+r $KUBECONFIG
 }
 
@@ -91,7 +93,7 @@ _install_flekszible() {
   local os=$(uname -s)
   local arch=$(uname -m)
 
-  curl -LSs https://github.com/elek/flekszible/releases/download/v1.8.1/flekszible_1.8.1_${os}_${arch}.tar.gz | tar -xz -f - -C bin
+  curl -Lv https://github.com/elek/flekszible/releases/download/v1.8.1/flekszible_1.8.1_${os}_${arch}.tar.gz | tar -xz -f - -C bin
 
   chmod +x bin/flekszible
 }
