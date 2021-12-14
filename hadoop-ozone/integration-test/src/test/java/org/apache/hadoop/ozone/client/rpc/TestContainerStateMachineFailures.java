@@ -87,12 +87,11 @@ import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import static org.hamcrest.core.Is.is;
 
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -101,22 +100,22 @@ import org.junit.Test;
 
 public class TestContainerStateMachineFailures {
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
-  private static OzoneClient client;
-  private static ObjectStore objectStore;
-  private static String volumeName;
-  private static String bucketName;
-  private static XceiverClientManager xceiverClientManager;
-  private static Random random;
+  private MiniOzoneCluster cluster;
+  private OzoneConfiguration conf;
+  private OzoneClient client;
+  private ObjectStore objectStore;
+  private String volumeName;
+  private String bucketName;
+  private XceiverClientManager xceiverClientManager;
+  private static final Random RANDOM = new Random();
 
   /**
    * Create a MiniDFSCluster for testing.
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     conf = new OzoneConfiguration();
 
     OzoneClientConfig clientConfig = conf.getObject(OzoneClientConfig.class);
@@ -166,24 +165,13 @@ public class TestContainerStateMachineFailures {
     bucketName = volumeName;
     objectStore.createVolume(volumeName);
     objectStore.getVolume(volumeName).createBucket(bucketName);
-    random = new Random();
-  }
-
-  @Before
-  public void restartDatanode()
-      throws InterruptedException, TimeoutException, AuthenticationException,
-      IOException {
-    for (int i=0; i < cluster.getHddsDatanodes().size(); i++) {
-      cluster.restartHddsDatanode(i, true);
-    }
-    cluster.restartStorageContainerManager(true);
   }
 
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -620,7 +608,7 @@ public class TestContainerStateMachineFailures {
         ByteString data = ByteString.copyFromUtf8("hello");
         ContainerProtos.ContainerCommandRequestProto.Builder writeChunkRequest =
             ContainerTestHelper.newWriteChunkRequestBuilder(pipeline,
-                omKeyLocationInfo.getBlockID(), data.size(), random.nextInt()
+                omKeyLocationInfo.getBlockID(), data.size(), RANDOM.nextInt()
             );
         writeChunkRequest.setWriteChunk(writeChunkRequest.getWriteChunkBuilder()
                 .setData(data));
