@@ -91,9 +91,9 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Tests the containerStateMachine failure handling.
@@ -169,7 +169,7 @@ public class TestContainerStateMachineFailures {
     random = new Random();
   }
 
-  @BeforeEach
+  @Before
   public void restartDatanode()
       throws InterruptedException, TimeoutException, AuthenticationException,
       IOException {
