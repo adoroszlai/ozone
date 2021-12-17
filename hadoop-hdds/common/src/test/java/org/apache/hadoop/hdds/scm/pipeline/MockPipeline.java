@@ -30,10 +30,13 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
 import com.google.common.base.Preconditions;
 
+import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomLocalDatanodeDetails;
+
 /**
  * Provides {@link Pipeline} factory methods for testing.
  */
 public final class MockPipeline {
+
   /**
    * Create a pipeline with single node replica.
    *
@@ -50,11 +53,7 @@ public final class MockPipeline {
    */
   public static Pipeline createPipeline(int numNodes) throws IOException {
     Preconditions.checkArgument(numNodes >= 1);
-    final List<DatanodeDetails> ids = new ArrayList<>(numNodes);
-    for(int i = 0; i < numNodes; i++) {
-      ids.add(MockDatanodeDetails.randomLocalDatanodeDetails());
-    }
-    return createPipeline(ids);
+    return createPipeline(randomLocalDatanodeDetails(numNodes));
   }
 
   public static Pipeline createPipeline(Iterable<DatanodeDetails> ids) {

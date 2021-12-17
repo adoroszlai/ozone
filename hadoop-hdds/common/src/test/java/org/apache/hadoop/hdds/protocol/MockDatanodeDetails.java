@@ -18,9 +18,12 @@
 package org.apache.hadoop.hdds.protocol;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.ratis.util.NetUtils;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -112,14 +115,18 @@ public final class MockDatanodeDetails {
    *
    * @return DatanodeDetails
    */
-  public static DatanodeDetails randomLocalDatanodeDetails()
+  public static List<DatanodeDetails> randomLocalDatanodeDetails(int count)
       throws IOException {
-    try (ServerSocket socket = new ServerSocket(0)) {
-      return createDatanodeDetails(UUID.randomUUID().toString(),
-          socket.getInetAddress().getHostName(),
-          socket.getInetAddress().getHostAddress(), null,
-          socket.getLocalPort());
+    final List<DatanodeDetails> datanodes = new ArrayList<>(count);
+    for (InetSocketAddress address : NetUtils.createLocalServerAddress(count)) {
+      DatanodeDetails e = MockDatanodeDetails.createDatanodeDetails(
+          UUID.randomUUID().toString(),
+          address.getHostString(),
+          address.getAddress().getHostAddress(), null,
+          address.getPort());
+      datanodes.add(e);
     }
+    return datanodes;
   }
 
   private MockDatanodeDetails() {
