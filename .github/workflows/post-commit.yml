@@ -32,7 +32,7 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
+      needs-basic-checks: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
       needs-compose-tests: false
       needs-dependency-check: false
@@ -287,6 +287,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: maven-repo-with-ozone
+      - name: Display structure of downloaded files
+        run: ls -la ~/.m2/repository
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
       - name: Summary of failures
