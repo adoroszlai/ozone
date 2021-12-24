@@ -39,6 +39,8 @@ fi
 if [[ "${CHECK}" == "integration" && -z "${CI:-}" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
   mvn ${MAVEN_OPTIONS} -DskipTests clean install
 fi
+echo "exit before tests"
+exit
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 mkdir -p "$REPORT_DIR"
