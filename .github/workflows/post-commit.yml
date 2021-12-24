@@ -99,12 +99,19 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Run a full build
         run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist
-      - name: Store binaries for tests
+      - name: Store binaries for acceptance tests
         uses: actions/upload-artifact@v2
         if: matrix.java == '8'
         with:
           name: ozone-bin
           path: hadoop-ozone/dist/target/ozone*.tar.gz
+          retention-days: 1
+      - name: Store binaries for integration tests
+        uses: actions/upload-artifact@v2
+        if: matrix.java == '8'
+        with:
+          name: maven-repo-with-ozone
+          path: ~/.m2/repository
           retention-days: 1
       - name: Delete temporary build artifacts before caching
         run: |
@@ -262,6 +269,7 @@ jobs:
   integration:
     needs:
       - build-info
+      - compile
     runs-on: ubuntu-18.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
@@ -275,15 +283,10 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
-      - name: Cache for maven dependencies
-        uses: actions/cache@v2
+      - name: Download Maven cache with Ozone
+        uses: actions/download-artifact@v2
         with:
-          path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.profile }}
-          restore-keys: |
-            maven-repo-${{ hashFiles('**/pom.xml') }}-8
-            maven-repo-${{ hashFiles('**/pom.xml') }}
-            maven-repo-
+          name: maven-repo-with-ozone
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
       - name: Summary of failures
