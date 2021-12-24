@@ -106,12 +106,14 @@ jobs:
           name: ozone-bin
           path: hadoop-ozone/dist/target/ozone*.tar.gz
           retention-days: 1
+      - name: Tar Maven repo
+        run: tar -cvf m2_repo.tar ~/.m2/repository
       - name: Store binaries for integration tests
         uses: actions/upload-artifact@v2
         if: matrix.java == '8'
         with:
           name: maven-repo-with-ozone
-          path: ~/.m2/repository
+          path: m2_repo.tar
           retention-days: 1
       - name: Delete temporary build artifacts before caching
         run: |
@@ -287,7 +289,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: maven-repo-with-ozone
-          path: ~/.m2/repository
+      - name: Tar Maven repo
+        run: tar -xvf m2_repo.tar ~/.m2/repository
       - name: Display structure of downloaded files
         run: ls -la ~/.m2/repository
       - name: Execute tests
