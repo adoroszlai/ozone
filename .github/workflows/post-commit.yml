@@ -42,33 +42,33 @@ jobs:
           java-version: 8
 
       - name: Maven repo before build
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
         continue-on-error: true
 
       - name: Run a full build
         run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist --debug
       - name: Maven repo after build
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
 
       - name: Run rat
         run: hadoop-ozone/dev-support/checks/rat.sh
       - name: Maven repo after rat
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
 
       - name: Run checkstyle
         run: hadoop-ozone/dev-support/checks/checkstyle.sh
       - name: Maven repo after checkstyle
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
 
       - name: Run findbugs
         run: hadoop-ozone/dev-support/checks/findbugs.sh
       - name: Maven repo after findbugs
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
 
       - name: Run unit
         run: hadoop-ozone/dev-support/checks/unit.sh
       - name: Maven repo after unit
-        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
+        run: find ~/.m2/repository -name '*.jar' | cut -c29- | sort
 
       - name: Delete temporary build artifacts
         run: rm -fr ~/.m2/repository/org/apache/ozone
