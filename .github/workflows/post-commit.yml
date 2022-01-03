@@ -46,7 +46,7 @@ jobs:
         continue-on-error: true
 
       - name: Run a full build
-        run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist
+        run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist --debug
       - name: Maven repo after build
         run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
