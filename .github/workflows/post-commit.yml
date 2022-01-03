@@ -42,39 +42,33 @@ jobs:
           java-version: 8
 
       - name: Maven repo before build
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
         continue-on-error: true
 
       - name: Run a full build
         run: hadoop-ozone/dev-support/checks/build.sh -Pcoverage -Pdist
       - name: Maven repo after build
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
       - name: Run rat
         run: hadoop-ozone/dev-support/checks/rat.sh
       - name: Maven repo after rat
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
       - name: Run checkstyle
         run: hadoop-ozone/dev-support/checks/checkstyle.sh
       - name: Maven repo after checkstyle
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
       - name: Run findbugs
         run: hadoop-ozone/dev-support/checks/findbugs.sh
       - name: Maven repo after findbugs
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
       - name: Run unit
         run: hadoop-ozone/dev-support/checks/unit.sh
       - name: Maven repo after unit
-        run: find . -mindepth 1 -name '*.jar' | cut -c3- | sort
-        working-directory: ~/.m2/repository
+        run: find ~/.m2/repository -name '*.jar' | cut -c3- | sort
 
       - name: Delete temporary build artifacts
         run: rm -fr ~/.m2/repository/org/apache/ozone
