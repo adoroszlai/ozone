@@ -388,7 +388,7 @@ public class KeyInputStream extends InputStream
   }
 
   @Override
-  public long skip(long n) throws IOException {
+  public synchronized long skip(long n) throws IOException {
     if (n <= 0) {
       return 0;
     }
