@@ -243,7 +243,7 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_ENABLE_FILESYSTEM_PATHS =
       "ozone.om.enable.filesystem.paths";
   public static final boolean OZONE_OM_ENABLE_FILESYSTEM_PATHS_DEFAULT =
-      false;
+      true;
 
   public static final String OZONE_OM_HA_PREFIX = "ozone.om.ha";
 
@@ -273,10 +273,10 @@ public final class OMConfigKeys {
   // when a client does not specify the bucket layout option.
   public static final String OZONE_DEFAULT_BUCKET_LAYOUT =
       "ozone.default.bucket.layout";
-  public static final String OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT =
-      BucketLayout.OBJECT_STORE.name();
   public static final String OZONE_BUCKET_LAYOUT_FILE_SYSTEM_OPTIMIZED =
       BucketLayout.FILE_SYSTEM_OPTIMIZED.name();
+  public static final String OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT =
+      OZONE_BUCKET_LAYOUT_FILE_SYSTEM_OPTIMIZED;
 
   /**
    * Configuration properties for Directory Deleting Service.
