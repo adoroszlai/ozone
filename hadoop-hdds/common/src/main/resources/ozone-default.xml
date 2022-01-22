@@ -2742,7 +2742,7 @@
   <property>
     <name>ozone.om.enable.filesystem.paths</name>
     <tag>OZONE, OM</tag>
-    <value>false</value>
+    <value>true</value>
     <description>If true, key names will be interpreted as file system paths.
       "/" will be treated as a special character and paths will be normalized
       and must follow Unix filesystem path naming conventions. This flag will
@@ -2996,7 +2996,7 @@
 
   <property>
     <name>ozone.default.bucket.layout</name>
-    <value>OBJECT_STORE</value>
+    <value>FILE_SYSTEM_OPTIMIZED</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       Default bucket layout used by Ozone Manager during bucket creation when a client does not specify the
