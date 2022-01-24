@@ -19,7 +19,7 @@ COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export COMPOSE_DIR
 basename=$(basename ${COMPOSE_DIR})
 
-current_version=1.1.0
+current_version=1.3.0
 
 # shellcheck source=hadoop-ozone/dist/src/main/compose/testlib.sh
 source "${COMPOSE_DIR}/../testlib.sh"
