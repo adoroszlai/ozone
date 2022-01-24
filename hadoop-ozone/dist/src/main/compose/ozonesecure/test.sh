@@ -47,10 +47,6 @@ for bucket in link generated; do
   execute_robot_test s3g -v BUCKET:${bucket} -N s3-${bucket} s3
 done
 
-#expects 4 pipelines, should be run before
-#admincli which creates STANDALONE pipeline
-execute_robot_test scm recon
-
 execute_robot_test scm admincli
 execute_robot_test scm spnego
 

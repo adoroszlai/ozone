@@ -41,8 +41,6 @@ for bucket in link generated; do
   execute_robot_test scm -v BUCKET:${bucket} -N s3-${bucket} s3
 done
 
-execute_robot_test scm recon
-
 execute_robot_test scm om-ratis
 
 execute_robot_test scm freon
