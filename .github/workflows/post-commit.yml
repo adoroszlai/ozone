@@ -32,12 +32,12 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
+      needs-basic-checks: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v2
@@ -71,7 +71,7 @@ jobs:
     if: needs.build-info.outputs.needs-build == 'true'
     strategy:
       matrix:
-        java: [ 8, 11 ]
+        java: [ 8 ]
       fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
@@ -189,15 +189,6 @@ jobs:
     runs-on: ubuntu-18.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
-    strategy:
-      matrix:
-        suite:
-          - secure
-          - unsecure
-          - HA
-          - MR
-          - misc
-      fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -218,14 +209,13 @@ jobs:
           ./hadoop-ozone/dev-support/checks/acceptance.sh
         env:
           KEEP_IMAGE: false
-          OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
-          OZONE_WITH_COVERAGE: true
+          OZONE_TEST_SELECTOR: xcompat
           OZONE_VOLUME_OWNER: 1000
       - name: Archive build results
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: acceptance-${{ matrix.suite }}
+          name: acceptance
           path: target/acceptance
         continue-on-error: true
   kubernetes:
