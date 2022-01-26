@@ -190,7 +190,6 @@ function run_all_tests_if_environment_files_changed() {
     start_end::group_start "Check if everything should be run"
     local pattern_array=(
         "^.github/workflows/"
-        "^dev-support/ci"
         "^hadoop-ozone/dev-support/checks/_lib.sh"
     )
     filter_changed_files
