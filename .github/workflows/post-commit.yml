@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - run: git show --stat 5532981a7
         continue-on-error: true
