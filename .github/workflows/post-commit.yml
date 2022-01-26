@@ -22,6 +22,15 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@v2
 
+      - run: git show --stat 5532981a7
+        continue-on-error: true
+
+      - run: git show --stat 5532981a7^
+        continue-on-error: true
+
+      - run: git show --stat 5532981a7~1
+        continue-on-error: true
+
       - run: git rev-parse --short 5532981a7~1
         continue-on-error: true
       - run: git diff-tree --no-commit-id --name-only -r $(git rev-parse --short 5532981a7~1) 5532981a7
