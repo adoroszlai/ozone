@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,11 +47,15 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RDBStore Tests.
  */
 public class TestRDBStore {
+  private static final Logger LOG = LoggerFactory.getLogger(TestRDBStore.class);
+
   private final List<String> families =
       Arrays.asList(StringUtils.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
           "First", "Second", "Third",
@@ -311,16 +316,125 @@ public class TestRDBStore {
       long end = System.nanoTime();
       long keyGetLatency = end - start;
 
-      start = System.nanoTime();
+      long start2 = System.nanoTime();
       for (int i = 0; i < 50; i++) {
         Assert.assertFalse(db.keyMayExist(
             org.apache.commons.codec.binary.StringUtils
                 .getBytesUtf16("key" + i), null));
       }
-      end = System.nanoTime();
-      long keyMayExistLatency = end - start;
+      long end2 = System.nanoTime();
+      long keyMayExistLatency = end2 - start2;
 
-      Assert.assertTrue(keyMayExistLatency < keyGetLatency);
+      String msg =
+          keyMayExistLatency + "(" + end2 + " - " + start2 + ")" +
+          " < " +
+          keyGetLatency + "(" + end + " - " + start + ")";
+      LOG.info("ZZZ {}: {}", msg, keyMayExistLatency < keyGetLatency);
+      Assert.assertTrue("Expected " + msg, keyMayExistLatency < keyGetLatency);
+    }
+  }
+
+  @Test
+  public void keyMayExistLatencyReordered() throws Exception {
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+      RocksDB db = newStore.getDb();
+
+      //Test with 50 invalid keys.
+      long start2 = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertFalse(db.keyMayExist(
+            org.apache.commons.codec.binary.StringUtils
+                .getBytesUtf16("reordered" + i), null));
+      }
+      long end2 = System.nanoTime();
+      long keyMayExistLatency = end2 - start2;
+
+      long start = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertTrue(db.get(
+            org.apache.commons.codec.binary.StringUtils
+                .getBytesUtf16("reordered" + i)) == null);
+      }
+      long end = System.nanoTime();
+      long keyGetLatency = end - start;
+
+      String msg =
+          keyMayExistLatency + "(" + end2 + " - " + start2 + ")" +
+              " < " +
+              keyGetLatency + "(" + end + " - " + start + ")";
+      LOG.info("ZZZ {}: {}", msg, keyMayExistLatency < keyGetLatency);
+      Assert.assertTrue("Expected " + msg, keyMayExistLatency < keyGetLatency);
+    }
+  }
+
+  @Test
+  public void keyMayExistLatencyWithPrecreatedBytes() throws Exception {
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+      RocksDB db = newStore.getDb();
+
+      //Test with 50 invalid keys.
+      List<byte[]> keys = new ArrayList<>(50);
+      for (int i = 0; i < 50; i++) {
+        byte[] bytes = org.apache.commons.codec.binary.StringUtils.getBytesUtf16("pre" + i);
+        keys.add(bytes);
+      }
+
+      long start = System.nanoTime();
+      for (byte[] key : keys) {
+        Assert.assertTrue(db.get(key) == null);
+      }
+      long end = System.nanoTime();
+      long keyGetLatency = end - start;
+
+      long start2 = System.nanoTime();
+      for (byte[] key : keys) {
+        Assert.assertFalse(db.keyMayExist(key, null));
+      }
+      long end2 = System.nanoTime();
+      long keyMayExistLatency = end2 - start2;
+
+      String msg =
+          keyMayExistLatency + "(" + end2 + " - " + start2 + ")" +
+              " < " +
+              keyGetLatency + "(" + end + " - " + start + ")";
+      LOG.info("ZZZ {}: {}", msg, keyMayExistLatency < keyGetLatency);
+      Assert.assertTrue("Expected " + msg, keyMayExistLatency < keyGetLatency);
+    }
+  }
+
+  @Test
+  public void keyMayExistLatencyWithDistinctKeys() throws Exception {
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+      RocksDB db = newStore.getDb();
+
+      //Test with 50 invalid keys.
+      long start = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertTrue(db.get(
+            org.apache.commons.codec.binary.StringUtils
+                .getBytesUtf16("dkey" + i)) == null);
+      }
+      long end = System.nanoTime();
+      long keyGetLatency = end - start;
+
+      long start2 = System.nanoTime();
+      for (int i = 50; i < 100; i++) {
+        Assert.assertFalse(db.keyMayExist(
+            org.apache.commons.codec.binary.StringUtils
+                .getBytesUtf16("dkey" + i), null));
+      }
+      long end2 = System.nanoTime();
+      long keyMayExistLatency = end2 - start2;
+
+      String msg =
+          keyMayExistLatency + "(" + end2 + " - " + start2 + ")" +
+              " < " +
+              keyGetLatency + "(" + end + " - " + start + ")";
+      LOG.info("ZZZ {}: {}", msg, keyMayExistLatency < keyGetLatency);
+      Assert.assertTrue("Expected " + msg, keyMayExistLatency < keyGetLatency);
     }
   }
 
