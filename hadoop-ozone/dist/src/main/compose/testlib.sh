@@ -320,8 +320,8 @@ copy_results() {
   local result_dir="${test_dir}/result"
   local test_dir_name=$(basename ${test_dir})
   if [[ -n "$(find "${result_dir}" -name "*.xml")" ]]; then
-    rebot --nostatusrc -N "${test_dir_name}" -l NONE -r NONE -o "${all_result_dir}/${test_dir_name}.xml" "${result_dir}/*.xml"
-    rm -fv "${result_dir}/*.xml"
+    rebot --nostatusrc -N "${test_dir_name}" -l NONE -r NONE -o "${all_result_dir}/${test_dir_name}.xml" "${result_dir}"/*.xml
+    rm -fv "${result_dir}"/*.xml
   fi
 
   mkdir -p "${all_result_dir}"/"${test_dir_name}"
