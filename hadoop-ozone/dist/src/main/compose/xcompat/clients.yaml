@@ -27,7 +27,7 @@ services:
       HADOOP_OPTS:
     command: ["sleep","1000000"]
   new_client:
-    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
+    image: ${OZONE_IMAGE}
     env_file:
       - docker-config
     volumes:

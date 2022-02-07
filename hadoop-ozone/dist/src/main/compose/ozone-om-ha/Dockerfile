@@ -16,7 +16,7 @@
 
 ARG OZONE_RUNNER_VERSION
 
-FROM apache/ozone-runner:${OZONE_RUNNER_VERSION}
+FROM ${OZONE_IMAGE}
 
 # Install ssh
 RUN sudo yum install -y openssh-clients openssh-server

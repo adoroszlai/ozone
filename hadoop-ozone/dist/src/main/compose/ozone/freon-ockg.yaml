@@ -17,7 +17,7 @@
 version: "3.4"
 services:
   freon:
-    image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
+    image: ${OZONE_IMAGE}
     volumes:
       - ../..:/opt/hadoop
     env_file:
