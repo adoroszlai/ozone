@@ -20,7 +20,7 @@ services:
       build:
          context: .
          args:
-            - OZONE_RUNNER_VERSION
+            - OZONE_IMAGE
       image: ozone-runner-scripts:${OZONE_RUNNER_VERSION}
       volumes:
         - ../..:/opt/hadoop
@@ -32,7 +32,7 @@ services:
       build:
          context: .
          args:
-            - OZONE_RUNNER_VERSION
+            - OZONE_IMAGE
       image: ozone-runner-scripts:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
@@ -45,7 +45,7 @@ services:
       build:
          context: .
          args:
-            - OZONE_RUNNER_VERSION
+            - OZONE_IMAGE
       image: ozone-runner-scripts:${OZONE_RUNNER_VERSION}
       volumes:
          - ../..:/opt/hadoop
