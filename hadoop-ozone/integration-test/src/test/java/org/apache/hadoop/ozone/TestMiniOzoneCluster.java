@@ -306,7 +306,7 @@ public class TestMiniOzoneCluster {
    * @throws Exception
    */
   @Test (timeout = 100000)
-  public void testDNstartAfterSCM() throws Exception {
+  public void testDNStartAfterSCM() throws Exception {
     // Start a cluster with 3 DN
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
@@ -321,10 +321,10 @@ public class TestMiniOzoneCluster {
     cluster.restartHddsDatanode(0, false);
 
     // DN should be in GETVERSION state till the SCM is restarted.
-    // Check DN endpoint state for 20 seconds
+    // Check DN endpoint state for 10 seconds
     DatanodeStateMachine dnStateMachine = cluster.getHddsDatanodes().get(0)
         .getDatanodeStateMachine();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 10; i++) {
       for (EndpointStateMachine endpoint :
           dnStateMachine.getConnectionManager().getValues()) {
         Assert.assertEquals(
