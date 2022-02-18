@@ -40,6 +40,8 @@ OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
 OZONE-SITE.XML_ozone.recon.db.dir=/data/metadata/recon
 OZONE-SITE.XML_ozone.recon.om.snapshot.task.interval.delay=1m
 
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
+
 no_proxy=om1,om2,om3,scm,s3g,kdc,localhost,127.0.0.1
 
 OM_SERVICE_ID=omservice

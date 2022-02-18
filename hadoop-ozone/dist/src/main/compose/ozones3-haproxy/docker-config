@@ -15,6 +15,7 @@
 # limitations under the License.
 
 CORE-SITE.XML_fs.defaultFS=ofs://om
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
 
 OZONE-SITE.XML_ozone.om.address=om
 OZONE-SITE.XML_ozone.scm.container.size=1GB

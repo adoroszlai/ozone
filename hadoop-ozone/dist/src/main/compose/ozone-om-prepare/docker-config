@@ -15,6 +15,7 @@
 # limitations under the License.
 
 CORE-SITE.XML_fs.defaultFS=ofs://omservice/
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
 
 OZONE-SITE.XML_ozone.om.service.ids=omservice
 OZONE-SITE.XML_ozone.om.nodes.omservice=om1,om2,om3

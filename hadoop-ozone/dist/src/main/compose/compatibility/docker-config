@@ -30,6 +30,8 @@ OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
 OZONE-SITE.XML_ozone.recon.address=recon:9891
 OZONE-SITE.XML_hdds.scmclient.max.retry.timeout=30s
 
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
+
 HADOOP_OPTS="-Dhadoop.opts=test"
 HDFS_STORAGECONTAINERMANAGER_OPTS="-Dhdfs.scm.opts=test"
 HDFS_OM_OPTS="-Dhdfs.om.opts=test"

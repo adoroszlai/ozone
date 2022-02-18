@@ -33,4 +33,6 @@ OZONE-SITE.XML_recon.om.snapshot.task.interval.delay=1m
 OZONE-SITE.XML_hdds.scmclient.max.retry.timeout=30s
 OZONE-SITE.XML_ozone.default.bucket.layout=FILE_SYSTEM_OPTIMIZED
 
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
+
 no_proxy=om,recon,scm,s3g,kdc,localhost,127.0.0.1
