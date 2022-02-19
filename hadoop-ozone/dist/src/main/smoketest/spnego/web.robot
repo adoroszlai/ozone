@@ -77,4 +77,5 @@ Test SCM stacks
 
 Test Recon portal
     Verify SPNEGO enabled URL       ${RECON_URL}
+    Verify SPNEGO enabled URL       ${RECON_URL}/api/v1/containers
 
