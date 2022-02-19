@@ -33,7 +33,6 @@ HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
 HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
 
 CORE-SITE.xml_fs.defaultFS=ofs://om/
-CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
 
 MAPRED-SITE.XML_mapreduce.framework.name=yarn
 MAPRED-SITE.XML_yarn.app.mapreduce.am.env=HADOOP_MAPRED_HOME=$HADOOP_HOME

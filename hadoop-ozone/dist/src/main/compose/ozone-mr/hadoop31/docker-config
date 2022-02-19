@@ -16,6 +16,7 @@
 
 CORE-SITE.xml_fs.AbstractFileSystem.o3fs.impl=org.apache.hadoop.fs.ozone.OzFs
 CORE-SITE.xml_fs.AbstractFileSystem.ofs.impl=org.apache.hadoop.fs.ozone.RootedOzFs
+CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
 MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/ozone-filesystem-hadoop3-@project.version@.jar
 
 HADOOP_CLASSPATH=/opt/ozone/share/ozone/lib/ozone-filesystem-hadoop3-@project.version@.jar
