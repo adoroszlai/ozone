@@ -22,7 +22,7 @@ Resource            ../commonlib.robot
 Test Timeout        5 minutes
 
 *** Variables ***
-${ENDPOINT_URL}       http://recon:9888
+${ENDPOINT_URL}       https://recon:9889
 ${API_ENDPOINT_URL}   ${ENDPOINT_URL}/api/v1
 ${ADMIN_API_ENDPOINT_URL}   ${API_ENDPOINT_URL}/containers
 ${NON_ADMIN_API_ENDPOINT_URL}   ${API_ENDPOINT_URL}/clusterState
@@ -30,10 +30,10 @@ ${NON_ADMIN_API_ENDPOINT_URL}   ${API_ENDPOINT_URL}/clusterState
 *** Keywords ***
 Check if Recon picks up container from OM
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit as ozone admin
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/containers
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/containers
                         Should contain      ${result}       \"ContainerID\"
 
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/utilization/fileCount
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/utilization/fileCount
                         Should contain      ${result}       \"fileSize\":2048,\"count\":10
 
 Kinit as non admin
@@ -47,7 +47,7 @@ Kinit as recon admin
 
 Check http return code
     [Arguments]         ${url}          ${expected_code}
-    ${result} =         Execute                             curl --negotiate -u : --write-out '\%{http_code}\n' --silent --show-error --output /dev/null ${url}
+    ${result} =         Execute                             curl --negotiate -u : --write-out '\%{http_code}\n' --insecure --silent --show-error --output /dev/null ${url}
                         IF  '${SECURITY_ENABLED}' == 'true'
                             Should contain      ${result}       ${expected_code}
                         ELSE
@@ -64,13 +64,13 @@ Check if Recon picks up OM data
     Wait Until Keyword Succeeds     90sec      10sec        Check if Recon picks up container from OM
 
 Check if Recon picks up DN heartbeats
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/datanodes
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/datanodes
                         Should contain      ${result}       datanodes
                         Should contain      ${result}       datanode_1
                         Should contain      ${result}       datanode_2
                         Should contain      ${result}       datanode_3
 
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/pipelines
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/pipelines
                         Should contain      ${result}       pipelines
                         Should contain      ${result}       RATIS
                         Should contain      ${result}       OPEN
@@ -78,17 +78,17 @@ Check if Recon picks up DN heartbeats
                         Should contain      ${result}       datanode_2
                         Should contain      ${result}       datanode_3
 
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/clusterState
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/clusterState
                         Should contain      ${result}       \"totalDatanodes\"
                         Should contain      ${result}       \"healthyDatanodes\"
                         Should contain      ${result}       \"pipelines\"
 
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/containers/1/replicaHistory
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${API_ENDPOINT_URL}/containers/1/replicaHistory
                         Should contain      ${result}       \"containerId\":1
 
 Check if Recon Web UI is up
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit HTTP user
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${ENDPOINT_URL}
+    ${result} =         Execute                             curl --negotiate -u : -kLSs ${ENDPOINT_URL}
                         Should contain      ${result}       Ozone Recon
 
 Check web UI access
