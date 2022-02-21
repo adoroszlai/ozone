@@ -41,13 +41,14 @@ OZONE-SITE.XML_ozone.recon.db.dir=/data/metadata/recon
 OZONE-SITE.XML_ozone.recon.om.snapshot.task.initial.delay=20s
 OZONE-SITE.XML_ozone.recon.address=recon:9891
 OZONE-SITE.XML_ozone.scm.ratis.enable=false
-OZONE-SITE.XML_ozone.http.policy=HTTP_AND_HTTPS
 
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_ozone.acl.enabled=true
 OZONE-SITE.XML_ozone.acl.authorizer.class=org.apache.hadoop.ozone.security.acl.OzoneNativeAuthorizer
 OZONE-SITE.XML_ozone.administrators="testuser/scm@EXAMPLE.COM,testuser/s3g@EXAMPLE.COM,recon/recon@EXAMPLE.COM"
 OZONE-SITE.XML_ozone.recon.administrators="testuser2/scm@EXAMPLE.COM"
+
+OZONE-SITE.XML_ozone.http.policy=HTTP_AND_HTTPS
 SSL-SERVER.XML_ssl.server.truststore.location=/etc/security/truststore.jks
 SSL-SERVER.XML_ssl.server.truststore.password=admin1
 SSL-SERVER.XML_ssl.server.keystore.type=PKCS12

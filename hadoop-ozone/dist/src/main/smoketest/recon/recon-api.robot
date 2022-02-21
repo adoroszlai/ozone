@@ -22,7 +22,7 @@ Resource            ../commonlib.robot
 Test Timeout        5 minutes
 
 *** Variables ***
-${ENDPOINT_URL}       https://recon:9889
+${ENDPOINT_URL}       http://recon:9888
 ${API_ENDPOINT_URL}   ${ENDPOINT_URL}/api/v1
 ${ADMIN_API_ENDPOINT_URL}   ${API_ENDPOINT_URL}/containers
 ${NON_ADMIN_API_ENDPOINT_URL}   ${API_ENDPOINT_URL}/clusterState

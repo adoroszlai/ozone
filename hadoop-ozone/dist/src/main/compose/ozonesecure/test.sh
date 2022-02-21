@@ -33,8 +33,13 @@ execute_command_in_container kms hadoop key create ${OZONE_BUCKET_KEY_NAME}
 
 execute_robot_test scm kinit.robot
 
-execute_robot_test scm spnego
-execute_robot_test scm recon
+# http
+execute_robot_test scm -v OM_URL:http://om:9874 -v SCM_URL:http://${SCM}:9876 -v RECON_URL:http://recon:9888 -N spnego-http spnego
+execute_robot_test scm -v ENDPOINT_URL:http://recon:9888 -N recon-http recon
+
+# https
+execute_robot_test scm -v OM_URL:https://om:9875 -v SCM_URL:https://${SCM}:9877 -v RECON_URL:https://recon:9889 -N spnego-https spnego
+execute_robot_test scm -v ENDPOINT_URL:https://recon:9889 -N recon-https recon
 
 stop_docker_env
 
