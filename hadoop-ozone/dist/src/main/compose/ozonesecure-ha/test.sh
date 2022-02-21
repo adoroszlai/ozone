@@ -31,16 +31,12 @@ start_docker_env
 
 execute_robot_test ${SCM} kinit.robot
 
-execute_robot_test ${SCM} freon
+# http
+execute_robot_test scm -v OM_URL:http://om:9874 -v SCM_URL:http://${SCM}:9876 -v RECON_URL:http://recon:9888 -N spnego-http spnego
+execute_robot_test scm -v ENDPOINT_URL:http://recon:9888 -N recon-http recon
 
-execute_robot_test ${SCM} basic/links.robot
-
-execute_robot_test ${SCM} s3
-
-execute_robot_test ${SCM} admincli
-
-export SCM=scm2.org
-execute_robot_test ${SCM} admincli
-stop_docker_env
+# https
+execute_robot_test scm -v OM_URL:https://om:9875 -v SCM_URL:https://${SCM}:9877 -v RECON_URL:https://recon:9889 -N spnego-https spnego
+execute_robot_test scm -v ENDPOINT_URL:https://recon:9889 -N recon-https recon
 
 generate_report

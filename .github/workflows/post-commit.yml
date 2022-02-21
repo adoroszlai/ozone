@@ -195,11 +195,6 @@ jobs:
     runs-on: ubuntu-18.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
-    strategy:
-      matrix:
-        suite:
-          - secure
-      fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v2
@@ -220,14 +215,14 @@ jobs:
           ./hadoop-ozone/dev-support/checks/acceptance.sh
         env:
           KEEP_IMAGE: false
-          OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
+          OZONE_TEST_SELECTOR: ozonesecure-ha
           OZONE_WITH_COVERAGE: true
           OZONE_VOLUME_OWNER: 1000
       - name: Archive build results
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: acceptance-${{ matrix.suite }}
+          name: acceptance
           path: target/acceptance
         continue-on-error: true
   kubernetes:
