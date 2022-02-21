@@ -120,8 +120,10 @@ run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
 run cp -p -r "${ROOT}/hadoop-ozone/dist/target/Dockerfile" .
 
-#Copy pre-generated keytabs
+#Copy pre-generated keytabs and certs
+run cp -p -R "${ROOT}/hadoop-ozone/dist/src/main/keystore" compose/_keystore
 run cp -p -R "${ROOT}/hadoop-ozone/dist/src/main/keytabs" compose/_keytabs
+run cp -p -R "${ROOT}/hadoop-ozone/dist/src/main/truststore" compose/_truststore
 
 #workaround for https://issues.apache.org/jira/browse/MRESOURCES-236
 find ./compose -name "*.sh" -exec chmod 755 {} \;
