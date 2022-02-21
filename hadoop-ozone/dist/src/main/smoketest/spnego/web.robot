@@ -23,28 +23,28 @@ Resource            ../commonlib.robot
 Test Timeout        5 minutes
 
 *** Variables ***
-${OM_URL}           http://om:9874
+${OM_URL}           https://om:9875
 ${OM_DB_CHECKPOINT_URL}      ${OM_URL}/dbCheckpoint
 ${OM_SERVICE_LIST_URL}       ${OM_URL}/serviceList
 
 ${SCM}              scm
-${SCM_URL}          http://${SCM}:9876
-${RECON_URL}        http://recon:9888
+${SCM_URL}          https://${SCM}:9877
+${RECON_URL}        https://recon:9889
 
-${SCM_CONF_URL}     http://${SCM}:9876/conf
-${SCM_JMX_URL}      http://${SCM}:9876/jmx
-${SCM_STACKS_URL}   http://${SCM}:9876/stacks
+${SCM_CONF_URL}     ${SCM_URL}/conf
+${SCM_JMX_URL}      ${SCM_URL}/jmx
+${SCM_STACKS_URL}   ${SCM_URL}/stacks
 
 
 *** Keywords ***
 Verify SPNEGO enabled URL
     [arguments]                      ${url}
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Execute     kdestroy
-    ${result} =         Execute                             curl --negotiate -u : -v -s -I ${url}
+    ${result} =         Execute                             curl --negotiate -u : -v -k -s -I ${url}
     Should contain      ${result}       401 Authentication required
 
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user     testuser     testuser.keytab
-    ${result} =         Execute                             curl --negotiate -u : -v -s -I ${url}
+    ${result} =         Execute                             curl --negotiate -u : -v -k -s -I ${url}
     Should contain      ${result}       200 OK
 
 
@@ -77,5 +77,4 @@ Test SCM stacks
 
 Test Recon portal
     Verify SPNEGO enabled URL       ${RECON_URL}
-    Verify SPNEGO enabled URL       ${RECON_URL}/api/v1/containers
 
