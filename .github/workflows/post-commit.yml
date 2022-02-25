@@ -32,12 +32,12 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
+      needs-basic-checks: false
+      needs-build: false
+      needs-compose-tests: false
+      needs-dependency-check: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v2
@@ -269,14 +269,14 @@ jobs:
     needs:
       - build-info
     runs-on: ubuntu-18.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
         profile:
-          - client
-          - filesystem-hdds
-          - ozone
+          - 1
+          - 2
+          - 3
+          - 4
       fail-fast: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout project
@@ -291,7 +291,9 @@ jobs:
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestMiniOzoneCluster
+        env:
+          ITERATIONS: 25
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: always()
