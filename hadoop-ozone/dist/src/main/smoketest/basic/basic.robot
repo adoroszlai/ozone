@@ -17,7 +17,7 @@
 Documentation       Smoketest ozone cluster startup
 Library             OperatingSystem
 Resource            ../commonlib.robot
-Test Timeout        5 minutes
+Test Timeout        1 minutes
 
 *** Variables ***
 ${SCM}          scm
@@ -32,6 +32,6 @@ Check webui static resources
 
 Start freon testing
     Run Keyword if    '${SECURITY_ENABLED}' == 'true'    Kinit test user     testuser     testuser.keytab
-    ${result} =        Execute              ozone freon randomkeys --num-of-volumes 5 --num-of-buckets 5 --num-of-keys 5 --num-of-threads 1 --replication-type RATIS --factor THREE --validate-writes
-                       Wait Until Keyword Succeeds      3min       10sec     Should contain   ${result}   Number of Keys added: 125
-                       Should Contain                   ${result}  Status: Success
+    ${result} =        Execute              ozone freon randomkeys --num-of-volumes 5 --num-of-buckets 5 --num-of-keys 10000 --num-of-threads 1 --replication-type RATIS --factor THREE --validate-writes
+                       Should contain                   ${result}   Number of Keys added: 125
+                       Should Contain                   ${result}   Status: Success
