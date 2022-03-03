@@ -23,8 +23,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.ratis.conf.RatisClientConfig;
+import org.apache.hadoop.hdds.ratis.retrypolicy.RetryPolicyCreator;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.ozone.HddsDatanodeService;
@@ -33,18 +36,18 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.ozone.test.GenericTestUtils;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.ratis.grpc.client.GrpcClientProtocolService;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.GroupInfoReply;
 import org.apache.ratis.protocol.GroupInfoRequest;
 import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.retry.RetryPolicies;
+import org.apache.ratis.retry.RetryPolicy;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -54,7 +57,7 @@ import org.slf4j.LoggerFactory;
 public class TestRatisPipelineLeader {
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
-  private static final org.slf4j.Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(TestRatisPipelineLeader.class);
 
   @BeforeClass
@@ -94,17 +97,14 @@ public class TestRatisPipelineLeader {
       }
     }, 200, 20000);
     // Verify client connects to Leader without NotLeaderException
+    OzoneConfiguration config = new OzoneConfiguration(conf);
+    RatisClientConfig clientConfig = config.getObject(RatisClientConfig.class);
+    clientConfig.setRetryPolicy(NoRetryPolicyCreator.class);
+    config.setFromObject(clientConfig);
     XceiverClientRatis xceiverClientRatis =
-        XceiverClientRatis.newXceiverClientRatis(ratisPipeline, conf);
-    Logger.getLogger(GrpcClientProtocolService.class).setLevel(Level.DEBUG);
-    GenericTestUtils.LogCapturer logCapturer =
-        GenericTestUtils.LogCapturer.captureLogs(GrpcClientProtocolService.LOG);
+        XceiverClientRatis.newXceiverClientRatis(ratisPipeline, config);
     xceiverClientRatis.connect();
     ContainerProtocolCalls.createContainer(xceiverClientRatis, 1L, null);
-    logCapturer.stopCapturing();
-    Assert.assertFalse("Client should connect to pipeline leader on first try.",
-        logCapturer.getOutput().contains(
-            "org.apache.ratis.protocol.NotLeaderException"));
   }
 
   @Test(timeout = 120000)
@@ -156,4 +156,17 @@ public class TestRatisPipelineLeader {
         ratisPipeline.getLeaderId().toString().equals(
             reply.getRoleInfoProto().getSelf().getId().toStringUtf8());
   }
+
+  /**
+   * Does not allow any retry.  This should ensure test failure should client
+   * contact follower instead of leader first.
+   */
+  public static class NoRetryPolicyCreator implements RetryPolicyCreator {
+
+    @Override
+    public RetryPolicy create(ConfigurationSource any) {
+      return RetryPolicies.noRetry();
+    }
+  }
+
 }

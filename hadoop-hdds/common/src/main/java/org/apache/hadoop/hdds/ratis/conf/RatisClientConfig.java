@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.conf.Config;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.ratis.RatisHelper;
+import org.apache.hadoop.hdds.ratis.retrypolicy.RetryPolicyCreator;
 import org.apache.ratis.client.RaftClientConfigKeys;
 
 import java.time.Duration;
@@ -214,10 +215,14 @@ public class RatisClientConfig {
           + "RequestTypeDependentRetryPolicyCreator",
       type = ConfigType.STRING,
       tags = { OZONE, CLIENT, PERFORMANCE },
-      description = "The class name of the policy for retry.")
+      description = "The name of the class that creates policy for retry.")
   private String retryPolicy;
 
   public String getRetryPolicy() {
     return retryPolicy;
+  }
+
+  public void setRetryPolicy(Class<? extends RetryPolicyCreator> cls) {
+    retryPolicy = cls.getName();
   }
 }
