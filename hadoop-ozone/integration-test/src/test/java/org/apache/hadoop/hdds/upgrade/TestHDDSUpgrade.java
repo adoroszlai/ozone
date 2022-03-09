@@ -102,7 +102,6 @@ import org.slf4j.LoggerFactory;
  */
 @Timeout(11000)
 @Flaky({"HDDS-6028", "HDDS-6049"})
-@Slow
 public class TestHDDSUpgrade {
 
   /**
@@ -855,6 +854,7 @@ public class TestHDDSUpgrade {
    * Upgrade execution points as defined in
    * UpgradeFinalizer:UpgradeTestInjectionPoints.
    */
+  @Slow
   @Test
   public void testDataNodeFailuresDuringDataNodeUpgrade()
       throws Exception {
@@ -899,6 +899,7 @@ public class TestHDDSUpgrade {
    * through upgrade-finalization. This test covers all the combinations of
    * SCM-Upgrade-execution points and DataNode-Upgrade-execution points.
    */
+  @Slow
   @Test
   public void testAllPossibleDataNodeFailuresAndSCMFailures()
       throws Exception {
@@ -958,6 +959,7 @@ public class TestHDDSUpgrade {
    * through upgrade. This test covers all the combinations of
    * SCM-Upgrade-execution points.
    */
+  @Slow
   @Test
   public void testDataNodeAndSCMFailuresTogetherDuringSCMUpgrade()
       throws Exception {
@@ -996,6 +998,7 @@ public class TestHDDSUpgrade {
    * through upgrade. This test covers all the combinations of
    * DataNode-Upgrade-execution points.
    */
+  @Slow
   @Test
   public void testDataNodeAndSCMFailuresTogetherDuringDataNodeUpgrade()
       throws Exception {
