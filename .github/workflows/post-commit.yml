@@ -292,7 +292,7 @@ jobs:
         run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }}
         if: matrix.profile != 'flaky'
       - name: Execute flaky tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }} -Dsurefire.rerunFailingTestsCount=5 -Dsurefire.fork.timeout=18000 -Dtest=TestHDDSUpgrade
+        run: hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }} -Dsurefire.fork.timeout=18000 -Dtest=TestHDDSUpgrade
         if: matrix.profile == 'flaky'
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
