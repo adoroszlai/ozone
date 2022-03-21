@@ -572,7 +572,8 @@ public class TestOmMetrics {
         .setKeyName(keyName)
         .setAcls(Lists.emptyList())
         .setReplicationConfig(
-            new RatisReplicationConfig(HddsProtos.ReplicationFactor.THREE))
+            RatisReplicationConfig.getInstance(
+                HddsProtos.ReplicationFactor.THREE))
         .build();
   }
   private OmVolumeArgs createVolumeArgs() {

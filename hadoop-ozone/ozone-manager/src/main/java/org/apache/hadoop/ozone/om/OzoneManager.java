@@ -3505,6 +3505,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .getUpdatesSince(dbUpdatesRequest.getSequenceNumber(), limitCount);
     DBUpdates dbUpdates = new DBUpdates(updatesSince.getData());
     dbUpdates.setCurrentSequenceNumber(updatesSince.getCurrentSequenceNumber());
+    dbUpdates.setLatestSequenceNumber(updatesSince.getLatestSequenceNumber());
     return dbUpdates;
   }
 

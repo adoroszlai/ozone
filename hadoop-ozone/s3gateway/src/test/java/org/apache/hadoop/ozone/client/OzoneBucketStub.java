@@ -80,7 +80,8 @@ public class OzoneBucketStub extends OzoneBucket {
       long creationTime) {
     super(volumeName,
         bucketName,
-        new RatisReplicationConfig(HddsProtos.ReplicationFactor.THREE),
+        RatisReplicationConfig
+            .getInstance(HddsProtos.ReplicationFactor.ONE),
         storageType,
         versioning,
         creationTime);

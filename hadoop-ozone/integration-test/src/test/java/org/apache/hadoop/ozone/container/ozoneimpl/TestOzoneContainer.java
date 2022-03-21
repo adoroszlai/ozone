@@ -32,15 +32,20 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.ozone.test.tag.Flaky;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomDatanodeDetails;
@@ -49,13 +54,10 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 /**
  * Tests ozone containers.
  */
-@Ignore
+@EnableRuleMigrationSupport
+@Flaky("HDDS-2263")
+@Timeout(300)
 public class TestOzoneContainer {
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = Timeout.seconds(300);
 
   @Rule
   public TemporaryFolder tempFolder = new TemporaryFolder();
@@ -231,18 +233,9 @@ public class TestOzoneContainer {
           getChunksCount();
       ContainerTestHelper.verifyGetBlock(request, response, chunksCount);
 
-
-      // Delete Block
-      request =
-          ContainerTestHelper.getDeleteBlockRequest(
-              pipeline, putBlockRequest.getPutBlock());
-      response = client.sendCommand(request);
-      Assert.assertNotNull(response);
-      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-
-      //Delete Chunk
-      request = ContainerTestHelper.getDeleteChunkRequest(
-          pipeline, writeChunkRequest.getWriteChunk());
+      // Delete Block and Delete Chunk are handled by BlockDeletingService
+      // ContainerCommandRequestProto DeleteBlock and DeleteChunk requests
+      // are deprecated
 
       response = client.sendCommand(request);
       Assert.assertNotNull(response);
@@ -397,10 +390,6 @@ public class TestOzoneContainer {
           .getChunksCount();
       ContainerTestHelper.verifyGetBlock(request, response, chunksCount);
 
-      // Delete block must fail on a closed container.
-      request =
-          ContainerTestHelper.getDeleteBlockRequest(client.getPipeline(),
-              putBlockRequest.getPutBlock());
       response = client.sendCommand(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,

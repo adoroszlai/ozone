@@ -1119,6 +1119,7 @@ message ServiceListResponse {
 message DBUpdatesResponse {
     required uint64 sequenceNumber = 1;
     repeated bytes data = 2;
+    optional uint64 latestSequenceNumber = 3;
 }
 
 message FinalizeUpgradeRequest {
