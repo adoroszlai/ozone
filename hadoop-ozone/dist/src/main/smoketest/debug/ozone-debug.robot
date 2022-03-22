@@ -28,6 +28,7 @@ Execute read-replicas CLI tool
 
 Read Replicas Manifest
     ${manifest} =        Get File        ${DIR}/${TESTFILE}_manifest
+    Log                             ${manifest}
     ${json} =            Evaluate        json.loads('''${manifest}''')        json
     Validate JSON                        ${json}
     [return]    ${json}
