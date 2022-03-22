@@ -31,7 +31,6 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -951,7 +950,7 @@ public class RpcClient implements ClientProtocol {
         = keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly();
 
     for (OmKeyLocationInfo keyLocationInfo : keyLocationInfos) {
-      Map<DatanodeDetails, OzoneInputStream> blocks = new HashMap<>();
+      Map<DatanodeDetails, OzoneInputStream> blocks = new LinkedHashMap<>();
 
       Pipeline pipelineBefore = keyLocationInfo.getPipeline();
       List<DatanodeDetails> datanodes = pipelineBefore.getNodes();
