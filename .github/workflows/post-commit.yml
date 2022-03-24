@@ -286,7 +286,7 @@ jobs:
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestContainerStateManagerIntegration -DexcludedGroups=flaky
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestContainerStateManagerIntegration
         env:
           ITERATIONS: 10
       - name: Summary of failures
