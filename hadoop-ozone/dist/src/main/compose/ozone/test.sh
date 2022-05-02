@@ -26,6 +26,8 @@ export OZONE_REPLICATION_FACTOR=3
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
+init_script_if_needed
+
 start_docker_env 5
 
 execute_robot_test scm lib

@@ -35,8 +35,11 @@ _install_tool() {
   bin="${4:-"${tool}"}"
   func="${5:-"_install_${tool}"}"
 
+  start_end::group_start "Install ${tool}"
+
   if [[ "${OZONE_PREFER_LOCAL_TOOL}" == "true" ]] && which "$bin" >& /dev/null; then
     echo "Skip installing $bin, as it's already available on PATH."
+    start_end::group_end
     return
   fi
 
@@ -62,6 +65,8 @@ _install_tool() {
       fi
     fi
   fi
+
+  start_end::group_end
 }
 
 install_bats() {

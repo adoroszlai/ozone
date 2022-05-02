@@ -19,6 +19,8 @@ set -u -o pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
+source "dev-support/ci/_script_init.sh"
+
 : ${CHECK:="unit"}
 : ${ITERATIONS:="1"}
 
@@ -37,15 +39,19 @@ else
 fi
 
 if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
+  start_end::group_start "Building Ozone"
   mvn ${MAVEN_OPTIONS} -DskipTests clean install
+  start_end::group_end
 fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 mkdir -p "$REPORT_DIR"
 
+start_end::group_start "Running tests"
 rc=0
 for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${ITERATIONS} -gt 1 ]]; then
+    start_end::group_start "Running iteration ${i}"
     original_report_dir="${REPORT_DIR}"
     REPORT_DIR="${original_report_dir}/iteration${i}"
     mkdir -p "${REPORT_DIR}"
@@ -64,14 +70,18 @@ for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${ITERATIONS} -gt 1 ]]; then
     REPORT_DIR="${original_report_dir}"
     echo "Iteration ${i} exit code: ${irc}" | tee -a "${REPORT_DIR}/summary.txt"
+    start_end::group_end
   fi
 
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
   fi
 done
+start_end::group_end
 
 #Archive combined jacoco records
+start_end::group_start "Calculating combined coverage"
 mvn -B -N jacoco:merge -Djacoco.destFile=$REPORT_DIR/jacoco-combined.exec
+start_end::group_end
 
 exit ${rc}

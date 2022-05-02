@@ -27,6 +27,8 @@ rm "$ALL_RESULT_DIR"/* || true
 
 source "$SCRIPT_DIR"/testlib.sh
 
+init_script_if_needed
+
 if [ "$OZONE_WITH_COVERAGE" ]; then
    java -cp "$PROJECT_DIR"/share/coverage/$(ls "$PROJECT_DIR"/share/coverage | grep test-util):"$PROJECT_DIR"/share/coverage/jacoco-core.jar org.apache.hadoop.test.JacocoServer &
    DOCKER_BRIDGE_IP=$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')
