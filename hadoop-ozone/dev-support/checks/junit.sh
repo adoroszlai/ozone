@@ -19,7 +19,7 @@ set -u -o pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-source "dev-support/ci/_script_init.sh"
+source "dev-support/ci/lib/_script_init.sh"
 
 : ${CHECK:="unit"}
 : ${ITERATIONS:="1"}
