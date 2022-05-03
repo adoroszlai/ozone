@@ -73,22 +73,13 @@ public class TestListParts {
     assertEquals(200, response.getStatus());
 
     String content = "Multipart Upload";
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(content.getBytes(UTF_8));
-    response = REST.put(OzoneConsts.S3_BUCKET, OzoneConsts.KEY,
-        content.length(), 1, uploadID, body);
+    byte[] bytes = content.getBytes(UTF_8);
+    for (int i = 1; i <= 3; i++) {
+      response = REST.put(OzoneConsts.S3_BUCKET, OzoneConsts.KEY,
+          bytes.length, i, uploadID, new ByteArrayInputStream(bytes));
 
-    assertNotNull(response.getHeaderString("ETag"));
-
-    response = REST.put(OzoneConsts.S3_BUCKET, OzoneConsts.KEY,
-        content.length(), 2, uploadID, body);
-
-    assertNotNull(response.getHeaderString("ETag"));
-
-    response = REST.put(OzoneConsts.S3_BUCKET, OzoneConsts.KEY,
-        content.length(), 3, uploadID, body);
-
-    assertNotNull(response.getHeaderString("ETag"));
+      assertNotNull(response.getHeaderString("ETag"));
+    }
   }
 
   @Test
