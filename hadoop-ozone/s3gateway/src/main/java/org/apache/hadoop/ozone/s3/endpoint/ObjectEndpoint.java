@@ -244,6 +244,9 @@ public class ObjectEndpoint extends EndpointBase {
       } else {
         getMetrics().incCreateKeyFailure();
       }
+      if (ex instanceof EOFException) {
+        throw newError(INVALID_REQUEST, keyPath, ex);
+      }
       LOG.error("Exception occurred in PutObject", ex.getMessage());
       throw ex;
     } finally {
@@ -777,9 +780,9 @@ public class ObjectEndpoint extends EndpointBase {
   }
 
   private void validateBytesStored(long length, long bytes)
-      throws OS3Exception {
+      throws IOException {
     if (length > 0 && bytes != length) {
-      throw newError(INVALID_REQUEST,
+      throw new EOFException(
           "Expected content to be " + length +
               " bytes, but was " + bytes + " bytes");
     }
