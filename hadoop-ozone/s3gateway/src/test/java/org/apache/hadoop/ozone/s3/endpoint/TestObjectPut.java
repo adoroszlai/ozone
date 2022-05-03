@@ -60,10 +60,9 @@ import static org.mockito.Mockito.when;
 class TestObjectPut {
 
   private static final byte[] CONTENT = RandomUtils.nextBytes(10);
-
-  private final String bucketName = "b1";
-  private final String keyName = "key=value/1";
-  private final String destBucket = "b2";
+  private static final String BUCKET_NAME = "b1";
+  private static final String KEY_NAME = "key=value/1";
+  private static final String DEST_BUCKET = "b2";
 
   private OzoneClient clientStub;
   private ObjectEndpoint objectEndpoint;
@@ -75,8 +74,8 @@ class TestObjectPut {
     clientStub = new OzoneClientStub();
 
     // Create bucket
-    clientStub.getObjectStore().createS3Bucket(bucketName);
-    clientStub.getObjectStore().createS3Bucket(destBucket);
+    clientStub.getObjectStore().createS3Bucket(BUCKET_NAME);
+    clientStub.getObjectStore().createS3Bucket(DEST_BUCKET);
 
     // Create PutObject and setClient to OzoneClientStub
     objectEndpoint = new ObjectEndpoint();
@@ -90,16 +89,16 @@ class TestObjectPut {
   @ParameterizedTest
   @ArgumentsSource(KeyContentProvider.class)
   void testPutObject(byte[] content) throws IOException, OS3Exception {
-    assertSuccess(putObject(bucketName, keyName, content, content.length));
-    assertKeyContent(bucketName, keyName, content);
+    assertSuccess(putObject(BUCKET_NAME, KEY_NAME, content, content.length));
+    assertKeyContent(BUCKET_NAME, KEY_NAME, content);
   }
 
   @ParameterizedTest
   @ArgumentsSource(KeyContentProvider.class)
   void testPutObjectWithoutLength(byte[] content)
       throws IOException, OS3Exception {
-    assertSuccess(putObject(bucketName, keyName, content, 0));
-    assertKeyContent(bucketName, keyName, content);
+    assertSuccess(putObject(BUCKET_NAME, KEY_NAME, content, 0));
+    assertKeyContent(BUCKET_NAME, KEY_NAME, content);
   }
 
   @ParameterizedTest
@@ -108,7 +107,7 @@ class TestObjectPut {
       throws IOException {
     byte[] content = RandomUtils.nextBytes(100);
     try {
-      putObject(bucketName, keyName, content, content.length + diff);
+      putObject(BUCKET_NAME, KEY_NAME, content, content.length + diff);
       fail("Expected upload with wrong content length to fail");
     } catch (OS3Exception e) {
       // TODO confirm expected error code
@@ -123,18 +122,19 @@ class TestObjectPut {
     //GIVEN
     ECReplicationConfig ecReplicationConfig =
         new ECReplicationConfig("rs-3-2-1024K");
-    clientStub.getObjectStore().getS3Bucket(bucketName)
+    clientStub.getObjectStore().getS3Bucket(BUCKET_NAME)
         .setReplicationConfig(ecReplicationConfig);
 
     // WHEN
-    Response response = putObject(bucketName, keyName, content, content.length);
+    Response response = putObject(BUCKET_NAME, KEY_NAME,
+        content, content.length);
 
     // THEN
     assertSuccess(response);
     assertEquals(ecReplicationConfig,
-        clientStub.getObjectStore().getS3Bucket(bucketName).getKey(keyName)
+        clientStub.getObjectStore().getS3Bucket(BUCKET_NAME).getKey(KEY_NAME)
             .getReplicationConfig());
-    assertKeyContent(bucketName, keyName, content);
+    assertKeyContent(BUCKET_NAME, KEY_NAME, content);
   }
 
   @Test
@@ -149,40 +149,41 @@ class TestObjectPut {
         .thenReturn("STREAMING-AWS4-HMAC-SHA256-PAYLOAD");
 
     //WHEN
-    Response response = putObject(bucketName, keyName, bytes, 0);
+    Response response = putObject(BUCKET_NAME, KEY_NAME, bytes, 0);
 
     //THEN
     assertSuccess(response);
-    assertKeyContent(bucketName, keyName, "1234567890abcde".getBytes(UTF_8));
+    assertKeyContent(BUCKET_NAME, KEY_NAME, "1234567890abcde".getBytes(UTF_8));
   }
 
   @ParameterizedTest
   @ArgumentsSource(KeyContentProvider.class)
   void testCopyObject(byte[] content) throws IOException, OS3Exception {
     // GIVEN
-    putObject(bucketName, keyName, content, content.length);
+    putObject(BUCKET_NAME, KEY_NAME, content, content.length);
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn(bucketName + "/" + urlEncode(keyName));
+        .thenReturn(BUCKET_NAME + "/" + urlEncode(KEY_NAME));
 
     // WHEN
     String destKey = "key=value/2";
-    Response response = putObject(destBucket, destKey, content, content.length);
+    Response response = putObject(DEST_BUCKET, destKey,
+        content, content.length);
 
     // THEN
     assertSuccess(response);
-    assertKeyContent(destBucket, destKey, content);
+    assertKeyContent(DEST_BUCKET, destKey, content);
   }
 
   @Test
   void rejectsCopyToSameLocation() throws IOException, OS3Exception {
     // GIVEN
-    putObject(bucketName, keyName, CONTENT, CONTENT.length);
+    putObject(BUCKET_NAME, KEY_NAME, CONTENT, CONTENT.length);
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn(bucketName + "/" + urlEncode(keyName));
+        .thenReturn(BUCKET_NAME + "/" + urlEncode(KEY_NAME));
 
     // WHEN + THEN
     try {
-      putObject(bucketName, keyName, CONTENT, CONTENT.length);
+      putObject(BUCKET_NAME, KEY_NAME, CONTENT, CONTENT.length);
       fail("Expected copy to fail when source and destination is the same");
     } catch (OS3Exception ex) {
       assertTrue(ex.getErrorMessage().contains("This copy request is illegal"));
@@ -193,11 +194,11 @@ class TestObjectPut {
   void copyFromNonExistentBucket() throws IOException {
     // GIVEN
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn("no-such-bucket" + "/" + urlEncode(keyName));
+        .thenReturn("no-such-bucket" + "/" + urlEncode(KEY_NAME));
 
     try {
       // WHEN
-      putObject(destBucket, keyName, CONTENT, CONTENT.length);
+      putObject(DEST_BUCKET, KEY_NAME, CONTENT, CONTENT.length);
       fail("Expected copy from non-existent source bucket to fail");
     } catch (OS3Exception ex) {
       // THEN
@@ -209,11 +210,11 @@ class TestObjectPut {
   void copyToNonExistentBucket() throws IOException {
     // GIVEN
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn(bucketName + "/" + urlEncode(keyName));
+        .thenReturn(BUCKET_NAME + "/" + urlEncode(KEY_NAME));
 
     try {
       // WHEN
-      putObject("no-such-bucket", keyName, CONTENT, CONTENT.length);
+      putObject("no-such-bucket", KEY_NAME, CONTENT, CONTENT.length);
       fail("Expected copy to non-existent bucket to fail");
     } catch (OS3Exception ex) {
       // THEN
@@ -225,7 +226,7 @@ class TestObjectPut {
   void copyFromNonExistentToNonExistent() throws IOException {
     // GIVEN
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn("no-such-bucket" + "/" + urlEncode(keyName));
+        .thenReturn("no-such-bucket" + "/" + urlEncode(KEY_NAME));
 
     try {
       // WHEN
@@ -241,11 +242,11 @@ class TestObjectPut {
   void copyNonExistentKey() throws IOException {
     // GIVEN
     when(headers.getHeaderString(COPY_SOURCE_HEADER))
-        .thenReturn(bucketName + "/" + urlEncode("no-such-key"));
+        .thenReturn(BUCKET_NAME + "/" + urlEncode("no-such-key"));
 
     try {
       // WHEN
-      putObject(destBucket, keyName, CONTENT, CONTENT.length);
+      putObject(DEST_BUCKET, KEY_NAME, CONTENT, CONTENT.length);
       fail("Expected copy from non-existent source key to fail");
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.NO_SUCH_KEY.getCode(), ex.getCode());
@@ -258,7 +259,7 @@ class TestObjectPut {
         .thenReturn("random");
 
     try {
-      putObject(bucketName, keyName, CONTENT, CONTENT.length);
+      putObject(BUCKET_NAME, KEY_NAME, CONTENT, CONTENT.length);
       fail("Expected to fail with invalid storage type");
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.INVALID_ARGUMENT.getErrorMessage(),
@@ -275,14 +276,15 @@ class TestObjectPut {
         .thenReturn("");
 
     // WHEN
-    Response response = putObject(bucketName, keyName, CONTENT, CONTENT.length);
+    Response response = putObject(BUCKET_NAME, KEY_NAME,
+        CONTENT, CONTENT.length);
 
     // THEN
     assertSuccess(response);
 
     OzoneKeyDetails key =
-        clientStub.getObjectStore().getS3Bucket(bucketName)
-            .getKey(keyName);
+        clientStub.getObjectStore().getS3Bucket(BUCKET_NAME)
+            .getKey(KEY_NAME);
     //default type is set
     assertEquals(ReplicationType.RATIS, key.getReplicationType());
   }
