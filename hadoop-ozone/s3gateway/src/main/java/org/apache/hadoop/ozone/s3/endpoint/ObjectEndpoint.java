@@ -207,7 +207,8 @@ public class ObjectEndpoint extends EndpointBase {
         body = new SignedChunksInputStream(body);
       }
 
-      IOUtils.copy(body, output);
+      long bytes = IOUtils.copyLarge(body, output);
+      validateBytesStored(length, bytes);
 
       getMetrics().incCreateKeySuccess();
       return Response.ok().status(HttpStatus.SC_OK)
@@ -742,7 +743,8 @@ public class ObjectEndpoint extends EndpointBase {
             }
           }
         } else {
-          IOUtils.copy(body, ozoneOutputStream);
+          long bytes = IOUtils.copyLarge(body, ozoneOutputStream);
+          validateBytesStored(length, bytes);
         }
       } finally {
         if (ozoneOutputStream != null) {
@@ -771,6 +773,15 @@ public class ObjectEndpoint extends EndpointBase {
         throw newError(S3ErrorTable.ACCESS_DENIED, bucket + "/" + key, ex);
       }
       throw ex;
+    }
+  }
+
+  private void validateBytesStored(long length, long bytes)
+      throws OS3Exception {
+    if (length > 0 && bytes != length) {
+      throw newError(INVALID_REQUEST,
+          "Expected content to be " + length +
+              " bytes, but was " + bytes + " bytes");
     }
   }
 

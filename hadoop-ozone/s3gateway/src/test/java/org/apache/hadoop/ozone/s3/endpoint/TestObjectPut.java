@@ -25,6 +25,7 @@ import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -36,34 +37,40 @@ import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Utils.urlEncode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 /**
  * Test put object.
  */
-public class TestObjectPut {
-  public static final String CONTENT = "0123456789";
-  private String bucketName = "b1";
-  private String keyName = "key=value/1";
-  private String destBucket = "b2";
-  private String destkey = "key=value/2";
-  private String nonexist = "nonexist";
+class TestObjectPut {
+
+  private static final byte[] CONTENT = RandomUtils.nextBytes(10);
+
+  private final String bucketName = "b1";
+  private final String keyName = "key=value/1";
+  private final String destBucket = "b2";
+
   private OzoneClient clientStub;
   private ObjectEndpoint objectEndpoint;
+  private HttpHeaders headers;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  void setup() throws IOException {
     //Create client stub and object store stub.
     clientStub = new OzoneClientStub();
 
@@ -75,193 +82,184 @@ public class TestObjectPut {
     objectEndpoint = new ObjectEndpoint();
     objectEndpoint.setClient(clientStub);
     objectEndpoint.setOzoneConfiguration(new OzoneConfiguration());
-  }
 
-  @Test
-  public void testPutObject() throws IOException, OS3Exception {
-    //GIVEN
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
+    headers = Mockito.mock(HttpHeaders.class);
     objectEndpoint.setHeaders(headers);
-
-    //WHEN
-    Response response = objectEndpoint.put(bucketName, keyName, CONTENT
-        .length(), 1, null, body);
-
-
-    //THEN
-    OzoneInputStream ozoneInputStream =
-        clientStub.getObjectStore().getS3Bucket(bucketName)
-            .readKey(keyName);
-    String keyContent =
-        IOUtils.toString(ozoneInputStream, UTF_8);
-
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(CONTENT, keyContent);
   }
 
-  @Test
-  public void testPutObjectWithECReplicationConfig()
+  @ParameterizedTest
+  @ArgumentsSource(KeyContentProvider.class)
+  void testPutObject(byte[] content) throws IOException, OS3Exception {
+    assertSuccess(putObject(bucketName, keyName, content, content.length));
+    assertKeyContent(bucketName, keyName, content);
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(KeyContentProvider.class)
+  void testPutObjectWithoutLength(byte[] content)
+      throws IOException, OS3Exception {
+    assertSuccess(putObject(bucketName, keyName, content, 0));
+    assertKeyContent(bucketName, keyName, content);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 1})
+  void rejectsPutObjectWithWrongContentLength(int diff)
+      throws IOException {
+    byte[] content = RandomUtils.nextBytes(100);
+    try {
+      putObject(bucketName, keyName, content, content.length + diff);
+      fail("Expected upload with wrong content length to fail");
+    } catch (OS3Exception e) {
+      // TODO confirm expected error code
+      assertEquals(S3ErrorTable.INVALID_REQUEST.getCode(), e.getCode());
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(KeyContentProvider.class)
+  void testPutObjectWithECReplicationConfig(byte[] content)
       throws IOException, OS3Exception {
     //GIVEN
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
-    objectEndpoint.setHeaders(headers);
     ECReplicationConfig ecReplicationConfig =
         new ECReplicationConfig("rs-3-2-1024K");
     clientStub.getObjectStore().getS3Bucket(bucketName)
         .setReplicationConfig(ecReplicationConfig);
-    Response response = objectEndpoint.put(bucketName, keyName, CONTENT
-        .length(), 1, null, body);
 
-    Assert.assertEquals(ecReplicationConfig,
+    // WHEN
+    Response response = putObject(bucketName, keyName, content, content.length);
+
+    // THEN
+    assertSuccess(response);
+    assertEquals(ecReplicationConfig,
         clientStub.getObjectStore().getS3Bucket(bucketName).getKey(keyName)
             .getReplicationConfig());
-    OzoneInputStream ozoneInputStream =
-        clientStub.getObjectStore().getS3Bucket(bucketName)
-            .readKey(keyName);
-    String keyContent =
-        IOUtils.toString(ozoneInputStream, UTF_8);
-
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(CONTENT, keyContent);
+    assertKeyContent(bucketName, keyName, content);
   }
 
   @Test
-  public void testPutObjectWithSignedChunks() throws IOException, OS3Exception {
+  void testPutObjectWithSignedChunks() throws IOException, OS3Exception {
     //GIVEN
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    objectEndpoint.setHeaders(headers);
-
     String chunkedContent = "0a;chunk-signature=signature\r\n"
         + "1234567890\r\n"
         + "05;chunk-signature=signature\r\n"
         + "abcde\r\n";
-
+    byte[] bytes = chunkedContent.getBytes(UTF_8);
     when(headers.getHeaderString("x-amz-content-sha256"))
         .thenReturn("STREAMING-AWS4-HMAC-SHA256-PAYLOAD");
 
     //WHEN
-    Response response = objectEndpoint.put(bucketName, keyName,
-        chunkedContent.length(), 1, null,
-        new ByteArrayInputStream(chunkedContent.getBytes(UTF_8)));
+    Response response = putObject(bucketName, keyName, bytes, 0);
 
     //THEN
-    OzoneInputStream ozoneInputStream =
-        clientStub.getObjectStore().getS3Bucket(bucketName)
-            .readKey(keyName);
-    String keyContent = IOUtils.toString(ozoneInputStream, UTF_8);
+    assertSuccess(response);
+    assertKeyContent(bucketName, keyName, "1234567890abcde".getBytes(UTF_8));
+  }
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals("1234567890abcde", keyContent);
+  @ParameterizedTest
+  @ArgumentsSource(KeyContentProvider.class)
+  void testCopyObject(byte[] content) throws IOException, OS3Exception {
+    // GIVEN
+    putObject(bucketName, keyName, content, content.length);
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(bucketName + "/" + urlEncode(keyName));
+
+    // WHEN
+    String destKey = "key=value/2";
+    Response response = putObject(destBucket, destKey, content, content.length);
+
+    // THEN
+    assertSuccess(response);
+    assertKeyContent(destBucket, destKey, content);
   }
 
   @Test
-  public void testCopyObject() throws IOException, OS3Exception {
-    // Put object in to source bucket
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
-    objectEndpoint.setHeaders(headers);
-    keyName = "sourceKey";
+  void rejectsCopyToSameLocation() throws IOException, OS3Exception {
+    // GIVEN
+    putObject(bucketName, keyName, CONTENT, CONTENT.length);
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(bucketName + "/" + urlEncode(keyName));
 
-    Response response = objectEndpoint.put(bucketName, keyName,
-        CONTENT.length(), 1, null, body);
-
-    OzoneInputStream ozoneInputStream = clientStub.getObjectStore()
-        .getS3Bucket(bucketName)
-        .readKey(keyName);
-
-    String keyContent = IOUtils.toString(ozoneInputStream, UTF_8);
-
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(CONTENT, keyContent);
-
-
-    // Add copy header, and then call put
-    when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
-        bucketName  + "/" + urlEncode(keyName));
-
-    response = objectEndpoint.put(destBucket, destkey, CONTENT.length(), 1,
-        null, body);
-
-    // Check destination key and response
-    ozoneInputStream = clientStub.getObjectStore().getS3Bucket(destBucket)
-        .readKey(destkey);
-
-    keyContent = IOUtils.toString(ozoneInputStream, UTF_8);
-
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(CONTENT, keyContent);
-
-    // source and dest same
+    // WHEN + THEN
     try {
-      objectEndpoint.put(bucketName, keyName, CONTENT.length(), 1, null, body);
-      fail("test copy object failed");
+      putObject(bucketName, keyName, CONTENT, CONTENT.length);
+      fail("Expected copy to fail when source and destination is the same");
     } catch (OS3Exception ex) {
-      Assert.assertTrue(ex.getErrorMessage().contains("This copy request is " +
-          "illegal"));
+      assertTrue(ex.getErrorMessage().contains("This copy request is illegal"));
     }
-
-    // source bucket not found
-    try {
-      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
-          nonexist + "/"  + urlEncode(keyName));
-      objectEndpoint.put(destBucket, destkey, CONTENT.length(), 1, null,
-          body);
-      fail("test copy object failed");
-    } catch (OS3Exception ex) {
-      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
-    }
-
-    // dest bucket not found
-    try {
-      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
-          bucketName + "/" + urlEncode(keyName));
-      objectEndpoint.put(nonexist, destkey, CONTENT.length(), 1, null, body);
-      fail("test copy object failed");
-    } catch (OS3Exception ex) {
-      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
-    }
-
-    //Both source and dest bucket not found
-    try {
-      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
-          nonexist + "/" + urlEncode(keyName));
-      objectEndpoint.put(nonexist, destkey, CONTENT.length(), 1, null, body);
-      fail("test copy object failed");
-    } catch (OS3Exception ex) {
-      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
-    }
-
-    // source key not found
-    try {
-      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
-          bucketName + "/" + urlEncode(nonexist));
-      objectEndpoint.put("nonexistent", keyName, CONTENT.length(), 1,
-          null, body);
-      fail("test copy object failed");
-    } catch (OS3Exception ex) {
-      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
-    }
-
   }
 
   @Test
-  public void testInvalidStorageType() throws IOException {
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
-    objectEndpoint.setHeaders(headers);
-    keyName = "sourceKey";
-    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("random");
+  void copyFromNonExistentBucket() throws IOException {
+    // GIVEN
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn("no-such-bucket" + "/" + urlEncode(keyName));
 
     try {
-      objectEndpoint.put(bucketName, keyName,
-          CONTENT.length(), 1, null, body);
-      fail("testInvalidStorageType");
+      // WHEN
+      putObject(destBucket, keyName, CONTENT, CONTENT.length);
+      fail("Expected copy from non-existent source bucket to fail");
+    } catch (OS3Exception ex) {
+      // THEN
+      assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
+    }
+  }
+
+  @Test
+  void copyToNonExistentBucket() throws IOException {
+    // GIVEN
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(bucketName + "/" + urlEncode(keyName));
+
+    try {
+      // WHEN
+      putObject("no-such-bucket", keyName, CONTENT, CONTENT.length);
+      fail("Expected copy to non-existent bucket to fail");
+    } catch (OS3Exception ex) {
+      // THEN
+      assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
+    }
+  }
+
+  @Test
+  void copyFromNonExistentToNonExistent() throws IOException {
+    // GIVEN
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn("no-such-bucket" + "/" + urlEncode(keyName));
+
+    try {
+      // WHEN
+      putObject("other-missing-bucket", "otherKey", CONTENT, CONTENT.length);
+      fail("Expected copy to fail when neither source nor destination exist");
+    } catch (OS3Exception ex) {
+      // THEN
+      assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
+    }
+  }
+
+  @Test
+  void copyNonExistentKey() throws IOException {
+    // GIVEN
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(bucketName + "/" + urlEncode("no-such-key"));
+
+    try {
+      // WHEN
+      putObject(destBucket, keyName, CONTENT, CONTENT.length);
+      fail("Expected copy from non-existent source key to fail");
+    } catch (OS3Exception ex) {
+      assertEquals(S3ErrorTable.NO_SUCH_KEY.getCode(), ex.getCode());
+    }
+  }
+
+  @Test
+  void rejectsInvalidStorageClass() throws IOException {
+    when(headers.getHeaderString(STORAGE_CLASS_HEADER))
+        .thenReturn("random");
+
+    try {
+      putObject(bucketName, keyName, CONTENT, CONTENT.length);
+      fail("Expected to fail with invalid storage type");
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.INVALID_ARGUMENT.getErrorMessage(),
           ex.getErrorMessage());
@@ -270,22 +268,42 @@ public class TestObjectPut {
   }
 
   @Test
-  public void testEmptyStorageType() throws IOException, OS3Exception {
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    ByteArrayInputStream body =
-        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
-    objectEndpoint.setHeaders(headers);
-    keyName = "sourceKey";
-    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("");
+  void usesDefaultReplicationForEmptyStorageClass()
+      throws IOException, OS3Exception {
+    // GIVEN
+    when(headers.getHeaderString(STORAGE_CLASS_HEADER))
+        .thenReturn("");
 
-    objectEndpoint.put(bucketName, keyName, CONTENT
-            .length(), 1, null, body);
+    // WHEN
+    Response response = putObject(bucketName, keyName, CONTENT, CONTENT.length);
+
+    // THEN
+    assertSuccess(response);
+
     OzoneKeyDetails key =
         clientStub.getObjectStore().getS3Bucket(bucketName)
             .getKey(keyName);
-
-
     //default type is set
-    Assert.assertEquals(ReplicationType.RATIS, key.getReplicationType());
+    assertEquals(ReplicationType.RATIS, key.getReplicationType());
+  }
+
+  private Response putObject(String bucket, String key, byte[] content,
+      long length) throws IOException, OS3Exception {
+    return objectEndpoint.put(bucket, key, length,
+        0, null, new ByteArrayInputStream(content));
+  }
+
+  private static void assertSuccess(Response response) {
+    assertEquals(200, response.getStatus());
+  }
+
+  private void assertKeyContent(String bucket, String key,
+      byte[] expectedContent) throws IOException {
+    OzoneInputStream ozoneInputStream =
+        clientStub.getObjectStore().getS3Bucket(bucket)
+            .readKey(key);
+    byte[] keyContent = new byte[expectedContent.length];
+    IOUtils.readFully(ozoneInputStream, keyContent);
+    assertArrayEquals(expectedContent, keyContent);
   }
 }
