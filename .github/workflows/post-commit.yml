@@ -35,10 +35,10 @@ jobs:
       needs-basic-checks: false
       needs-build: true
       needs-compile: false
-      needs-compose-tests: false
+      needs-compose-tests: true
       needs-dependency-check: false
       needs-integration-tests: false
-      needs-kubernetes-tests: true
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v2
@@ -231,11 +231,7 @@ jobs:
     strategy:
       matrix:
         suite:
-          - secure
-          - unsecure
           - HA
-          - MR
-          - misc
       fail-fast: false
     steps:
       - name: Checkout project
