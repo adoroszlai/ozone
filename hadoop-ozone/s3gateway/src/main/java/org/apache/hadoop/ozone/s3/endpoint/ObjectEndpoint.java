@@ -247,7 +247,7 @@ public class ObjectEndpoint extends EndpointBase {
       if (ex instanceof EOFException) {
         throw newError(INVALID_REQUEST, keyPath, ex);
       }
-      LOG.error("Exception occurred in PutObject", ex.getMessage());
+      LOG.error("Exception occurred in PutObject", ex);
       throw ex;
     } finally {
       if (auditSuccess) {

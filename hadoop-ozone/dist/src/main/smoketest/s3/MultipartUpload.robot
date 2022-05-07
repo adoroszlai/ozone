@@ -58,6 +58,20 @@ Test Multipart Upload With Adjusted Length
     Perform Multipart Upload    ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
     Verify Multipart Upload     ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
 
+Test Multipart Upload with Content Length Larger Than Body
+    ${key} =            Set Variable               ${PREFIX}/fails-content-length-larger-than-body
+    ${uploadID} =       Create Multipart Upload    ${BUCKET}    ${key}
+    ${result} =         Execute AWSS3APICli and checkrc    upload-part --bucket ${BUCKET} --key ${key} --part-number 1 --body /tmp/part1 --upload-id ${upload_id} --content-length 5244928    255
+                        Should contain          ${result}    SignatureDoesNotMatch
+
+
+Test Multipart Upload with Content Length Smaller Than Body
+    ${key} =            Set Variable               ${PREFIX}/fails-content-length-smaller-than-body
+    ${uploadID} =       Create Multipart Upload    ${BUCKET}    ${key}
+    ${result} =         Execute AWSS3APICli and checkrc    upload-part --bucket ${BUCKET} --key ${key} --part-number 1 --body /tmp/part1 --upload-id ${upload_id} --content-length 5242880    255
+                        Should contain          ${result}    SignatureDoesNotMatch
+
+
 Test Multipart Upload
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey
     ${uploadID} =       Execute and checkrc     echo '${result}' | jq -r '.UploadId'    0
@@ -114,6 +128,7 @@ Test Multipart Upload Complete
     ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 /tmp/${PREFIX}-multipartKey1.result
                                 Execute                    cat /tmp/part1 /tmp/part2 > /tmp/${PREFIX}-multipartKey1
     Compare files               /tmp/${PREFIX}-multipartKey1         /tmp/${PREFIX}-multipartKey1.result
+
 
 Test Multipart Upload Complete Entity too small
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey2

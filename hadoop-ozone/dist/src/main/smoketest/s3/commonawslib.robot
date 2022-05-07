@@ -134,17 +134,27 @@ Generate random prefix
     ${random} =          Generate Ozone String
                          Set Suite Variable  ${PREFIX}  ${random}
 
+Create Multipart Upload
+    [arguments]    ${bucket}    ${key}    @{files}
+    ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${bucket} --key ${key}
+    ${upload_id} =      Execute                 echo '${result}' | jq -r '.UploadId'
+    [return]       ${upload_id}
+
+Upload Part
+    [arguments]    ${bucket}    ${key}    ${upload_id}    ${part}    ${file}    ${args}=${EMPTY}
+    ${result} =   Execute AWSS3APICli     upload-part --bucket ${bucket} --key ${key} --part-number ${part} --body ${file} --upload-id ${upload_id} ${args}
+    ${etag} =     Execute                 echo '${result}' | jq -r '.ETag'
+    [return]      ${etag}
+
 Perform Multipart Upload
     [arguments]    ${bucket}    ${key}    @{files}
 
-    ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${bucket} --key ${key}
-    ${upload_id} =      Execute and checkrc     echo '${result}' | jq -r '.UploadId'    0
+    ${upload_id} =      Create Multipart Upload    ${bucket}    ${key}
 
     @{etags} =    Create List
     FOR    ${i}    ${file}    IN ENUMERATE    @{files}
         ${part} =    Evaluate    ${i} + 1
-        ${result} =   Execute AWSS3APICli     upload-part --bucket ${bucket} --key ${key} --part-number ${part} --body ${file} --upload-id ${upload_id}
-        ${etag} =     Execute                 echo '${result}' | jq -r '.ETag'
+        ${etag} =    Upload Part    ${bucket}    ${key}    ${upload_id}    ${part}    ${file}
         Append To List    ${etags}    {ETag=${etag},PartNumber=${part}}
     END
 
