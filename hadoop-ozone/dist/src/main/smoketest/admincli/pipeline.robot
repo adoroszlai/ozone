@@ -36,6 +36,10 @@ List pipelines
     ${output} =         Execute          ozone admin pipeline list
                         Should contain   ${output}   STANDALONE/ONE
 
+List pipelines with factor
+    ${output} =         Execute          ozone admin pipeline list -t RATIS -ffc ONE
+                        Should contain   ${output}   RATIS/ONE
+
 List pipelines with explicit host
     ${output} =         Execute          ozone admin pipeline list --scm ${SCM}
                         Should contain   ${output}   STANDALONE/ONE
