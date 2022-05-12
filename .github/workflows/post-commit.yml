@@ -32,13 +32,13 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
+      needs-basic-checks: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v2
@@ -231,11 +231,8 @@ jobs:
     strategy:
       matrix:
         suite:
-          - secure
-          - unsecure
-          - HA
-          - MR
-          - misc
+          - ozone-ha
+          - ozonesecure-ha
       fail-fast: false
     steps:
       - name: Checkout project
@@ -257,7 +254,7 @@ jobs:
           ./hadoop-ozone/dev-support/checks/acceptance.sh
         env:
           KEEP_IMAGE: false
-          OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
+          OZONE_TEST_SELECTOR: ${{ matrix.suite }}
           OZONE_WITH_COVERAGE: true
           OZONE_VOLUME_OWNER: 1000
       - name: Archive build results
