@@ -30,10 +30,13 @@ source "$COMPOSE_DIR/../testlib.sh"
 
 start_docker_env
 
-execute_robot_test ${SCM} basic/ozone-shell-single.robot
-execute_robot_test ${SCM} basic/links.robot
+execute_robot_test ${SCM} basic
 execute_robot_test ${SCM} s3
+execute_robot_test ${SCM} -v SCHEME:ofs -v BUCKET_TYPE:link -N ozonefs-ofs-link ozonefs/ozonefs.robot
+execute_robot_test ${SCM} -v SCHEME:o3fs -v BUCKET_TYPE:bucket -N ozonefs-o3fs-bucket ozonefs/ozonefs.robot
 execute_robot_test ${SCM} freon
+execute_robot_test ${SCM} cli
+execute_robot_test ${SCM} admincli
 
 stop_docker_env
 
