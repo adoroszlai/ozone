@@ -316,7 +316,7 @@ jobs:
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/unit.sh -Dtest=TestECBlockReconstructedInputStream
+        run: hadoop-ozone/dev-support/checks/unit.sh -DfailIfNoTests=false -Dtest=TestECBlockReconstructedInputStream
         env:
           ITERATIONS: 100
       - name: Summary of failures
