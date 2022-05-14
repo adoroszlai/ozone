@@ -302,7 +302,6 @@ jobs:
     needs:
       - build-info
     runs-on: ubuntu-18.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     steps:
       - name: Checkout project
@@ -316,7 +315,7 @@ jobs:
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/unit.sh -DfailIfNoTests=false -Dtest=TestECBlockReconstructedInputStream
+        run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :hdds-client -DfailIfNoTests=false -Dtest=TestECBlockReconstructedInputStream
         env:
           ITERATIONS: 100
       - name: Summary of failures
