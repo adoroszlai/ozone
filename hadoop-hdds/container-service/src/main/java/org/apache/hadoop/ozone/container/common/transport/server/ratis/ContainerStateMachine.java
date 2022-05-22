@@ -810,7 +810,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           new CompletableFuture<>();
       final Consumer<Exception> exceptionHandler = e -> {
         LOG.error("gid {} : ApplyTransaction failed. cmd {} logIndex "
-            + "{} exception {}", gid, requestProto.getCmdType(), index, e);
+            + "{} exception {}", gid, cmdType, index, e);
         stateMachineHealthy.compareAndSet(true, false);
         metrics.incNumApplyTransactionsFails();
         applyTransactionFuture.completeExceptionally(e);
@@ -836,7 +836,7 @@ public class ContainerStateMachine extends BaseStateMachine {
               new StorageContainerException(r.getMessage(), r.getResult());
           LOG.error(
               "gid {} : ApplyTransaction failed. cmd {} logIndex {} msg : "
-                  + "{} Container Result: {}", gid, r.getCmdType(), index,
+                  + "{} Container Result: {}", gid, cmdType, index,
               r.getMessage(), r.getResult());
           metrics.incNumApplyTransactionsFails();
           // Since the applyTransaction now is completed exceptionally,
@@ -850,10 +850,23 @@ public class ContainerStateMachine extends BaseStateMachine {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
                 "gid {} : ApplyTransaction completed. cmd {} logIndex {} msg : "
-                    + "{} Container Result: {}", gid, r.getCmdType(), index,
+                    + "{} Container Result: {}", gid, cmdType, index,
                 r.getMessage(), r.getResult());
           }
+          LOG.info("ZZZ sleep 1");
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+          }
+          LOG.info("ZZZ complete applyTransaction fut");
           applyTransactionFuture.complete(r::toByteString);
+          LOG.info("ZZZ sleep 2");
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+          }
           if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
             metrics.incNumBytesCommittedCount(
                 requestProto.getWriteChunk().getChunkData().getLen());
@@ -873,7 +886,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         if (t != null) {
           stateMachineHealthy.set(false);
           LOG.error("gid {} : ApplyTransaction failed. cmd {} logIndex "
-              + "{} exception {}", gid, requestProto.getCmdType(), index, t);
+              + "{} exception {}", gid, cmdType, index, t);
         }
         applyTransactionSemaphore.release();
         metrics.recordApplyTransactionCompletion(

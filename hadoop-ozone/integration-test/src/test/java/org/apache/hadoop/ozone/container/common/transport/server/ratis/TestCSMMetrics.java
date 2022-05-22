@@ -66,11 +66,15 @@ import java.util.function.BiConsumer;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class tests the metrics of ContainerStateMachine.
  */
 public class TestCSMMetrics {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCSMMetrics.class);
   static final String TEST_DIR =
       GenericTestUtils.getTestDir("dfs").getAbsolutePath()
           + File.separator;
@@ -148,8 +152,10 @@ public class TestCSMMetrics {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
-      metric = getMetrics(CSMMetrics.SOURCE_NAME +
-              RaftGroupId.valueOf(pipeline.getId().getId()).toString());
+      String name = CSMMetrics.SOURCE_NAME +
+          RaftGroupId.valueOf(pipeline.getId().getId());
+      LOG.info("ZZZ getting metrics source={}", name);
+      metric = getMetrics(name);
       assertCounter("NumWriteStateMachineOps", 1L, metric);
       assertCounter("NumBytesWrittenCount", 1024L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);

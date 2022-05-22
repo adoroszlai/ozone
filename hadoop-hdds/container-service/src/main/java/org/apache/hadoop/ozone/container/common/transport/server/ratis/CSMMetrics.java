@@ -28,6 +28,8 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.ratis.protocol.RaftGroupId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is for maintaining Container State Machine statistics.
@@ -35,6 +37,8 @@ import org.apache.ratis.protocol.RaftGroupId;
 @InterfaceAudience.Private
 @Metrics(about = "Container State Machine Metrics", context = "dfs")
 public class CSMMetrics {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CSMMetrics.class);
   public static final String SOURCE_NAME =
       CSMMetrics.class.getSimpleName();
 
@@ -78,7 +82,9 @@ public class CSMMetrics {
 
   public static CSMMetrics create(RaftGroupId gid) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(SOURCE_NAME + gid.toString(),
+    String name = SOURCE_NAME + gid;
+    LOG.debug("Registering new CSMMetrics for {}", name);
+    return ms.register(name,
         "Container State Machine",
         new CSMMetrics());
   }
@@ -96,6 +102,7 @@ public class CSMMetrics {
   }
 
   public void incNumApplyTransactionsOps() {
+    LOG.debug("ZZZ applyTransaction +1");
     numApplyTransactionOps.incr();
   }
 
@@ -112,10 +119,12 @@ public class CSMMetrics {
   }
 
   public void incNumBytesWrittenCount(long value) {
+    LOG.debug("ZZZ written +{}", value);
     numBytesWrittenCount.incr(value);
   }
 
   public void incNumBytesCommittedCount(long value) {
+    LOG.debug("ZZZ committed +{}", value);
     numBytesCommittedCount.incr(value);
   }
 
@@ -188,7 +197,9 @@ public class CSMMetrics {
 
   @VisibleForTesting
   public long getNumBytesCommittedCount() {
-    return numBytesCommittedCount.value();
+    long value = numBytesCommittedCount.value();
+    LOG.debug("ZZZ committed={}", value);
+    return value;
   }
 
   public MutableRate getApplyTransactionLatency() {
