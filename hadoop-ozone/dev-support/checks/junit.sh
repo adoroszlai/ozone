@@ -69,6 +69,10 @@ for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
   fi
+
+  if [[ ${rc} -gt 0 ]] && [[ "${FAIL_FAST:-}" == "true" ]]; then
+    break
+  fi
 done
 
 #Archive combined jacoco records
