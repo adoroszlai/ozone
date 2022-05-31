@@ -34,7 +34,7 @@ execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 
 # restart datanodes
-kubectl delete pod datanode-0
+kubectl delete pod datanode-0 datanode-1 datanode-2
 
 wait_for_startup
 
