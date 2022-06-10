@@ -31,7 +31,7 @@ Check webui static resources
     ${result} =        Execute                curl --negotiate -u : -s -I http://${SCM}:9876/static/bootstrap-3.4.1/js/bootstrap.min.js
                        Should contain         ${result}    200
     ${result} =        Execute                curl --negotiate -u : -sS --head "http://${SCM}:9876/#!/config"
-    ${count} =         echo "${result}" | grep -c '^Date: '
+    ${count} =         Execute                echo "${result}" | grep -c '^Date: '
                        Should Be Equal        ${count}     1
 
 Basic Freon smoketest
