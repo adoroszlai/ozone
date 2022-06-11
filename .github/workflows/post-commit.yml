@@ -247,10 +247,6 @@ jobs:
         suite:
           - secure
           - unsecure
-          - compat
-          - HA
-          - MR
-          - misc
       fail-fast: false
     steps:
       - name: Checkout project
