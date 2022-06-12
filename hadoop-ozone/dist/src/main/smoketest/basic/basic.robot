@@ -33,7 +33,8 @@ Check webui static resources
 
 Check for duplicate headers
     ${result} =        Execute                curl --negotiate -u : -sS --head "http://${SCM}:9876/#!/config"
-    @{lines} =         Get Lines Matching Regexp    ${result}    ^Date:    partial_match=true
+    ${match} =         Get Lines Matching Regexp    ${result}    ^Date:    partial_match=true
+    @{lines} =         Split To Lines         ${match}
                        Length Should Be       ${lines}     1
 
 Basic Freon smoketest
