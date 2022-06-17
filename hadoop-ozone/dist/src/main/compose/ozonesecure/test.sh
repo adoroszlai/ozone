@@ -32,8 +32,9 @@ start_docker_env
 execute_command_in_container kms hadoop key create ${OZONE_BUCKET_KEY_NAME}
 
 execute_robot_test scm kinit.robot
+execute_command_in_container scm ozone sh vol setacl -a user:testuser2/scm@EXAMPLE.COM:a s3v
 
-execute_robot_test s3g s3
+execute_robot_test scm s3
 
 stop_docker_env
 
