@@ -246,7 +246,6 @@ jobs:
       matrix:
         suite:
           - secure
-          - unsecure
       fail-fast: false
     steps:
       - name: Checkout project
