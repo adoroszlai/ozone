@@ -540,7 +540,7 @@ public class TestContainerStateMachineFailures {
       Assert.fail("Exception should not be thrown");
     }
     FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
-    Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
+    Assert.assertNotEquals(snapshot.getPath(), latestSnapshot.getPath());
   }
 
   // The test injects multiple write chunk requests along with closed container
