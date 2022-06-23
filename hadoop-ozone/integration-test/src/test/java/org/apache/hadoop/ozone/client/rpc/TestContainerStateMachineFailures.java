@@ -464,8 +464,8 @@ public class TestContainerStateMachineFailures {
       // Make sure the latest snapshot is same as the previous one
       try {
         FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
-        Assert.assertTrue(snapshot.getPath().equals(latestSnapshot.getPath()));
-      } catch (Throwable e) {
+        Assert.assertEquals(snapshot.getPath(), latestSnapshot.getPath());
+      } catch (Exception e) {
         Assert.assertFalse(snapshot.getPath().toFile().exists());
       }
     }
