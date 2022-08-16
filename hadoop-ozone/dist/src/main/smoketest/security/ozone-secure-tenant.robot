@@ -55,6 +55,8 @@ GetUserInfo as JSON Success
                         Should contain   ${output}         "tenantone$testuser"
 
 Create Bucket 1 Success via S3 API
+                        Execute          aws configure set aws_access_key_id ${ACCESS_ID}
+                        Execute          aws configure set aws_secret_access_key ${SECRET_KEY}
                         Set Environment Variable   AWS_ACCESS_KEY_ID    ${ACCESS_ID}
                         Set Environment Variable    AWS_SECRET_ACCESS_KEY    ${SECRET_KEY}
     ${output} =         Execute          aws s3api --endpoint-url ${S3G_ENDPOINT_URL} create-bucket --bucket bucket-test1
