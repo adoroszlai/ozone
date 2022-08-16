@@ -55,8 +55,8 @@ GetUserInfo as JSON Success
                         Should contain   ${output}         "tenantone$testuser"
 
 Create Bucket 1 Success via S3 API
-                        Execute          aws configure set aws_access_key_id ${ACCESS_ID}
-                        Execute          aws configure set aws_secret_access_key ${SECRET_KEY}
+                        Set Environment Variable   AWS_ACCESS_KEY_ID    ${ACCESS_ID}
+                        Set Environment Variable    AWS_SECRET_ACCESS_KEY    ${SECRET_KEY}
     ${output} =         Execute          aws s3api --endpoint-url ${S3G_ENDPOINT_URL} create-bucket --bucket bucket-test1
                         Should contain   ${output}         bucket-test1
     ${output} =         Execute          aws s3api --endpoint-url ${S3G_ENDPOINT_URL} list-buckets
@@ -87,7 +87,7 @@ Delete Bucket 1 Failure With Old SecretKey via S3 API
                         Should Be True	${rc} > 0
 
 Delete Bucket 1 Success With Newly Set SecretKey via S3 API
-                        Execute          aws configure set aws_secret_access_key 'somesecret1'
+                        Set Environment Variable    AWS_SECRET_ACCESS_KEY    'somesecret1'
     ${output} =         Execute          aws s3api --endpoint-url ${S3G_ENDPOINT_URL} delete-bucket --bucket bucket-test1
 
 Delete Tenant Failure Tenant Not Empty
@@ -112,12 +112,12 @@ Create Bucket 2 Success with somesecret1 via S3 API
                         Should contain   ${output}         bucket-test2
 
 Delete Bucket 2 Failure with somesecret2 via S3 API
-                        Execute          aws configure set aws_secret_access_key 'somesecret2'
+                        Set Environment Variable    AWS_SECRET_ACCESS_KEY    'somesecret2'
     ${rc}  ${output} =  Run And Return Rc And Output  aws s3api --endpoint-url ${S3G_ENDPOINT_URL} delete-bucket --bucket bucket-test2
                         Should Be True	${rc} > 0
 
 Delete Bucket 2 Success with somesecret1 via S3 API
-                        Execute          aws configure set aws_secret_access_key 'somesecret1'
+                        Set Environment Variable    AWS_SECRET_ACCESS_KEY    'somesecret1'
     ${output} =         Execute          aws s3api --endpoint-url ${S3G_ENDPOINT_URL} delete-bucket --bucket bucket-test2
 
 Revoke User AccessId Success with Cluster Admin

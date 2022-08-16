@@ -41,6 +41,6 @@ Get bucket info with Ozone Shell to check the owner field
                         # Also see "Setup dummy credentials for S3" in commonawslib.robot
 
 List buckets with empty access id
-                        Execute                    aws configure set aws_access_key_id ''
+                        Set Environment Variable   AWS_ACCESS_KEY_ID       ${EMPTY}
     ${result} =         Execute AWSS3APICli and checkrc         list-buckets    255
                         Should contain            ${result}         The authorization header you provided is invalid
