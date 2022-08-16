@@ -58,7 +58,6 @@ Setup v2 headers
                         Set Environment Variable   AWS_SECRET_ACCESS_KEY   ANYKEY
 
 Setup v4 headers
-    ${SECURITY_ENABLED} =       Get Environment Variable    SECURITY_ENABLED
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user    testuser    testuser.keytab
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Setup secure v4 headers
     Run Keyword if      '${SECURITY_ENABLED}' == 'false'    Setup dummy credentials for S3
@@ -72,15 +71,15 @@ Setup secure v4 headers
     ${accessKey} =      Set Variable               ${accessKey[0]}
     ${secret} =         Set Variable               ${secret[0]}
                         Execute                    aws configure set default.s3.signature_version s3v4
-                        Execute                    aws configure set aws_access_key_id ${accessKey}
-                        Execute                    aws configure set aws_secret_access_key ${secret}
                         Execute                    aws configure set region us-west-1
+                        Set Environment Variable   AWS_ACCESS_KEY_ID       ${accessKey}
+                        Set Environment Variable   AWS_SECRET_ACCESS_KEY   ${secret}
 
 Setup dummy credentials for S3
                         Execute                    aws configure set default.s3.signature_version s3v4
-                        Execute                    aws configure set aws_access_key_id dlfknslnfslf
-                        Execute                    aws configure set aws_secret_access_key dlfknslnfslf
                         Execute                    aws configure set region us-west-1
+                        Set Environment Variable   AWS_ACCESS_KEY_ID       dlfknslnfslf
+                        Set Environment Variable   AWS_SECRET_ACCESS_KEY   dlfknslnfslf
 
 Generate Ozone String
     ${randStr} =         Generate Random String     10  [NUMBERS]
