@@ -57,7 +57,7 @@ public final class CodecFactory {
       throws InvalidProtocolBufferException {
     final List<Class<?>> classes = new ArrayList<>();
     classes.add(type);
-    classes.add(type.getSuperclass());
+    classes.addAll(ClassUtils.getAllSuperclasses(type));
     classes.addAll(ClassUtils.getAllInterfaces(type));
     for (Class<?> clazz : classes) {
       if (codecs.containsKey(clazz)) {
