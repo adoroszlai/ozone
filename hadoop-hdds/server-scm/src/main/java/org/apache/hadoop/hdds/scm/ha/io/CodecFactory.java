@@ -22,10 +22,11 @@ import com.google.protobuf.Message;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.ProtocolMessageEnum;
 
+import org.apache.commons.lang3.ClassUtils;
+
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ public final class CodecFactory {
     final List<Class<?>> classes = new ArrayList<>();
     classes.add(type);
     classes.add(type.getSuperclass());
-    classes.addAll(Arrays.asList(type.getInterfaces()));
+    classes.addAll(ClassUtils.getAllInterfaces(type));
     for (Class<?> clazz : classes) {
       if (codecs.containsKey(clazz)) {
         return codecs.get(clazz);
