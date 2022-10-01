@@ -66,7 +66,8 @@ const COLUMNS = [
     dataIndex: 'pipelineId',
     key: 'pipelineId',
     isSearchable: true,
-    sorter: (a: IPipelineResponse, b: IPipelineResponse) => a.pipelineId.localeCompare(b.pipelineId)
+    sorter: (a: IPipelineResponse, b: IPipelineResponse) => a.pipelineId.localeCompare(b.pipelineId),
+    fixed: 'left'
   },
   {
     title: 'Replication Type & Factor',
@@ -229,7 +230,7 @@ export class Pipelines extends React.Component<Record<string, object>, IPipeline
         </div>
         <div className='content-div'>
           <Tabs defaultActiveKey='1' onChange={this.onTabChange}>
-            <TabPane key='1' tab='Active'>
+            <TabPane key='1'>
               <Table
                 dataSource={activeDataSource}
                 columns={COLUMNS.reduce<any[]>((filtered, column) => {
@@ -245,9 +246,11 @@ export class Pipelines extends React.Component<Record<string, object>, IPipeline
 
                   return filtered;
                 }, [])}
-                loading={activeLoading} pagination={paginationConfig} rowKey='pipelineId'/>
+                loading={activeLoading} pagination={paginationConfig} rowKey='pipelineId'
+                scroll={{x: true, y: false, scrollToFirstRowOnChange: true}}
+                />
             </TabPane>
-            <TabPane key='2' tab='Inactive'/>
+
           </Tabs>
         </div>
       </div>
