@@ -168,7 +168,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
     <findbugs.version>3.0.0</findbugs.version>
     <spotbugs.version>3.1.12</spotbugs.version>
-    <dnsjava.version>2.1.7</dnsjava.version>
 
     <guava.version>31.1-jre</guava.version>
     <guice.version>4.0</guice.version>
@@ -1463,12 +1462,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <artifactId>bcprov-jdk15on</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-
-      <dependency>
-        <groupId>dnsjava</groupId>
-        <artifactId>dnsjava</artifactId>
-        <version>${dnsjava.version}</version>
       </dependency>
 
       <dependency>
