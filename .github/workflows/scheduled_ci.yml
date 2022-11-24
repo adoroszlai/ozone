@@ -17,5 +17,5 @@ on:
   schedule:
     - cron: 30 0,12 * * *
 jobs:
-  call-ci:
+  CI:
     uses: ./.github/workflows/ci.yml
