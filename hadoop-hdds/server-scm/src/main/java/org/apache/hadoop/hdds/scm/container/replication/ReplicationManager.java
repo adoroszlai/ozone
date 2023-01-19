@@ -864,7 +864,7 @@ public class ReplicationManager implements SCMService {
 
     @Config(key = "push",
         type = ConfigType.BOOLEAN,
-        defaultValue = "false",
+        defaultValue = "true",
         tags = { SCM, DATANODE },
         description = "If false, replication happens by asking the target to " +
             "pull from source nodes.  If true, the source node is asked to " +
