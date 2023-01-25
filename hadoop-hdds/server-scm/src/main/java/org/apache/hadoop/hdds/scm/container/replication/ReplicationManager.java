@@ -311,7 +311,8 @@ public class ReplicationManager implements SCMService {
    * Create Replication Manager sub services such as Over and Under Replication
    * processors.
    */
-  private void startSubServices() {
+  @VisibleForTesting
+  protected void startSubServices() {
     underReplicatedProcessorThread = new Thread(underReplicatedProcessor);
     underReplicatedProcessorThread.setName("Under Replicated Processor");
     underReplicatedProcessorThread.setDaemon(true);
