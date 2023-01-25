@@ -73,8 +73,12 @@ public class TestRatisUnderReplicationHandler {
     policy = ReplicationTestUtil
         .getSimpleTestPlacementPolicy(nodeManager, conf);
     replicationManager = Mockito.mock(ReplicationManager.class);
+    ReplicationManagerConfiguration rmConf =
+        conf.getObject(ReplicationManagerConfiguration.class);
+    rmConf.setPush(true);
+    conf.setFromObject(rmConf);
     Mockito.when(replicationManager.getConfig())
-        .thenReturn(new ReplicationManagerConfiguration());
+        .thenReturn(rmConf);
 
     /*
      Return NodeStatus with NodeOperationalState as specified in
@@ -103,6 +107,16 @@ public class TestRatisUnderReplicationHandler {
 
     testProcessing(replicas, pendingOps, getUnderReplicatedHealthResult(), 2,
         1);
+  }
+
+  @Test
+  public void testOnlyOneReplicaLeft()
+      throws IOException {
+    Set<ContainerReplica> replicas
+        = createReplicas(container.containerID(), State.CLOSED, 0);
+
+    testProcessing(replicas, Collections.emptyList(),
+        getUnderReplicatedHealthResult(), 2, 2);
   }
 
   /**

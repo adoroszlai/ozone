@@ -21,6 +21,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Class used to represent the Health States of containers.
@@ -62,6 +63,32 @@ public class ContainerHealthResult {
 
   public ContainerInfo getContainerInfo() {
     return containerInfo;
+  }
+
+  @Override
+  public String toString() {
+    return "ContainerHealthResult{" +
+        "containerInfo=" + containerInfo +
+        ", healthState=" + healthState +
+        '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ContainerHealthResult that = (ContainerHealthResult) o;
+    return healthState == that.healthState &&
+        Objects.equals(containerInfo, that.containerInfo);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(containerInfo, healthState);
   }
 
   /**
@@ -227,6 +254,54 @@ public class ContainerHealthResult {
      */
     public boolean hasUnreplicatedOfflineIndexes() {
       return hasUnReplicatedOfflineIndexes;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("UnderReplicatedHealthResult{")
+          .append(super.toString())
+          .append(", remainingRedundancy=").append(remainingRedundancy)
+          .append(", requeueCount=").append(requeueCount);
+
+      if (dueToDecommission) {
+        sb.append(" +dueToDecommission");
+      }
+      if (sufficientlyReplicatedAfterPending) {
+        sb.append(" +sufficientlyReplicatedAfterPending");
+      }
+      if (unrecoverable) {
+        sb.append(" +unrecoverable");
+      }
+      if (hasUnReplicatedOfflineIndexes) {
+        sb.append(" +hasUnReplicatedOfflineIndexes");
+      }
+      return sb.append("}").toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      UnderReplicatedHealthResult that = (UnderReplicatedHealthResult) o;
+      return remainingRedundancy == that.remainingRedundancy &&
+          dueToDecommission == that.dueToDecommission &&
+          sufficientlyReplicatedAfterPending ==
+              that.sufficientlyReplicatedAfterPending &&
+          unrecoverable == that.unrecoverable &&
+          hasUnReplicatedOfflineIndexes == that.hasUnReplicatedOfflineIndexes &&
+          requeueCount == that.requeueCount;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(super.hashCode(), remainingRedundancy, dueToDecommission, sufficientlyReplicatedAfterPending, unrecoverable, hasUnReplicatedOfflineIndexes, requeueCount);
     }
   }
 

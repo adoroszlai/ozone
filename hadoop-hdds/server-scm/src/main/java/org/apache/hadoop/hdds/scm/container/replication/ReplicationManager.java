@@ -919,6 +919,10 @@ public class ReplicationManager implements SCMService {
       return maintenanceReplicaMinimum;
     }
 
+    public void setPush(boolean push) {
+      this.push = push;
+    }
+
     public boolean isPush() {
       return push;
     }

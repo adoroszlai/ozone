@@ -424,19 +424,26 @@ public class TestReplicationManager {
     replicationManager.processAll();
 
     // Get the first message off the queue - it should be underRep0.
+    ContainerHealthResult.UnderReplicatedHealthResult expect0
+        = new ContainerHealthResult.UnderReplicatedHealthResult(
+            underRep0, 0, false, false, false);
     ContainerHealthResult.UnderReplicatedHealthResult res
         = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(underRep0, res.getContainerInfo());
+    Assert.assertEquals(expect0, res);
 
     // Now requeue it
     replicationManager.requeueUnderReplicatedContainer(res);
+    expect0.incrementRequeueCount();
 
     // Now get the next message. It should be underRep1, as it has remaining
     // redundancy 1 + zero retries. UnderRep0 will have remaining redundancy 0
     // and 1 retry. They will have the same weighted redundancy so lesser
     // retries should come first
+    ContainerHealthResult.UnderReplicatedHealthResult expect1
+        = new ContainerHealthResult.UnderReplicatedHealthResult(
+            underRep1, 1, false, false, false);
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(underRep1, res.getContainerInfo());
+    Assert.assertEquals(expect1, res);
 
     // Next message is underRep0. It starts with a weighted redundancy of 0 + 1
     // retry. The other message on the queue is a decommission only with a
@@ -445,8 +452,9 @@ public class TestReplicationManager {
     // one will be next due to having less retries.
     for (int i = 0; i < 4; i++) {
       res = replicationManager.dequeueUnderReplicatedContainer();
-      Assert.assertEquals(underRep0, res.getContainerInfo());
+      Assert.assertEquals(expect0, res);
       replicationManager.requeueUnderReplicatedContainer(res);
+      expect0.incrementRequeueCount();
     }
     res = replicationManager.dequeueUnderReplicatedContainer();
     Assert.assertEquals(decomContainer, res.getContainerInfo());
