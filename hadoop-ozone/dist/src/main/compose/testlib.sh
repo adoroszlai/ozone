@@ -30,6 +30,15 @@ fi
 
 : ${SCM:=scm}
 
+init_script_if_needed() {
+  if type -f start_end::group_start >& /dev/null; then
+    return
+  fi
+
+  local root_dir="${_testlib_dir}/../../../../.."
+  source "${root_dir}/dev-support/ci/lib/_script_init.sh"
+}
+
 ## @description create results directory, purging any prior data
 create_results_dir() {
   #delete previous results
@@ -144,6 +153,8 @@ wait_for_om_leader() {
 start_docker_env(){
   local -i datanode_count=${1:-3}
 
+  start_end::group_start "Starting Docker cluster"
+
   create_results_dir
   export OZONE_SAFEMODE_MIN_DATANODES="${datanode_count}"
 
@@ -151,10 +162,14 @@ start_docker_env(){
   if ! { docker-compose --ansi never up -d --scale datanode="${datanode_count}" \
       && wait_for_safemode_exit \
       && wait_for_om_leader ; }; then
+
+    start_end::group_end
     [[ -n "$OUTPUT_NAME" ]] || OUTPUT_NAME="$COMPOSE_ENV_NAME"
     stop_docker_env
     return 1
   fi
+
+  start_end::group_end
 }
 
 ## @description  Execute robot tests in a specific container.
@@ -171,6 +186,8 @@ execute_robot_test(){
   TEST_NAME="$(basename "$COMPOSE_DIR")-${TEST_NAME%.*}"
   set +e
   [[ -n "$OUTPUT_NAME" ]] || OUTPUT_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
+
+  start_end::group_start "Executing ${TEST} in ${CONTAINER}"
 
   # find unique filename
   declare -i i=0
@@ -196,6 +213,9 @@ execute_robot_test(){
       "$SMOKETEST_DIR_INSIDE/$TEST"
   local -i rc=$?
 
+  start_end::group_end
+  start_end::group_start "Copying logs from containers"
+
   FULL_CONTAINER_NAME=$(docker-compose ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
   docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
 
@@ -206,6 +226,8 @@ execute_robot_test(){
   fi
 
   set -e
+
+  start_end::group_end
 
   if [[ ${rc} -gt 0 ]]; then
     stop_docker_env
@@ -295,10 +317,14 @@ wait_for_port(){
 
 ## @description  Stops a docker-compose based test environment (with saving the logs)
 stop_docker_env(){
+  start_end::group_start "Stopping Docker cluster"
+
   docker-compose --ansi never logs > "$RESULT_DIR/docker-$OUTPUT_NAME.log"
   if [ "${KEEP_RUNNING:-false}" = false ]; then
      docker-compose --ansi never down
   fi
+
+  start_end::group_end
 }
 
 ## @description  Removes the given docker images if configured not to keep them (via KEEP_IMAGE=false)
@@ -334,6 +360,9 @@ copy_results() {
 
   local result_dir="${test_dir}/result"
   local test_dir_name=$(basename ${test_dir})
+
+  start_end::group_start "Copying test results from ${test_dir} to ${all_result_dir}"
+
   if [[ -n "$(find "${result_dir}" -name "*.xml")" ]]; then
     rebot --nostatusrc -N "${test_dir_name}" -l NONE -r NONE -o "${all_result_dir}/${test_dir_name}.xml" "${result_dir}"/*.xml
     rm -fv "${result_dir}"/*.xml "${result_dir}"/log.html "${result_dir}"/report.html
@@ -341,6 +370,8 @@ copy_results() {
 
   mkdir -p "${all_result_dir}"/"${test_dir_name}"
   mv -v "${result_dir}"/* "${all_result_dir}"/"${test_dir_name}"/
+
+  start_end::group_end
 }
 
 run_test_script() {
@@ -351,10 +382,12 @@ run_test_script() {
     test_script=./test.sh
   fi
 
-  echo "Executing test in ${d}"
-
   #required to read the .env file from the right location
-  cd "${d}" || return
+  if ! cd "${d}"; then
+    echo "ERROR: Cannot change to ${d}"
+    start_end::group_end
+    return
+  fi
 
   local ret=0
   if ! "$test_script"; then
@@ -430,6 +463,8 @@ execute_debug_tests() {
   local bucket="cli-debug-bucket"
   local key="testfile"
 
+  start_end::group_start "Executing 'ozone debug' tests"
+
   execute_robot_test ${SCM} -v "PREFIX:${prefix}" debug/ozone-debug-tests.robot
 
   # get block locations for key
@@ -455,6 +490,8 @@ execute_debug_tests() {
   docker start "${container}"
 
   wait_for_datanode "${container}" HEALTHY 60
+
+  start_end::group_end
 }
 
 ## @description  Wait for datanode state

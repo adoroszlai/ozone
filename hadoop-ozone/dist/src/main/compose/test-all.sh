@@ -27,6 +27,8 @@ rm "$ALL_RESULT_DIR"/* || true
 
 source "$SCRIPT_DIR"/testlib.sh
 
+init_script_if_needed
+
 if [ "$OZONE_WITH_COVERAGE" ]; then
    java -cp "$PROJECT_DIR"/share/coverage/$(ls "$PROJECT_DIR"/share/coverage | grep test-util):"$PROJECT_DIR"/share/coverage/jacoco-core.jar org.apache.hadoop.test.JacocoServer &
    DOCKER_BRIDGE_IP=$(docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}')
@@ -35,6 +37,8 @@ fi
 
 tests=$(find_tests)
 cd "$SCRIPT_DIR"
+
+verbosity::store_exit_on_error_status
 
 RESULT=0
 run_test_scripts ${tests} || RESULT=$?
@@ -46,5 +50,6 @@ fi
 
 generate_report "acceptance" "${ALL_RESULT_DIR}" "${XUNIT_RESULT_DIR}"
 
+verbosity::restore_exit_on_error_status
 
 exit $RESULT
