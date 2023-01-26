@@ -107,7 +107,7 @@ public class ContainerHealthResult {
    */
   public static class UnHealthyResult extends ContainerHealthResult {
 
-    UnHealthyResult(ContainerInfo containerInfo) {
+    public UnHealthyResult(ContainerInfo containerInfo) {
       super(containerInfo, HealthState.UNHEALTHY);
     }
   }
@@ -135,6 +135,7 @@ public class ContainerHealthResult {
     private final boolean dueToDecommission;
     private final boolean sufficientlyReplicatedAfterPending;
     private final boolean unrecoverable;
+    private boolean hasHealthyReplicas;
     private boolean hasUnReplicatedOfflineIndexes = false;
     private int requeueCount = 0;
 
@@ -256,6 +257,14 @@ public class ContainerHealthResult {
       return hasUnReplicatedOfflineIndexes;
     }
 
+    public boolean hasHealthyReplicas() {
+      return hasHealthyReplicas;
+    }
+
+    public void setHasHealthyReplicas(boolean hasHealthyReplicas) {
+      this.hasHealthyReplicas = hasHealthyReplicas;
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("UnderReplicatedHealthResult{")
@@ -274,6 +283,9 @@ public class ContainerHealthResult {
       }
       if (hasUnReplicatedOfflineIndexes) {
         sb.append(" +hasUnReplicatedOfflineIndexes");
+      }
+      if (hasHealthyReplicas) {
+        sb.append(" +hasHealthyReplicas");
       }
       return sb.append("}").toString();
     }
@@ -296,12 +308,15 @@ public class ContainerHealthResult {
               that.sufficientlyReplicatedAfterPending &&
           unrecoverable == that.unrecoverable &&
           hasUnReplicatedOfflineIndexes == that.hasUnReplicatedOfflineIndexes &&
+          hasHealthyReplicas == that.hasHealthyReplicas &&
           requeueCount == that.requeueCount;
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(super.hashCode(), remainingRedundancy, dueToDecommission, sufficientlyReplicatedAfterPending, unrecoverable, hasUnReplicatedOfflineIndexes, requeueCount);
+      return Objects.hash(super.hashCode(), remainingRedundancy,
+          dueToDecommission, sufficientlyReplicatedAfterPending,
+          unrecoverable, hasUnReplicatedOfflineIndexes, requeueCount);
     }
   }
 
@@ -343,7 +358,7 @@ public class ContainerHealthResult {
 
     private final int excessRedundancy;
     private final boolean sufficientlyReplicatedAfterPending;
-
+    private boolean hasMismatchedReplicas;
 
     public OverReplicatedHealthResult(ContainerInfo containerInfo,
         int excessRedundancy, boolean replicatedOkWithPending) {
@@ -374,6 +389,14 @@ public class ContainerHealthResult {
      */
     public boolean isReplicatedOkAfterPending() {
       return sufficientlyReplicatedAfterPending;
+    }
+
+    public boolean hasMismatchedReplicas() {
+      return hasMismatchedReplicas;
+    }
+
+    public void setHasMismatchedReplicas(boolean hasMismatchedReplicas) {
+      this.hasMismatchedReplicas = hasMismatchedReplicas;
     }
   }
 }
