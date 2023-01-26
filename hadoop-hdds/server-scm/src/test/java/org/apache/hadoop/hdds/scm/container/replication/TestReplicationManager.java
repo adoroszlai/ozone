@@ -45,6 +45,7 @@ import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.ozone.test.TestClock;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
@@ -445,7 +446,7 @@ public class TestReplicationManager {
         ReplicationManagerReport.HealthState.OVER_REPLICATED));
   }
 
-  @Test
+  @RepeatedTest(100)
   public void testUnderReplicationQueuePopulated() {
     // Make it always return mis-replicated. Only a perfectly replicated
     // container should make it the mis-replicated state as under / over
