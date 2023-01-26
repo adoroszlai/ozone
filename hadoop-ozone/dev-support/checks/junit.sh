@@ -24,6 +24,7 @@ cd "$DIR/../../.." || exit 1
 
 # shellcheck source=dev-support/ci/lib/_script_init.sh
 source dev-support/ci/lib/_script_init.sh
+set +e
 
 declare -i ITERATIONS
 if [[ ${ITERATIONS} -le 0 ]]; then
