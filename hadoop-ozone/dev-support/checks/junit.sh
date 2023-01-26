@@ -22,6 +22,9 @@ cd "$DIR/../../.." || exit 1
 : ${CHECK:="unit"}
 : ${ITERATIONS:="1"}
 
+# shellcheck source=dev-support/ci/lib/_script_init.sh
+source dev-support/ci/lib/_script_init.sh
+
 declare -i ITERATIONS
 if [[ ${ITERATIONS} -le 0 ]]; then
   ITERATIONS=1
@@ -37,7 +40,9 @@ else
 fi
 
 if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
+  start_end::group_start "Build the project"
   mvn ${MAVEN_OPTIONS} -DskipTests clean install
+  start_end::group_end
 fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
@@ -46,24 +51,36 @@ mkdir -p "$REPORT_DIR"
 rc=0
 for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${ITERATIONS} -gt 1 ]]; then
+    start_end::group_start "Iteration ${i}"
+
     original_report_dir="${REPORT_DIR}"
     REPORT_DIR="${original_report_dir}/iteration${i}"
     mkdir -p "${REPORT_DIR}"
   fi
 
+  start_end::group_start "Run the tests"
   mvn ${MAVEN_OPTIONS} "$@" test \
     | tee "${REPORT_DIR}/output.log"
   irc=$?
+  start_end::group_end
 
+  start_end::group_start "Check for failures"
   # shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
   source "${DIR}/_mvn_unit_report.sh"
   if [[ ${irc} == 0 ]] && [[ -s "${REPORT_DIR}/summary.txt" ]]; then
     irc=1
   fi
+  start_end::group_end
 
   if [[ ${ITERATIONS} -gt 1 ]]; then
+    start_end::group_end
     REPORT_DIR="${original_report_dir}"
-    echo "Iteration ${i} exit code: ${irc}" | tee -a "${REPORT_DIR}/summary.txt"
+    echo "Iteration ${i} exit code: ${irc}" >> "${REPORT_DIR}/summary.txt"
+    if [[ ${irc} == 0 ]]; then
+      echo "Iteration ${i} ${COLOR_GREEN}passed${COLOR_RESET}"
+    else
+      echo "Iteration ${i} ${COLOR_RED}failed${COLOR_RESET}"
+    fi
   fi
 
   if [[ ${rc} == 0 ]]; then
@@ -72,6 +89,8 @@ for i in $(seq 1 ${ITERATIONS}); do
 done
 
 #Archive combined jacoco records
+start_end::group_start "Process test coverage"
 mvn -B -N jacoco:merge -Djacoco.destFile=$REPORT_DIR/jacoco-combined.exec
+start_end::group_end
 
 exit ${rc}
