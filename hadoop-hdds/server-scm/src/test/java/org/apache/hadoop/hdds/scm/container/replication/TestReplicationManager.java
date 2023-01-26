@@ -44,9 +44,8 @@ import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.ozone.test.TestClock;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
@@ -95,7 +94,7 @@ public class TestReplicationManager {
   private ReplicationManagerReport repReport;
   private ReplicationQueue repQueue;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     configuration = new OzoneConfiguration();
     configuration.set(HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT, "0s");
@@ -159,8 +158,8 @@ public class TestReplicationManager {
     addReplicas(container, ContainerReplicaProto.State.OPEN, 1, 2, 3, 4);
     replicationManager.processContainer(
         container, repQueue, repReport);
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
   }
 
   @Test
@@ -174,10 +173,10 @@ public class TestReplicationManager {
         container, repQueue, repReport);
     Mockito.verify(eventPublisher, Mockito.times(1))
         .fireEvent(SCMEvents.CLOSE_CONTAINER, container.containerID());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.OPEN_UNHEALTHY));
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
   }
 
   @Test
@@ -199,14 +198,14 @@ public class TestReplicationManager {
 
     Mockito.verify(eventPublisher, Mockito.times(3))
         .fireEvent(any(), any());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.OVER_REPLICATED));
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
     /*
     Though over replicated, this container should not be added to over
     replicated queue until all replicas are closed.
      */
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
   }
 
   @Test
@@ -232,10 +231,10 @@ public class TestReplicationManager {
 
     Mockito.verify(eventPublisher, Mockito.times(1))
         .fireEvent(any(), any());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
-    Assert.assertEquals(1, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
   }
 
   @Test
@@ -246,8 +245,8 @@ public class TestReplicationManager {
 
     replicationManager.processContainer(
         container, repQueue, repReport);
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
   }
 
   @Test
@@ -258,9 +257,9 @@ public class TestReplicationManager {
 
     replicationManager.processContainer(
         container, repQueue, repReport);
-    Assert.assertEquals(1, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
   }
 
@@ -277,12 +276,12 @@ public class TestReplicationManager {
         container, repQueue, repReport);
     // As the pending replication fixes the under replication, nothing is added
     // to the under replication list.
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
     // As the container is still under replicated, as the pending have not
     // completed yet, the container is still marked as under-replicated in the
     // report.
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
   }
 
@@ -297,11 +296,11 @@ public class TestReplicationManager {
         container, repQueue, repReport);
     // If it is unrecoverable, there is no point in putting it into the under
     // replication list. It will be checked again on the next RM run.
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.MISSING));
   }
 
@@ -328,9 +327,9 @@ public class TestReplicationManager {
     replicationManager.processContainer(
         container, repQueue, repReport);
 
-    Assert.assertEquals(1, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
   }
 
@@ -359,11 +358,11 @@ public class TestReplicationManager {
     replicationManager.processContainer(
         container, repQueue, repReport);
 
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.MISSING));
   }
 
@@ -387,9 +386,9 @@ public class TestReplicationManager {
     replicationManager.processContainer(
         container, repQueue, repReport);
 
-    Assert.assertEquals(1, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
   }
 
@@ -405,11 +404,11 @@ public class TestReplicationManager {
     // If it is both under and over replicated, we set it to the most important
     // state, which is under-replicated. When that is fixed, over replication
     // will be handled.
-    Assert.assertEquals(1, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(1, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.UNDER_REPLICATED));
-    Assert.assertEquals(0, repReport.getStat(
+    Assertions.assertEquals(0, repReport.getStat(
         ReplicationManagerReport.HealthState.OVER_REPLICATED));
   }
 
@@ -421,9 +420,9 @@ public class TestReplicationManager {
         1, 2, 3, 4, 5, 5);
     replicationManager.processContainer(
         container, repQueue, repReport);
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
-    Assert.assertEquals(1, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(1, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.OVER_REPLICATED));
   }
 
@@ -438,11 +437,11 @@ public class TestReplicationManager {
         MockDatanodeDetails.randomDatanodeDetails(), 5);
     replicationManager.processContainer(
         container, repQueue, repReport);
-    Assert.assertEquals(0, repQueue.underReplicatedQueueSize());
+    Assertions.assertEquals(0, repQueue.underReplicatedQueueSize());
     // If the pending replication fixes the over-replication, nothing is added
     // to the over replication list.
-    Assert.assertEquals(0, repQueue.overReplicatedQueueSize());
-    Assert.assertEquals(1, repReport.getStat(
+    Assertions.assertEquals(0, repQueue.overReplicatedQueueSize());
+    Assertions.assertEquals(1, repReport.getStat(
         ReplicationManagerReport.HealthState.OVER_REPLICATED));
   }
 
@@ -479,7 +478,7 @@ public class TestReplicationManager {
     // Get the first message off the queue - it should be underRep0.
     ContainerHealthResult.UnderReplicatedHealthResult res
         = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(underRep0, res.getContainerInfo());
+    Assertions.assertEquals(underRep0, res.getContainerInfo());
 
     // Now requeue it
     replicationManager.requeueUnderReplicatedContainer(res);
@@ -489,7 +488,7 @@ public class TestReplicationManager {
     // and 1 retry. They will have the same weighted redundancy so lesser
     // retries should come first
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(underRep1, res.getContainerInfo());
+    Assertions.assertEquals(underRep1, res.getContainerInfo());
 
     // Next message is underRep0. It starts with a weighted redundancy of 0 + 1
     // retry. The other message on the queue is a decommission only with a
@@ -498,21 +497,21 @@ public class TestReplicationManager {
     // one will be next due to having less retries.
     for (int i = 0; i < 4; i++) {
       res = replicationManager.dequeueUnderReplicatedContainer();
-      Assert.assertEquals(underRep0, res.getContainerInfo());
+      Assertions.assertEquals(underRep0, res.getContainerInfo());
       replicationManager.requeueUnderReplicatedContainer(res);
     }
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(decomContainer, res.getContainerInfo());
+    Assertions.assertEquals(decomContainer, res.getContainerInfo());
 
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(underRep0, res.getContainerInfo());
+    Assertions.assertEquals(underRep0, res.getContainerInfo());
 
     // Next is the mis-rep container, which has a remaining redundancy of 6.
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertEquals(misRep, res.getContainerInfo());
+    Assertions.assertEquals(misRep, res.getContainerInfo());
 
     res = replicationManager.dequeueUnderReplicatedContainer();
-    Assert.assertNull(res);
+    Assertions.assertNull(res);
   }
 
   @Test
@@ -647,7 +646,7 @@ public class TestReplicationManager {
     long expectedDeadline = clock.millis() +
         Math.round(rmConf.getEventTimeout() *
             rmConf.getCommandDeadlineFactor());
-    Assert.assertEquals(expectedDeadline, command.getDeadline());
+    Assertions.assertEquals(expectedDeadline, command.getDeadline());
 
     List<ContainerReplicaOp> ops = containerReplicaPendingOps.getPendingOps(
         containerInfo.containerID());
