@@ -57,24 +57,21 @@ for i in $(seq 1 ${ITERATIONS}); do
     original_report_dir="${REPORT_DIR}"
     REPORT_DIR="${original_report_dir}/iteration${i}"
     mkdir -p "${REPORT_DIR}"
+  else
+    start_end::group_start "Run the tests"
   fi
 
-  start_end::group_start "Run the tests"
   mvn ${MAVEN_OPTIONS} "$@" test \
     | tee "${REPORT_DIR}/output.log"
   irc=$?
-  start_end::group_end
 
-  start_end::group_start "Check for failures"
   # shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
-  source "${DIR}/_mvn_unit_report.sh"
+  source "${DIR}/_mvn_unit_report.sh" || true
   if [[ ${irc} == 0 ]] && [[ -s "${REPORT_DIR}/summary.txt" ]]; then
     irc=1
   fi
-  start_end::group_end
 
   if [[ ${ITERATIONS} -gt 1 ]]; then
-    start_end::group_end
     REPORT_DIR="${original_report_dir}"
     echo "Iteration ${i} exit code: ${irc}" >> "${REPORT_DIR}/summary.txt"
     if [[ ${irc} == 0 ]]; then
@@ -87,6 +84,8 @@ for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
   fi
+
+  start_end::group_end
 done
 
 #Archive combined jacoco records
