@@ -135,7 +135,7 @@ public class TestReplicationManager {
         legacyReplicationManager,
         containerReplicaPendingOps) {
       @Override
-      protected void startSubServices() {
+      public synchronized void start() {
         // do not start separate threads
       }
     };
