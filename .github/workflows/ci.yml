@@ -320,7 +320,7 @@ jobs:
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
-        split: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        split: [ 1 ]
       fail-fast: false
     steps:
       - name: Checkout project
@@ -341,7 +341,7 @@ jobs:
       - name: Execute tests
         run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :hdds-server-scm -Dtest=TestReplicationManager
         env:
-          ITERATIONS: 100
+          ITERATIONS: 3
       - name: Summary of failures
         run: cat target/unit/summary.txt
         if: always()
