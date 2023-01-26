@@ -42,7 +42,7 @@ fi
 
 if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
   start_end::group_start "Build the project"
-  mvn ${MAVEN_OPTIONS} -DskipTests clean install
+  # mvn ${MAVEN_OPTIONS} -DskipTests clean install
   start_end::group_end
 fi
 
