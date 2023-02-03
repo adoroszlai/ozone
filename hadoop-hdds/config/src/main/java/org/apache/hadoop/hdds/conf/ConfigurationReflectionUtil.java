@@ -67,21 +67,21 @@ public final class ConfigurationReflectionUtil {
   public static <T> void injectConfiguration(
       ConfigurationSource configuration,
       Class<T> configurationClass,
-      T configObject, String prefix) {
+      T configObject, String prefix, boolean reconfiguration) {
     injectConfigurationToObject(configuration, configurationClass, configObject,
-        prefix);
+        prefix, reconfiguration);
     Class<? super T> superClass = configurationClass.getSuperclass();
     while (superClass != null) {
       injectConfigurationToObject(configuration, superClass, configObject,
-          prefix);
+          prefix, reconfiguration);
       superClass = superClass.getSuperclass();
     }
   }
 
-  public static <T> void injectConfigurationToObject(ConfigurationSource from,
-      Class<T> configurationClass,
-      T configuration,
-      String prefix) {
+  private static <T> void injectConfigurationToObject(ConfigurationSource from,
+      Class<T> configurationClass, T configuration, String prefix,
+      boolean reconfiguration
+  ) {
     for (Field field : configurationClass.getDeclaredFields()) {
       if (field.isAnnotationPresent(Config.class)) {
         checkNotFinal(configurationClass, field);
@@ -90,6 +90,10 @@ public final class ConfigurationReflectionUtil {
             configurationClass + "." + field.getName();
 
         Config configAnnotation = field.getAnnotation(Config.class);
+
+        if (reconfiguration && !configAnnotation.reconfigurable()) {
+          continue;
+        }
 
         String key = prefix + "." + configAnnotation.key();
 
