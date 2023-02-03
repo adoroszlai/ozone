@@ -86,8 +86,8 @@ class TestConfigurationReflectionUtil {
   @Test
   void listReconfigurableProperties() {
     Set<String> props =
-        ConfigurationReflectionUtil.reconfigurableProperties(
-            ConfigurationExample.class);
+        ConfigurationReflectionUtil.mapReconfigurableProperties(
+            ConfigurationExample.class).keySet();
 
     String prefix = "ozone.scm.client";
     assertEquals(ImmutableSet.of(

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdds.conf;
 
+import static org.apache.hadoop.hdds.conf.TimeDurationUtil.getTimeDurationHelper;
+
 /**
  * Possible type of injected configuration.
  * <p>
@@ -24,13 +26,76 @@ package org.apache.hadoop.hdds.conf;
  * the configuration field.
  */
 public enum ConfigType {
-  AUTO,
-  STRING,
-  BOOLEAN,
-  INT,
-  LONG,
-  TIME,
-  SIZE,
-  CLASS,
-  DOUBLE
+  AUTO {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      throw new UnsupportedOperationException();
+    }
+
+  },
+  STRING {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return value;
+    }
+
+  },
+  BOOLEAN {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return Boolean.parseBoolean(value);
+    }
+
+  },
+  INT {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return Integer.parseInt(value);
+    }
+
+  },
+  LONG {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return Long.parseLong(value);
+    }
+
+  },
+  TIME {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return getTimeDurationHelper(config.key(), value, config.timeUnit());
+    }
+
+  },
+  SIZE {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      StorageSize measure = StorageSize.parse(value);
+      long val = Math.round(measure.getUnit().toBytes(measure.getValue()));
+      System.out.println(type);
+      if (type == int.class) {
+        return (int) val;
+      }
+      return val;
+    }
+
+  },
+  CLASS {
+    @Override
+    Object parse(String value, Config config, Class<?> type) throws Exception {
+      return Class.forName(value);
+    }
+
+  },
+  DOUBLE {
+    @Override
+    Object parse(String value, Config config, Class<?> type) {
+      return Double.parseDouble(value);
+    }
+
+  };
+
+  abstract Object parse(String value, Config config, Class<?> type)
+      throws Exception;
 }

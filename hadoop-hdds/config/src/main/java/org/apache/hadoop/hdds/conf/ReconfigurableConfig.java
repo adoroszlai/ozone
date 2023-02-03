@@ -17,14 +17,26 @@
  */
 package org.apache.hadoop.hdds.conf;
 
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Marker interface for easier access to reconfigurable properties.
+ * Base class for config with reconfigurable properties.
  */
-public interface Reconfigurable {
+public abstract class ReconfigurableConfig {
 
-  default Set<String> reconfigurableProperties() {
-    return ConfigurationReflectionUtil.reconfigurableProperties(getClass());
+  private final Map<String, Field> reconfigurableProperties =
+      ConfigurationReflectionUtil.mapReconfigurableProperties(getClass());
+
+  public void reconfigureProperty(String property, String newValue) {
+    Field field = reconfigurableProperties.get(property);
+    if (field != null) {
+      ConfigurationReflectionUtil.reconfigureProperty(this, field, newValue);
+    }
+  }
+
+  public Set<String> reconfigurableProperties() {
+    return reconfigurableProperties.keySet();
   }
 }
