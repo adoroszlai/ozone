@@ -23,7 +23,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-class ConfigurationSourceTest {
+/**
+ * Test for {@link ConfigurationSource}.
+ */
+class TestConfigurationSource {
 
   @Test
   void getPropsMatchPrefixAndTrimPrefix() {
