@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,24 +17,14 @@
  */
 package org.apache.hadoop.hdds.conf;
 
+import java.util.Set;
+
 /**
- * Example configuration to test inherited configuration injection.
+ * Marker interface for easier access to reconfigurable properties.
  */
-public class ConfigurationExampleGrandParent implements Reconfigurable {
+public interface Reconfigurable {
 
-  @Config(key = "number", defaultValue = "2", description = "Example numeric "
-      + "configuration", tags = ConfigTag.MANAGEMENT)
-  private int number = 1;
-
-  @Config(key = "grandpa.dyna", reconfigurable = true, defaultValue = "x",
-      description = "Test inherited dynamic property", tags = {})
-  private String grandpaDynamic;
-
-  public int getNumber() {
-    return number;
-  }
-
-  public void setNumber(int number) {
-    this.number = number;
+  default Set<String> reconfigurableProperties() {
+    return ConfigurationReflectionUtil.reconfigurableProperties(getClass());
   }
 }

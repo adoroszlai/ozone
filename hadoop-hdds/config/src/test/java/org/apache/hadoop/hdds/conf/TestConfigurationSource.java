@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.conf;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +45,19 @@ class TestConfigurationSource {
 
     assertEquals(ImmutableMap.of("somePrefix.key", "value"),
         c.getPropsMatchPrefix("somePrefix."));
+  }
+  @Test
+  void reconfigurableProperties() {
+    String prefix = "ozone.scm.client";
+    ImmutableSet<String> expected = ImmutableSet.of(
+        prefix + ".dynamic",
+        prefix + ".grandpa.dyna"
+    );
+
+    ConfigurationExample obj = new InMemoryConfiguration().getObject(
+        ConfigurationExample.class);
+
+    assertEquals(expected, obj.reconfigurableProperties());
   }
 
   @Test
