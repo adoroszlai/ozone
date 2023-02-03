@@ -103,4 +103,8 @@ public class ConfigurationExample extends ConfigurationExampleParent {
   public double getThreshold() {
     return threshold;
   }
+
+  public String getDynamic() {
+    return dynamic;
+  }
 }

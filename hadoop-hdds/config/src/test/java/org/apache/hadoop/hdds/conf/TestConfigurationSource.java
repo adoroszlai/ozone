@@ -45,4 +45,18 @@ class TestConfigurationSource {
     assertEquals(ImmutableMap.of("somePrefix.key", "value"),
         c.getPropsMatchPrefix("somePrefix."));
   }
+
+  @Test
+  void reconfiguration() {
+    MutableConfigurationSource subject = new InMemoryConfiguration();
+    ConfigurationExample orig = subject.getObject(ConfigurationExample.class);
+    ConfigurationExample obj = subject.getObject(ConfigurationExample.class);
+
+    subject.set("ozone.scm.client.dynamic", "updated");
+    subject.setLong("ozone.scm.client.wait", orig.getWaitTime() + 42);
+    subject.reconfigure(ConfigurationExample.class, obj);
+
+    assertEquals("updated", obj.getDynamic());
+    assertEquals(orig.getWaitTime(), obj.getWaitTime());
+  }
 }
