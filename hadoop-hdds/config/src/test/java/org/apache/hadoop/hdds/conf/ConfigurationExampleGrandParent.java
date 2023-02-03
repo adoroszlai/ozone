@@ -26,6 +26,10 @@ public class ConfigurationExampleGrandParent {
       + "configuration", tags = ConfigTag.MANAGEMENT)
   private int number = 1;
 
+  @Config(key = "grandpa.dyna", reconfigurable = true, defaultValue = "x",
+      description = "Test inherited dynamic property", tags = {})
+  private String grandpaDynamic;
+
   public int getNumber() {
     return number;
   }

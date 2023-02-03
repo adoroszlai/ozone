@@ -52,6 +52,10 @@ public class ConfigurationExample extends ConfigurationExampleParent {
       tags = ConfigTag.MANAGEMENT)
   private double threshold = 10;
 
+  @Config(key = "dynamic", reconfigurable = true, defaultValue = "original",
+      description = "Test dynamic property", tags = {})
+  private String dynamic;
+
   public void setClientAddress(String clientAddress) {
     this.clientAddress = clientAddress;
   }

@@ -21,8 +21,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -32,6 +34,34 @@ import java.util.stream.Stream;
 public final class ConfigurationReflectionUtil {
 
   private ConfigurationReflectionUtil() {
+  }
+
+  public static <T> List<Field> reconfigurableProperties(
+      Class<T> configurationClass) {
+    List<Field> props = new ArrayList<>();
+    props.addAll(getReconfigurableProperties(configurationClass));
+    Class<? super T> superClass = configurationClass.getSuperclass();
+    while (superClass != null) {
+      props.addAll(getReconfigurableProperties(superClass));
+      superClass = superClass.getSuperclass();
+    }
+    return props;
+  }
+
+  private static <T> List<Field> getReconfigurableProperties(
+      Class<T> configurationClass) {
+    List<Field> props = new ArrayList<>();
+    for (Field field : configurationClass.getDeclaredFields()) {
+      if (field.isAnnotationPresent(Config.class)) {
+        Config configAnnotation = field.getAnnotation(Config.class);
+
+        if (configAnnotation.reconfigurable()) {
+          checkNotFinal(configurationClass, field);
+          props.add(field);
+        }
+      }
+    }
+    return props;
   }
 
   public static <T> void injectConfiguration(
@@ -54,12 +84,7 @@ public final class ConfigurationReflectionUtil {
       String prefix) {
     for (Field field : configurationClass.getDeclaredFields()) {
       if (field.isAnnotationPresent(Config.class)) {
-        if ((field.getModifiers() & Modifier.FINAL) != 0) {
-          throw new ConfigurationException(String.format(
-              "Trying to set final field %s#%s, probably indicates misplaced " +
-                  "@Config annotation",
-              configurationClass.getSimpleName(), field.getName()));
-        }
+        checkNotFinal(configurationClass, field);
 
         String fieldLocation =
             configurationClass + "." + field.getName();
@@ -326,4 +351,16 @@ public final class ConfigurationReflectionUtil {
     }
     return Optional.empty();
   }
+
+  private static <T> void checkNotFinal(
+      Class<T> configurationClass, Field field) {
+
+    if ((field.getModifiers() & Modifier.FINAL) != 0) {
+      throw new ConfigurationException(String.format(
+          "Trying to set final field %s#%s, probably indicates misplaced " +
+              "@Config annotation",
+          configurationClass.getSimpleName(), field.getName()));
+    }
+  }
+
 }
