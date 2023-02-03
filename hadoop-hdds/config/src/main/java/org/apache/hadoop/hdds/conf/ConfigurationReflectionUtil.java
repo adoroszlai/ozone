@@ -21,11 +21,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -36,28 +36,28 @@ public final class ConfigurationReflectionUtil {
   private ConfigurationReflectionUtil() {
   }
 
-  public static <T> List<Field> reconfigurableProperties(
+  public static <T> Set<String> reconfigurableProperties(
       Class<T> configurationClass) {
-    List<Field> props = new ArrayList<>();
-    props.addAll(getReconfigurableProperties(configurationClass));
+    Optional<String> prefix = getPrefix(configurationClass);
+    Set<String> props = getReconfigurableProperties(configurationClass, prefix);
     Class<? super T> superClass = configurationClass.getSuperclass();
     while (superClass != null) {
-      props.addAll(getReconfigurableProperties(superClass));
+      props.addAll(getReconfigurableProperties(superClass, prefix));
       superClass = superClass.getSuperclass();
     }
     return props;
   }
 
-  private static <T> List<Field> getReconfigurableProperties(
-      Class<T> configurationClass) {
-    List<Field> props = new ArrayList<>();
+  private static <T> Set<String> getReconfigurableProperties(
+      Class<T> configurationClass, Optional<String> prefix) {
+    Set<String> props = new HashSet<>();
     for (Field field : configurationClass.getDeclaredFields()) {
       if (field.isAnnotationPresent(Config.class)) {
         Config configAnnotation = field.getAnnotation(Config.class);
 
         if (configAnnotation.reconfigurable()) {
           checkNotFinal(configurationClass, field);
-          props.add(field);
+          props.add(getFullKey(prefix, configAnnotation));
         }
       }
     }
@@ -320,13 +320,10 @@ public final class ConfigurationReflectionUtil {
 
   public static Optional<String> getKey(Class<?> configClass,
       String fieldName) {
-    ConfigGroup configGroup =
-        configClass.getAnnotation(ConfigGroup.class);
+    Optional<String> prefix = getPrefix(configClass);
 
-    return findFieldConfigAnnotationByName(configClass,
-        fieldName).map(
-            config -> configGroup == null ? config.key()
-                : configGroup.prefix() + "." + config.key());
+    return findFieldConfigAnnotationByName(configClass, fieldName)
+        .map(config -> getFullKey(prefix, config));
   }
 
   public static Optional<ConfigType> getType(Class<?> configClass,
@@ -365,6 +362,22 @@ public final class ConfigurationReflectionUtil {
               "@Config annotation",
           configurationClass.getSimpleName(), field.getName()));
     }
+  }
+
+  private static <T> Optional<String> getPrefix(Class<T> configurationClass) {
+    ConfigGroup configGroup =
+        configurationClass.getAnnotation(ConfigGroup.class);
+    return configGroup != null
+        ? Optional.of(configGroup.prefix())
+        : Optional.empty();
+  }
+
+  private static String getFullKey(
+      Optional<String> optionalPrefix, Config configAnnotation) {
+    String key = configAnnotation.key();
+    return optionalPrefix
+        .map(prefix -> prefix + "." + key)
+        .orElse(key);
   }
 
 }

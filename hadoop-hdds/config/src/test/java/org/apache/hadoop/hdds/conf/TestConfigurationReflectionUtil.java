@@ -23,12 +23,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -87,13 +85,14 @@ class TestConfigurationReflectionUtil {
 
   @Test
   void listReconfigurableProperties() {
-    List<Field> props =
+    Set<String> props =
         ConfigurationReflectionUtil.reconfigurableProperties(
             ConfigurationExample.class);
 
-    assertEquals(
-        ImmutableSet.of("dynamic", "grandpaDynamic"),
-        props.stream().map(Field::getName).collect(toSet())
-    );
+    String prefix = "ozone.scm.client";
+    assertEquals(ImmutableSet.of(
+        prefix + ".dynamic",
+        prefix + ".grandpa.dyna"
+    ), props);
   }
 }
