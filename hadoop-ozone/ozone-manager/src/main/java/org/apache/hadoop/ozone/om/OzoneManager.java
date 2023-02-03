@@ -4405,10 +4405,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throws ReconfigurationException {
     if (property.equals(OZONE_ADMINISTRATORS)) {
       return reconfOzoneAdmins(newVal);
-    } else {
-      throw new ReconfigurationException(property, newVal,
-          getConfiguration().get(property));
     }
+    return newVal;
   }
 
   private String reconfOzoneAdmins(String newVal) {

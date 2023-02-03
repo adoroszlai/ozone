@@ -23,17 +23,24 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.protobuf.BlockingService;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.ReconfigureProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.PipelineChoosePolicy;
@@ -153,6 +160,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.ratis.util.ExitUtils;
+import org.apache.ratis.util.MemoizedSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReport;
@@ -178,6 +186,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_EVENT_REPORT_EXEC_WAIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_EVENT_REPORT_QUEUE_WAIT_THRESHOLD_DEFAULT;
@@ -200,7 +209,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.SCM_ROOT_CA_COMPONENT_NAME;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
 public final class StorageContainerManager extends ServiceRuntimeInfoImpl
-    implements SCMMXBean, OzoneStorageContainerManager {
+    implements SCMMXBean, OzoneStorageContainerManager, ReconfigureProtocol {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(StorageContainerManager.class);
@@ -287,6 +296,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   // container replicas.
   private ContainerReplicaPendingOps containerReplicaPendingOps;
   private final AtomicBoolean isStopped = new AtomicBoolean(false);
+
+  private final Supplier<Set<String>> reconfigurableProperties;
 
   /**
    * Creates a new StorageContainerManager. Configuration will be
@@ -405,6 +416,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     registerMXBean();
     registerMetricsSource(this);
+
+    reconfigurableProperties = MemoizedSupplier.valueOf(() ->
+        ImmutableSortedSet.copyOf(new ImmutableSet.Builder<String>()
+            .addAll(replicationManager.getConfig().reconfigurableProperties())
+            .build())
+    );
   }
 
 
@@ -2022,4 +2039,30 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return String.valueOf(ServerUtils.getScmDbDir(configuration));
   }
 
+  @Override // ReconfigureProtocol
+  public void startReconfigure() throws IOException {
+    startReconfigurationTask();
+  }
+
+  @Override // ReconfigureProtocol
+  public ReconfigurationTaskStatus getReconfigureStatus() {
+    return getReconfigurationTaskStatus();
+  }
+
+  @Override // ReconfigureProtocol
+  public List<String> listReconfigureProperties() {
+    return ImmutableList.copyOf(getReconfigurableProperties());
+  }
+
+  @Override // ReconfigurableBase
+  public Collection<String> getReconfigurableProperties() {
+    return reconfigurableProperties.get();
+  }
+
+  @Override
+  protected String reconfigurePropertyImpl(String property, String newVal)
+      throws ReconfigurationException {
+    replicationManager.getConfig().reconfigureProperty(property, newVal);
+    return newVal;
+  }
 }

@@ -19,59 +19,36 @@ package org.apache.hadoop.ozone.reconfig;
  */
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import java.util.UUID;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests for OM Reconfigure.
  */
-public class TestOmReconfigure {
+@Timeout(300)
+class TestOmReconfigure {
 
-  /**
-   * Set a timeout for each test.
-   */
-  @Rule
-  public Timeout timeout = new Timeout(300000);
-  private OzoneConfiguration conf;
-  private MiniOzoneHAClusterImpl cluster;
-  private OzoneManager ozoneManager;
+  private static MiniOzoneCluster cluster;
 
-  /**
-   * Create a MiniDFSCluster for testing.
-   */
-  @Before
-  public void setup() throws Exception {
-
-    conf = new OzoneConfiguration();
-    String omServiceId = UUID.randomUUID().toString();
-    cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newOMHABuilder(conf)
-        .setClusterId(UUID.randomUUID().toString())
-        .setScmId(UUID.randomUUID().toString())
-        .setOMServiceId(omServiceId)
-        .setNumOfOzoneManagers(3)
-        .setNumDatanodes(1)
+  @BeforeAll
+  static void setup() throws Exception {
+    cluster = MiniOzoneCluster.newBuilder(new OzoneConfiguration())
+        .setStartDataNodes(false)
         .build();
-
-    cluster.waitForClusterToBeReady();
-    ozoneManager = cluster.getOzoneManager();
-
   }
 
-  /**
-   * Shutdown MiniDFSCluster.
-   */
-  @After
-  public void shutdown() {
+  @AfterAll
+  static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -81,20 +58,31 @@ public class TestOmReconfigure {
    * Test reconfigure om "ozone.administrators".
    */
   @Test
-  public void testOmAdminUsersReconfigure() throws Exception {
+  void testOmAdminUsersReconfigure() throws Exception {
+    OzoneManager ozoneManager = cluster.getOzoneManager();
     String userA = "mockUserA";
     String userB = "mockUserB";
-    conf.set(OZONE_ADMINISTRATORS, userA);
-    ozoneManager.reconfigurePropertyImpl(OZONE_ADMINISTRATORS, userA);
-    assertTrue(userA + " should be an admin user",
-        ozoneManager.getOmAdminUsernames().contains(userA));
+    ozoneManager.reconfigureProperty(OZONE_ADMINISTRATORS, userA);
+    assertTrue(ozoneManager.getOmAdminUsernames().contains(userA),
+        userA + " should be an admin user");
 
-    conf.set(OZONE_ADMINISTRATORS, userB);
-    ozoneManager.reconfigurePropertyImpl(OZONE_ADMINISTRATORS, userB);
-    assertFalse(userA + " should NOT be an admin user",
-        ozoneManager.getOmAdminUsernames().contains(userA));
-    assertTrue(userB + " should be an admin user",
-        ozoneManager.getOmAdminUsernames().contains(userB));
+    ozoneManager.reconfigureProperty(OZONE_ADMINISTRATORS, userB);
+    assertFalse(ozoneManager.getOmAdminUsernames().contains(userA),
+        userA + " should NOT be an admin user");
+    assertTrue(ozoneManager.getOmAdminUsernames().contains(userB),
+        userB + " should be an admin user");
+  }
+
+  @Test
+  void reconfigurePushReplication() throws Exception {
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    ReplicationManagerConfiguration rmConf =
+        scm.getReplicationManager().getConfig();
+    assertFalse(rmConf.isPush());
+
+    scm.reconfigureProperty("hdds.scm.replication.push", "true");
+
+    assertTrue(rmConf.isPush());
   }
 
 }

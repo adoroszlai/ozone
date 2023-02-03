@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.PostConstruct;
+import org.apache.hadoop.hdds.conf.ReconfigurableConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
@@ -736,7 +737,8 @@ public class ReplicationManager implements SCMService {
    * Configuration used by the Replication Manager.
    */
   @ConfigGroup(prefix = "hdds.scm.replication")
-  public static class ReplicationManagerConfiguration {
+  public static class ReplicationManagerConfiguration
+      extends ReconfigurableConfig {
     /**
      * The frequency in which ReplicationMonitor thread should run.
      */
@@ -868,6 +870,7 @@ public class ReplicationManager implements SCMService {
     @Config(key = "push",
         type = ConfigType.BOOLEAN,
         defaultValue = "false",
+        reconfigurable = true,
         tags = { SCM, DATANODE },
         description = "If false, replication happens by asking the target to " +
             "pull from source nodes.  If true, the source node is asked to " +
