@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.net.NodeSchema;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -67,6 +68,7 @@ public abstract class TestMisReplicationHandler {
   private ContainerInfo container;
   private NodeManager nodeManager;
   private OzoneConfiguration conf;
+  private ReplicationManagerConfiguration rmConf;
 
   protected void setup(ReplicationConfig repConfig) {
     nodeManager = new MockNodeManager(true, 10) {
@@ -78,6 +80,7 @@ public abstract class TestMisReplicationHandler {
 
     };
     conf = SCMTestUtils.getConf();
+    rmConf = conf.getObject(ReplicationManagerConfiguration.class);
     container = ReplicationTestUtil
             .createContainer(HddsProtos.LifeCycleState.CLOSED, repConfig);
     NodeSchema[] schemas =
@@ -87,7 +90,7 @@ public abstract class TestMisReplicationHandler {
 
   protected abstract MisReplicationHandler getMisreplicationHandler(
           PlacementPolicy placementPolicy, OzoneConfiguration configuration,
-          NodeManager nm);
+          NodeManager nm, ReplicationManagerConfiguration replManConf);
   protected void testMisReplication(Set<ContainerReplica> availableReplicas,
                                   List<ContainerReplicaOp> pendingOp,
                                   int maintenanceCnt, int misreplicationCount,
@@ -110,8 +113,8 @@ public abstract class TestMisReplicationHandler {
                                   int maintenanceCnt, int misreplicationCount,
                                   int expectedNumberOfNodes)
           throws IOException {
-    MisReplicationHandler misReplicationHandler =
-            getMisreplicationHandler(mockedPlacementPolicy, conf, nodeManager);
+    MisReplicationHandler misReplicationHandler = getMisreplicationHandler(
+        mockedPlacementPolicy, conf, nodeManager, rmConf);
 
     ContainerHealthResult.MisReplicatedHealthResult result =
             Mockito.mock(ContainerHealthResult.MisReplicatedHealthResult.class);

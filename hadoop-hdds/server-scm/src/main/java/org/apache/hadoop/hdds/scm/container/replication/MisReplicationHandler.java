@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
@@ -58,18 +59,18 @@ public abstract class MisReplicationHandler implements
   private final PlacementPolicy<ContainerReplica> containerPlacement;
   private final long currentContainerSize;
   private final NodeManager nodeManager;
-  private boolean push;
+  private final ReplicationManagerConfiguration rmConf;
 
   public MisReplicationHandler(
-          final PlacementPolicy<ContainerReplica> containerPlacement,
-          final ConfigurationSource conf, NodeManager nodeManager,
-      final boolean push) {
+      final PlacementPolicy<ContainerReplica> containerPlacement,
+      final ConfigurationSource conf, NodeManager nodeManager,
+      final ReplicationManagerConfiguration rmConf) {
     this.containerPlacement = containerPlacement;
     this.currentContainerSize = (long) conf.getStorageSize(
             ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
             ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT, StorageUnit.BYTES);
     this.nodeManager = nodeManager;
-    this.push = push;
+    this.rmConf = rmConf;
   }
 
   protected abstract ContainerReplicaCount getContainerReplicaCount(
@@ -127,6 +128,7 @@ public abstract class MisReplicationHandler implements
       long containerID = containerInfo.getContainerID();
       DatanodeDetails source = replica.getDatanodeDetails();
       DatanodeDetails target = targetDns.get(datanodeIdx);
+      final boolean push = rmConf.isPush();
       ReplicateContainerCommand replicateCommand = push
           ? ReplicateContainerCommand.toTarget(containerID, target)
           : ReplicateContainerCommand.fromSources(containerID,

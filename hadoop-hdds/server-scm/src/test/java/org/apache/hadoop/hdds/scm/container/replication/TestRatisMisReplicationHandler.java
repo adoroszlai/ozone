@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.scm.ContainerPlacementStatus;
 import org.apache.hadoop.hdds.scm.PlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.junit.jupiter.api.Assertions;
@@ -172,8 +173,8 @@ public class TestRatisMisReplicationHandler extends TestMisReplicationHandler {
   @Override
   protected MisReplicationHandler getMisreplicationHandler(
           PlacementPolicy placementPolicy, OzoneConfiguration conf,
-          NodeManager nodeManager) {
+          NodeManager nodeManager, ReplicationManagerConfiguration rmConf) {
     return new RatisMisReplicationHandler(placementPolicy, conf, nodeManager,
-        false);
+        rmConf);
   }
 }
