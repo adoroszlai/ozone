@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.utils.VersionInfo;
 
 import java.util.Collection;
 
+import static java.util.Collections.emptySet;
+
 /**
  * Helper base class to report the standard version and runtime information.
  *
@@ -71,12 +73,12 @@ public class ServiceRuntimeInfoImpl extends ReconfigurableBase
 
   @Override
   public Collection<String> getReconfigurableProperties() {
-    return null;
+    return emptySet();
   }
 
   @Override
   protected String reconfigurePropertyImpl(String property, String newVal)
       throws ReconfigurationException {
-    throw new ReconfigurationException();
+    return newVal;
   }
 }
