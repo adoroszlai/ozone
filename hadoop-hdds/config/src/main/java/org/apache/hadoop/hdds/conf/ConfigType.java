@@ -73,7 +73,6 @@ public enum ConfigType {
     Object parse(String value, Config config, Class<?> type) {
       StorageSize measure = StorageSize.parse(value);
       long val = Math.round(measure.getUnit().toBytes(measure.getValue()));
-      System.out.println(type);
       if (type == int.class) {
         return (int) val;
       }
