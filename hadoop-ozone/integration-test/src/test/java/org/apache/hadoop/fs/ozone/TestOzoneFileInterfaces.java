@@ -124,7 +124,7 @@ abstract class TestOzoneFileInterfaces {
 
   private OMMetrics omMetrics;
 
-  private static boolean enableFileSystemPaths;
+  private boolean enableFileSystemPaths;
 
   @SuppressWarnings("checkstyle:VisibilityModifier")
   protected boolean enableFileSystemPathsInstance;
