@@ -24,13 +24,12 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
@@ -40,17 +39,15 @@ import static org.junit.Assert.assertEquals;
 /**
  * Test client-side CRUD snapshot operations with Ozone Manager.
  */
+@Timeout(300)
 public class TestOzoneFsSnapshot {
-  // Set the timeout for every test.
-  @Rule
-  public Timeout testTimeout = Timeout.seconds(300);
 
   private static MiniOzoneCluster cluster;
   private static final String OM_SERVICE_ID = "om-service-test1";
   private OzoneConfiguration clientConf;
   private static OzoneManager ozoneManager;
 
-  @BeforeClass
+  @BeforeAll
   public static void initClass() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
@@ -65,14 +62,14 @@ public class TestOzoneFsSnapshot {
     ozoneManager = cluster.getOzoneManager();
   }
 
-  @Before
+  @BeforeEach
   public void init() {
     String hostPrefix = OZONE_OFS_URI_SCHEME + "://" + OM_SERVICE_ID;
     clientConf = new OzoneConfiguration(cluster.getConf());
     clientConf.set(FS_DEFAULT_NAME_KEY, hostPrefix);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();

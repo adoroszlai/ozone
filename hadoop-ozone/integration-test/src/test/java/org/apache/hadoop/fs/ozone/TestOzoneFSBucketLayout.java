@@ -26,12 +26,11 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -57,10 +56,8 @@ import java.util.Collection;
  * and behaviour.
  * TODO: Refactor this and TestOzoneFileSystem to reduce duplication.
  */
-@RunWith(Parameterized.class)
 public class TestOzoneFSBucketLayout {
 
-  private static String defaultBucketLayout;
   private static MiniOzoneCluster cluster = null;
   private static ObjectStore objectStore;
   private BasicRootedOzoneClientAdapterImpl adapter;
@@ -83,7 +80,6 @@ public class TestOzoneFSBucketLayout {
         OzoneConfigKeys.OZONE_CLIENT_FS_DEFAULT_BUCKET_LAYOUT);
   }
 
-  @Parameterized.Parameters
   public static Collection<String> data() {
     return Arrays.asList(
         // Empty Config
@@ -98,18 +94,7 @@ public class TestOzoneFSBucketLayout {
     );
   }
 
-  public TestOzoneFSBucketLayout(String bucketLayout) {
-    // Ignored. Actual init done in initParam().
-    // This empty constructor is still required to avoid argument exception.
-  }
-
-  @Parameterized.BeforeParam
-  public static void initDefaultLayout(String bucketLayout) {
-    defaultBucketLayout = bucketLayout;
-    LOG.info("Default bucket layout: {}", defaultBucketLayout);
-  }
-
-  @BeforeClass
+  @BeforeAll
   public static void initCluster() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf)
@@ -127,7 +112,7 @@ public class TestOzoneFSBucketLayout {
     volumePath = new Path(OZONE_URI_DELIMITER, volumeName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException {
     // Tear down the cluster after EACH set of parameters
     if (cluster != null) {
@@ -135,8 +120,10 @@ public class TestOzoneFSBucketLayout {
     }
   }
 
-  @Test
-  public void testFileSystemBucketLayoutConfiguration() throws IOException {
+  @ParameterizedTest
+  @MethodSource("data")
+  void testFileSystemBucketLayoutConfiguration(String defaultBucketLayout)
+      throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     OzoneClientConfig clientConfig = conf.getObject(OzoneClientConfig.class);
@@ -171,7 +158,7 @@ public class TestOzoneFSBucketLayout {
     // Create a new directory, which in turn creates a new bucket.
     Path root = new Path("/" + volumeName);
 
-    String bucketName = getBucketName();
+    String bucketName = getBucketName(defaultBucketLayout);
     Path dir1 = new Path(root, bucketName);
 
     adapter.createDirectory(dir1.toString());
@@ -191,7 +178,7 @@ public class TestOzoneFSBucketLayout {
     IOUtils.closeQuietly(fs);
   }
 
-  private String getBucketName() {
+  private String getBucketName(String defaultBucketLayout) {
     String bucketSuffix;
     if (StringUtils.isNotBlank(defaultBucketLayout)) {
       bucketSuffix = defaultBucketLayout

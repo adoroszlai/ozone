@@ -70,15 +70,15 @@ import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.LambdaTestUtils;
-import org.junit.After;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,44 +128,56 @@ import static org.junit.Assert.fail;
  * Ozone file system tests that are not covered by contract tests.
  * TODO: Refactor this and TestOzoneFileSystem to reduce duplication.
  */
-@RunWith(Parameterized.class)
-public class TestRootedOzoneFileSystem {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Timeout(300)
+abstract class TestRootedOzoneFileSystem {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRootedOzoneFileSystem.class);
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(
-        new Object[]{true, true, true},
-        new Object[]{true, true, false},
-        new Object[]{true, false, false},
-        new Object[]{false, true, false},
-        new Object[]{false, false, false}
-    );
+  static class TestOFS extends TestRootedOzoneFileSystem {
+    TestOFS() {
+      super(false, false, false);
+    }
   }
 
-  public TestRootedOzoneFileSystem(boolean setDefaultFs,
+  static class TestOFSWithFSPaths extends TestRootedOzoneFileSystem {
+    TestOFSWithFSPaths() {
+      super(true, false, false);
+    }
+  }
+
+  static class TestOFSWithRatis extends TestRootedOzoneFileSystem {
+    TestOFSWithRatis() {
+      super(false, true, false);
+    }
+  }
+
+  static class TestOFSWithRatisAndFSPaths extends TestRootedOzoneFileSystem {
+    TestOFSWithRatisAndFSPaths() {
+      super(true, true, false);
+    }
+  }
+
+  static class TestOFSWithRatisAndFSPathsAndACL
+      extends TestRootedOzoneFileSystem {
+    TestOFSWithRatisAndFSPathsAndACL() {
+      super(true, true, true);
+    }
+  }
+
+  TestRootedOzoneFileSystem(boolean setDefaultFs,
       boolean enableOMRatis, boolean isAclEnabled) {
-    // Ignored. Actual init done in initParam().
-    // This empty constructor is still required to avoid argument exception.
-  }
-
-  @Parameterized.BeforeParam
-  public static void initParam(boolean setDefaultFs,
-                               boolean enableOMRatis, boolean isAclEnabled)
-      throws IOException, InterruptedException, TimeoutException {
     // Initialize the cluster before EACH set of parameters
     enabledFileSystemPaths = setDefaultFs;
     omRatisEnabled = enableOMRatis;
     enableAcl = isAclEnabled;
-    initClusterAndEnv();
   }
 
-  @Parameterized.AfterParam
-  public static void teardownParam() {
+  @AfterAll
+  void teardownParam() {
     // Tear down the cluster after EACH set of parameters
     if (cluster != null) {
       cluster.shutdown();
@@ -173,7 +185,7 @@ public class TestRootedOzoneFileSystem {
     IOUtils.closeQuietly(fs);
   }
 
-  @Before
+  @BeforeEach
   public void createVolumeAndBucket() throws IOException {
     // create a volume and a bucket to be used by RootedOzoneFileSystem (OFS)
     OzoneBucket bucket =
@@ -184,51 +196,48 @@ public class TestRootedOzoneFileSystem {
     bucketPath = new Path(volumePath, bucketName);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     fs.delete(volumePath, true);
   }
 
-  public static FileSystem getFs() {
+  public FileSystem getFs() {
     return fs;
   }
 
-  public static Path getBucketPath() {
+  public Path getBucketPath() {
     return bucketPath;
   }
 
-  @Rule
-  public Timeout globalTimeout = Timeout.seconds(300);
+  private boolean enabledFileSystemPaths;
+  private boolean omRatisEnabled;
+  private boolean isBucketFSOptimized = false;
+  private boolean enableAcl;
 
-  private static boolean enabledFileSystemPaths;
-  private static boolean omRatisEnabled;
-  private static boolean isBucketFSOptimized = false;
-  private static boolean enableAcl;
+  private OzoneConfiguration conf;
+  private MiniOzoneCluster cluster = null;
+  private FileSystem fs;
+  private RootedOzoneFileSystem ofs;
+  private ObjectStore objectStore;
+  private BasicRootedOzoneClientAdapterImpl adapter;
+  private Trash trash;
 
-  private static OzoneConfiguration conf;
-  private static MiniOzoneCluster cluster = null;
-  private static FileSystem fs;
-  private static RootedOzoneFileSystem ofs;
-  private static ObjectStore objectStore;
-  private static BasicRootedOzoneClientAdapterImpl adapter;
-  private static Trash trash;
-
-  private static String volumeName;
-  private static Path volumePath;
-  private static String bucketName;
+  private String volumeName;
+  private Path volumePath;
+  private String bucketName;
   // Store path commonly used by tests that test functionality within a bucket
-  private static Path bucketPath;
-  private static String rootPath;
-  private static BucketLayout bucketLayout;
+  private Path bucketPath;
+  private String rootPath;
+  private BucketLayout bucketLayout;
 
   private static final String USER1 = "regularuser1";
   private static final UserGroupInformation UGI_USER1 = UserGroupInformation
       .createUserForTesting(USER1,  new String[] {"usergroup"});
   // Non-privileged OFS instance
-  private static RootedOzoneFileSystem userOfs;
+  private RootedOzoneFileSystem userOfs;
 
-  public static void initClusterAndEnv() throws IOException,
-      InterruptedException, TimeoutException {
+  @BeforeAll
+  void init() throws IOException, InterruptedException, TimeoutException {
     conf = new OzoneConfiguration();
     conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
@@ -281,7 +290,7 @@ public class TestRootedOzoneFileSystem {
     return cluster.getOzoneManager().getMetrics();
   }
 
-  protected static void setIsBucketFSOptimized(boolean isBucketFSO) {
+  protected void setIsBucketFSOptimized(boolean isBucketFSO) {
     isBucketFSOptimized = isBucketFSO;
   }
 

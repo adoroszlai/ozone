@@ -29,11 +29,10 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -50,9 +49,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY;
 /**
  * Ozone file system tests with Streaming.
  */
+@Timeout(300)
 public class TestOzoneFileSystemWithStreaming {
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
   private static MiniOzoneCluster cluster;
   private static OzoneBucket bucket;
@@ -96,7 +94,7 @@ public class TestOzoneFileSystemWithStreaming {
     bucket = TestDataUtil.createVolumeAndBucket(cluster, layout);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() {
     if (cluster != null) {
       cluster.shutdown();

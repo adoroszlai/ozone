@@ -62,20 +62,17 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 
-import org.junit.After;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
@@ -84,14 +81,8 @@ import org.junit.runners.Parameterized.Parameters;
  * This test will test the various interfaces i.e.
  * create, read, write, getFileStatus
  */
-@RunWith(Parameterized.class)
+@Timeout(300)
 public class TestOzoneFileInterfaces {
-
-  /**
-    * Set a timeout for each test.
-    */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
   private String rootPath;
 
@@ -168,7 +159,7 @@ public class TestOzoneFileInterfaces {
     setCluster(newCluster);
   }
 
-  @Before
+  @BeforeEach
   public void setupTest() throws Exception {
     volumeName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
     bucketName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
@@ -201,12 +192,12 @@ public class TestOzoneFileInterfaces {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void closeFs() throws IOException {
     IOUtils.closeQuietly(fs);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -500,7 +491,7 @@ public class TestOzoneFileInterfaces {
   }
 
   @Test
-  @Ignore("HDDS-3506")
+  @Disabled("HDDS-3506")
   public void testOzoneManagerLocatedFileStatusBlockOffsetsWithMultiBlockFile()
       throws Exception {
     // naive assumption: MiniOzoneCluster will not have larger than ~1GB

@@ -37,11 +37,11 @@ import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmDirectoryInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.ozone.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.After;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +76,7 @@ public class TestRootedDDSWithFSO {
   private static Path volumePath;
   private static Path bucketPath;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(OMConfigKeys.OZONE_DIR_DELETING_SERVICE_INTERVAL, 1);
@@ -111,7 +111,7 @@ public class TestRootedDDSWithFSO {
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -119,7 +119,7 @@ public class TestRootedDDSWithFSO {
     IOUtils.closeQuietly(fs);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     try {
       Path root = new Path("/");

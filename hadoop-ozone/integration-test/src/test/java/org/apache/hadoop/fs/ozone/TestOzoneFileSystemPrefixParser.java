@@ -30,10 +30,11 @@ import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.debug.PrefixParser;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.Assert;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.URI;
@@ -56,7 +57,7 @@ public class TestOzoneFileSystemPrefixParser {
   private static Path dir;
   private static Path file;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     volumeName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
     bucketName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
@@ -84,7 +85,7 @@ public class TestOzoneFileSystemPrefixParser {
     os.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -92,7 +93,7 @@ public class TestOzoneFileSystemPrefixParser {
     IOUtils.closeQuietly(fs);
   }
 
-  @Test(timeout = 120000)
+  @Test @Timeout(120)
   public void testPrefixParsePath() throws Exception {
 
     cluster.stop();

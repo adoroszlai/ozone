@@ -32,20 +32,16 @@ import org.apache.hadoop.ozone.om.helpers.OmDirectoryInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.Assert;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -57,27 +53,32 @@ import static org.junit.Assert.fail;
  * - prefix layout.
  *
  */
-@RunWith(Parameterized.class)
-public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
+abstract class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(
-            new Object[]{true, true},
-            new Object[]{true, false});
+  static class TestO3FSWithFSO extends TestOzoneFileSystemWithFSO {
+    TestO3FSWithFSO() {
+      super(false);
+    }
   }
 
-  @BeforeClass
-  public static void init() {
+  static class TestO3FSWithRatisAndFSO extends TestOzoneFileSystemWithFSO {
+    TestO3FSWithRatisAndFSO() {
+      super(true);
+    }
+  }
+
+  @BeforeAll
+  @Override
+  void init() throws Exception {
     setBucketLayout(BucketLayout.FILE_SYSTEM_OPTIMIZED);
+    super.init();
   }
 
-  public TestOzoneFileSystemWithFSO(boolean setDefaultFs,
-      boolean enableOMRatis) {
-    super(setDefaultFs, enableOMRatis);
+  TestOzoneFileSystemWithFSO(boolean enableOMRatis) {
+    super(true, enableOMRatis);
   }
 
-  @After
+  @AfterEach
   @Override
   public void cleanup() {
     super.cleanup();
@@ -94,21 +95,21 @@ public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testGetDirectoryModificationTime() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testOzoneFsServiceLoader() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testCreateWithInvalidPaths() {
     // ignore as this is not relevant to PREFIX layout changes
   }
@@ -453,13 +454,13 @@ public class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
 
   @Override
   @Test
-  @Ignore("TODO:HDDS-2939")
+  @Disabled("TODO:HDDS-2939")
   public void testListStatusWithIntermediateDir() throws Exception {
   }
 
   @Override
   @Test
-  @Ignore("TODO:HDDS-5012")
+  @Disabled("TODO:HDDS-5012")
   public void testListStatusOnLargeDirectory() throws Exception {
   }
 

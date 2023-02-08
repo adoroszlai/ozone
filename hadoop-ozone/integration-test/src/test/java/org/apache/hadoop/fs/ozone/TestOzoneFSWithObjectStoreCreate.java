@@ -38,14 +38,13 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -66,10 +65,8 @@ import static org.junit.Assert.fail;
 /**
  * Class tests create with object store and getFileStatus.
  */
+@Timeout(300)
 public class TestOzoneFSWithObjectStoreCreate {
-
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
   private String rootPath;
 
@@ -81,7 +78,7 @@ public class TestOzoneFSWithObjectStoreCreate {
 
   private String bucketName;
 
-  @BeforeClass
+  @BeforeAll
   public static void initClass() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
@@ -94,14 +91,14 @@ public class TestOzoneFSWithObjectStoreCreate {
     cluster.waitForClusterToBeReady();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClass() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     volumeName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
     bucketName = RandomStringUtils.randomAlphabetic(10).toLowerCase();
@@ -116,7 +113,7 @@ public class TestOzoneFSWithObjectStoreCreate {
     o3fs = (OzoneFileSystem) FileSystem.get(new URI(rootPath), conf);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     IOUtils.closeQuietly(o3fs);
   }

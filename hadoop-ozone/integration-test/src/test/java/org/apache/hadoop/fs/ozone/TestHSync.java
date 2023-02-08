@@ -35,11 +35,12 @@ import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -58,24 +59,17 @@ import static org.junit.Assert.assertTrue;
 /**
  * Test HSync.
  */
+@Timeout(300)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TestHSync {
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneBucket bucket;
+  private MiniOzoneCluster cluster;
+  private OzoneBucket bucket;
 
   private final OzoneConfiguration conf = new OzoneConfiguration();
 
-  {
-    try {
-      init();
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  private void init() throws Exception {
+  @BeforeAll
+  void init() throws Exception {
     final int chunkSize = 16 << 10;
     final int flushSize = 2 * chunkSize;
     final int maxFlushSize = 2 * flushSize;
@@ -102,8 +96,8 @@ public class TestHSync {
     bucket = TestDataUtil.createVolumeAndBucket(cluster, layout);
   }
 
-  @AfterClass
-  public static void teardown() {
+  @AfterAll
+  void teardown() {
     if (cluster != null) {
       cluster.shutdown();
     }

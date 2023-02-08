@@ -22,17 +22,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
@@ -41,63 +36,65 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests to verify ofs with prefix enabled cases.
  */
-@RunWith(Parameterized.class)
-public class TestRootedOzoneFileSystemWithFSO
+abstract class TestRootedOzoneFileSystemWithFSO
     extends TestRootedOzoneFileSystem {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRootedOzoneFileSystemWithFSO.class);
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(
-        new Object[]{true, true, false},
-        new Object[]{true, false, false}
-    );
+  static class TestOFSWithFSO extends TestRootedOzoneFileSystemWithFSO {
+    TestOFSWithFSO() {
+      super(false);
+    }
   }
 
-  public TestRootedOzoneFileSystemWithFSO(boolean setDefaultFs,
-      boolean enableOMRatis, boolean enableAcl) {
-    super(setDefaultFs, enableOMRatis, enableAcl);
+  static class TestOFSWithRatisAndFSO extends TestRootedOzoneFileSystemWithFSO {
+    TestOFSWithRatisAndFSO() {
+      super(true);
+    }
   }
 
-  @BeforeClass
-  public static void init()
-      throws IOException, InterruptedException, TimeoutException {
+  TestRootedOzoneFileSystemWithFSO(boolean enableOMRatis) {
+    super(true, enableOMRatis, false);
+  }
+
+  @Override
+  void init() throws IOException, InterruptedException, TimeoutException {
     setIsBucketFSOptimized(true);
+    super.init();
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testTempMount() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testOzoneFsServiceLoader() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testCreateWithInvalidPaths() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testDeleteEmptyVolume() {
     // ignore as this is not relevant to PREFIX layout changes
   }
 
   @Override
   @Test
-  @Ignore("HDDS-2939")
+  @Disabled("HDDS-2939")
   public void testMkdirNonExistentVolume() {
     // ignore as this is not relevant to PREFIX layout changes
   }
@@ -106,7 +103,7 @@ public class TestRootedOzoneFileSystemWithFSO
    * OFS: Test recursive listStatus on root and volume.
    */
   @Override
-  @Ignore("TODO:HDDS-4360")
+  @Disabled("TODO:HDDS-4360")
   public void testListStatusRootAndVolumeRecursive() throws IOException {
   }
 

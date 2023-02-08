@@ -47,25 +47,20 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.hdds.StringUtils.string2Bytes;
 
 /**
  * Test OzoneFSInputStream by reading through multiple interfaces.
  */
+@Timeout(300)
 public class TestOzoneFSInputStream {
 
-  /**
-    * Set a timeout for each test.
-    */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
   private static MiniOzoneCluster cluster = null;
   private static FileSystem fs;
   private static FileSystem ecFs;
@@ -80,7 +75,7 @@ public class TestOzoneFSInputStream {
    *
    * @throws IOException
    */
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
     conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
@@ -130,7 +125,7 @@ public class TestOzoneFSInputStream {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     fs.close();
     ecFs.close();

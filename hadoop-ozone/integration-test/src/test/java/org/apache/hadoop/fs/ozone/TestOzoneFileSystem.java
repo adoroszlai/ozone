@@ -58,15 +58,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.LambdaTestUtils;
 import org.apache.ozone.test.TestClock;
-import org.apache.ozone.test.tag.Flaky;
-import org.junit.After;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +75,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -103,62 +101,59 @@ import static org.junit.Assert.fail;
 /**
  * Ozone file system tests that are not covered by contract tests.
  */
-@RunWith(Parameterized.class)
-public class TestOzoneFileSystem {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Timeout(300)
+abstract class TestOzoneFileSystem {
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(
-        new Object[]{true, true},
-        new Object[]{true, false},
-        new Object[]{false, true},
-        new Object[]{false, false});
-  }
-
-  public TestOzoneFileSystem(boolean setDefaultFs, boolean enableOMRatis) {
-    // Checking whether 'defaultFS' and 'omRatis' flags represents next
-    // parameter index values. This is to ensure that initialize
-    // TestOzoneFileSystem#init() function will be invoked only at the
-    // beginning of every new set of Parameterized.Parameters.
-    if (enabledFileSystemPaths != setDefaultFs ||
-            omRatisEnabled != enableOMRatis || cluster == null) {
-      enabledFileSystemPaths = setDefaultFs;
-      omRatisEnabled = enableOMRatis;
-      try {
-        teardown();
-        init();
-      } catch (Exception e) {
-        LOG.info("Unexpected exception", e);
-        fail("Unexpected exception:" + e.getMessage());
-      }
+  static class TestO3FS extends TestOzoneFileSystem {
+    TestO3FS() {
+      super(false, false);
     }
   }
 
-  /**
-   * Set a timeout for each test.
-   */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
+  static class TestO3FSWithFSPaths extends TestOzoneFileSystem {
+    TestO3FSWithFSPaths() {
+      super(true, false);
+    }
+  }
+
+  static class TestO3FSWithRatis extends TestOzoneFileSystem {
+    TestO3FSWithRatis() {
+      super(false, true);
+    }
+  }
+
+  static class TestO3FSWithRatisAndFSPaths extends TestOzoneFileSystem {
+    TestO3FSWithRatisAndFSPaths() {
+      super(true, true);
+    }
+  }
+
+  TestOzoneFileSystem(boolean setDefaultFs, boolean enableOMRatis) {
+    enabledFileSystemPaths = setDefaultFs;
+    omRatisEnabled = enableOMRatis;
+  }
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOzoneFileSystem.class);
 
-  private static BucketLayout bucketLayout = BucketLayout.LEGACY;
-  private static boolean enabledFileSystemPaths;
-  private static boolean omRatisEnabled;
+  private BucketLayout bucketLayout = BucketLayout.LEGACY;
+  private boolean enabledFileSystemPaths;
+  private boolean omRatisEnabled;
 
-  private static MiniOzoneCluster cluster;
-  private static OzoneManagerProtocol writeClient;
-  private static FileSystem fs;
-  private static OzoneFileSystem o3fs;
-  private static OzoneBucket ozoneBucket;
-  private static String volumeName;
-  private static String bucketName;
-  private static Trash trash;
+  private MiniOzoneCluster cluster;
+  private OzoneManagerProtocol writeClient;
+  private FileSystem fs;
+  private OzoneFileSystem o3fs;
+  private OzoneBucket ozoneBucket;
+  private String volumeName;
+  private String bucketName;
+  private Trash trash;
 
-  private void init() throws Exception {
+  @BeforeAll
+  void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
@@ -197,15 +192,15 @@ public class TestOzoneFileSystem {
     o3fs = (OzoneFileSystem) fs;
   }
 
-  @AfterClass
-  public static void teardown() {
+  @AfterAll
+  void teardown() {
     if (cluster != null) {
       cluster.shutdown();
     }
     IOUtils.closeQuietly(fs);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     try {
       Path root = new Path("/");
@@ -218,23 +213,23 @@ public class TestOzoneFileSystem {
     }
   }
 
-  public static MiniOzoneCluster getCluster() {
+  public MiniOzoneCluster getCluster() {
     return cluster;
   }
 
-  public static FileSystem getFs() {
+  public FileSystem getFs() {
     return fs;
   }
 
-  public static void setBucketLayout(BucketLayout bLayout) {
+  public void setBucketLayout(BucketLayout bLayout) {
     bucketLayout = bLayout;
   }
 
-  public static String getBucketName() {
+  public String getBucketName() {
     return bucketName;
   }
 
-  public static String getVolumeName() {
+  public String getVolumeName() {
     return volumeName;
   }
 
@@ -1609,7 +1604,7 @@ public class TestOzoneFileSystem {
    * since fs.rename(src,dst,options) is enabled.
    */
   @Test
-  @Flaky("HDDS-6646")
+  @Disabled("HDDS-6646")
   public void testRenameToTrashEnabled() throws Exception {
     // Create a file
     String testKeyName = "testKey1";
@@ -1639,7 +1634,7 @@ public class TestOzoneFileSystem {
    * 2.Verify that the key gets deleted by the trash emptier.
    */
   @Test
-  @Flaky("HDDS-6645")
+  @Disabled("HDDS-6645")
   public void testTrash() throws Exception {
     String testKeyName = "testKey2";
     Path path = new Path(OZONE_URI_DELIMITER, testKeyName);

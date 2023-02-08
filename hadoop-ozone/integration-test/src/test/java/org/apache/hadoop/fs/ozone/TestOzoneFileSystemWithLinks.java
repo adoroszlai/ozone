@@ -31,7 +31,10 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.UUID;
@@ -51,16 +54,13 @@ import org.apache.hadoop.fs.Trash;
 
 import static org.junit.Assert.fail;
 
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
 
 
 /**
  * Ozone file system tests for Link Buckets.
  */
+@Timeout(300)
 public class TestOzoneFileSystemWithLinks {
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
@@ -75,12 +75,6 @@ public class TestOzoneFileSystemWithLinks {
     }
   }
 
-
-  /**
-   * Set a timeout for each test.
-   */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOzoneFileSystem.class);
@@ -131,7 +125,7 @@ public class TestOzoneFileSystemWithLinks {
     o3fs = (OzoneFileSystem) fs;
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -139,7 +133,7 @@ public class TestOzoneFileSystemWithLinks {
     IOUtils.closeQuietly(fs);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     try {
       Path root = new Path("/");

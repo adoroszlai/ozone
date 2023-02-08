@@ -40,11 +40,12 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.ratis.util.LifeCycle;
 import org.hamcrest.core.StringContains;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,21 +53,15 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 
-import org.junit.Rule;
-import org.junit.rules.Timeout;
 import static org.apache.hadoop.hdds.HddsUtils.getHostName;
 import static org.apache.hadoop.hdds.HddsUtils.getHostPort;
 
 /**
  * Test client-side URI handling with Ozone Manager HA.
  */
+@Timeout(300)
 public class TestOzoneFsHAURLs {
 
-  /**
-    * Set a timeout for each test.
-    */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
   public static final Logger LOG = LoggerFactory.getLogger(
       TestOzoneFsHAURLs.class);
 
@@ -88,7 +83,7 @@ public class TestOzoneFsHAURLs {
   private final String o3fsImplValue =
       "org.apache.hadoop.fs.ozone.OzoneFileSystem";
 
-  @BeforeClass
+  @BeforeAll
   public static void initClass() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     omId = UUID.randomUUID().toString();
@@ -125,7 +120,7 @@ public class TestOzoneFsHAURLs {
     om = cluster.getOzoneManager();
   }
 
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     // Duplicate the conf for each test, so the client can change it, and each
     // test will still get the same base conf used to start the cluster.
@@ -156,7 +151,7 @@ public class TestOzoneFsHAURLs {
     fs.mkdirs(dir2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
