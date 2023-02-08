@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +33,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
@@ -69,11 +67,13 @@ import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
-import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Test OzoneFileSystem Interfaces.
@@ -81,10 +81,9 @@ import org.junit.runners.Parameterized.Parameters;
  * This test will test the various interfaces i.e.
  * create, read, write, getFileStatus
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(300)
-public class TestOzoneFileInterfaces {
-
-  private String rootPath;
+abstract class TestOzoneFileInterfaces {
 
   /**
    * Parameter class to set absolute url/defaultFS handling.
@@ -93,17 +92,25 @@ public class TestOzoneFileInterfaces {
    * and file path without the schema, or use absolute url-s even with
    * different defaultFS. This parameter matrix would test both the use cases.
    */
-  @Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][] {{false, true, true},
-        {true, false, false}});
+  static class TestDefaultFS extends TestOzoneFileInterfaces {
+    TestDefaultFS() {
+      super(true, false, false);
+    }
   }
 
-  private static boolean setDefaultFs;
+  static class TestAbsolutePath extends TestOzoneFileInterfaces {
+    TestAbsolutePath() {
+      super(false, true, false);
+    }
+  }
 
-  private static boolean useAbsolutePath;
+  private String rootPath;
 
-  private static MiniOzoneCluster cluster = null;
+  private boolean setDefaultFs;
+
+  private boolean useAbsolutePath;
+
+  private MiniOzoneCluster cluster = null;
 
   private FileSystem fs;
 
@@ -122,32 +129,15 @@ public class TestOzoneFileInterfaces {
   @SuppressWarnings("checkstyle:VisibilityModifier")
   protected boolean enableFileSystemPathsInstance;
 
-  public TestOzoneFileInterfaces(boolean setDefaultFs,
-      boolean useAbsolutePath, boolean enabledFileSystemPaths)
-      throws Exception {
+  TestOzoneFileInterfaces(boolean setDefaultFs,
+      boolean useAbsolutePath, boolean enabledFileSystemPaths) {
     enableFileSystemPathsInstance = enabledFileSystemPaths;
-    if (this.setDefaultFs != setDefaultFs
-        || this.useAbsolutePath != useAbsolutePath
-        || this.enableFileSystemPaths != enabledFileSystemPaths) {
-      setParameters(setDefaultFs, useAbsolutePath, enabledFileSystemPaths);
-      teardown();
-      init();
-    }
-    GlobalStorageStatistics.INSTANCE.reset();
+    this.setDefaultFs = setDefaultFs;
+    this.useAbsolutePath = useAbsolutePath;
+    this.enableFileSystemPaths = enabledFileSystemPaths;
   }
 
-  private static void setParameters(boolean defaultFs,
-                                    boolean absolutePath,
-                                    boolean fileSystemPaths) {
-    setDefaultFs = defaultFs;
-    useAbsolutePath = absolutePath;
-    enableFileSystemPaths = fileSystemPaths;
-  }
-
-  private static void setCluster(MiniOzoneCluster newCluster) {
-    cluster = newCluster;
-  }
-
+  @BeforeAll
   public void init() throws Exception {
     OzoneConfiguration conf = getOzoneConfiguration();
     conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
@@ -156,7 +146,7 @@ public class TestOzoneFileInterfaces {
         .setNumDatanodes(3)
         .build();
     newCluster.waitForClusterToBeReady();
-    setCluster(newCluster);
+    cluster = newCluster;
   }
 
   @BeforeEach
@@ -198,7 +188,7 @@ public class TestOzoneFileInterfaces {
   }
 
   @AfterAll
-  public static void teardown() throws IOException {
+  public void teardown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
     }

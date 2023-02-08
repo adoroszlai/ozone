@@ -30,11 +30,21 @@ import java.io.IOException;
  * This test will test the various interfaces i.e.
  * create, read, write, getFileStatus
  */
-public class TestOzoneFileInterfacesWithFSO extends TestOzoneFileInterfaces {
+abstract class TestOzoneFileInterfacesWithFSO extends TestOzoneFileInterfaces {
 
-  public TestOzoneFileInterfacesWithFSO(boolean setDefaultFs,
-      boolean useAbsolutePath, boolean enabledFileSystemPaths)
-      throws Exception {
+  static class TestFSODefaultFS extends TestOzoneFileInterfacesWithFSO {
+    TestFSODefaultFS() {
+      super(true, false, false);
+    }
+  }
+
+  static class TestFSOAbsolutePath extends TestOzoneFileInterfacesWithFSO {
+    TestFSOAbsolutePath() {
+      super(false, true, false);
+    }
+  }
+  TestOzoneFileInterfacesWithFSO(boolean setDefaultFs,
+      boolean useAbsolutePath, boolean enabledFileSystemPaths) {
     super(setDefaultFs, useAbsolutePath, enabledFileSystemPaths);
   }
 
