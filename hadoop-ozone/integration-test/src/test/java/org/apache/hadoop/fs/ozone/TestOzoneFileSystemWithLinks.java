@@ -77,7 +77,7 @@ public class TestOzoneFileSystemWithLinks {
 
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOzoneFileSystem.class);
+      LoggerFactory.getLogger(OzoneFileSystemTests.class);
 
   private static BucketLayout bucketLayout = BucketLayout.DEFAULT;
 

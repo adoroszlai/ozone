@@ -103,41 +103,41 @@ import static org.junit.Assert.fail;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(300)
-abstract class TestOzoneFileSystem {
+abstract class OzoneFileSystemTests {
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
 
-  static class TestO3FS extends TestOzoneFileSystem {
+  static class TestO3FS extends OzoneFileSystemTests {
     TestO3FS() {
       super(false, false);
     }
   }
 
-  static class TestO3FSWithFSPaths extends TestOzoneFileSystem {
+  static class TestO3FSWithFSPaths extends OzoneFileSystemTests {
     TestO3FSWithFSPaths() {
       super(true, false);
     }
   }
 
-  static class TestO3FSWithRatis extends TestOzoneFileSystem {
+  static class TestO3FSWithRatis extends OzoneFileSystemTests {
     TestO3FSWithRatis() {
       super(false, true);
     }
   }
 
-  static class TestO3FSWithRatisAndFSPaths extends TestOzoneFileSystem {
+  static class TestO3FSWithRatisAndFSPaths extends OzoneFileSystemTests {
     TestO3FSWithRatisAndFSPaths() {
       super(true, true);
     }
   }
 
-  TestOzoneFileSystem(boolean setDefaultFs, boolean enableOMRatis) {
+  OzoneFileSystemTests(boolean setDefaultFs, boolean enableOMRatis) {
     enabledFileSystemPaths = setDefaultFs;
     omRatisEnabled = enableOMRatis;
   }
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOzoneFileSystem.class);
+      LoggerFactory.getLogger(OzoneFileSystemTests.class);
 
   private BucketLayout bucketLayout = BucketLayout.LEGACY;
   private boolean enabledFileSystemPaths;

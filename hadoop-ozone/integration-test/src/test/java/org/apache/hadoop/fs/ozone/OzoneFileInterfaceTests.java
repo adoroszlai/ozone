@@ -83,7 +83,7 @@ import org.junit.jupiter.api.Timeout;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(300)
-abstract class TestOzoneFileInterfaces {
+abstract class OzoneFileInterfaceTests {
 
   /**
    * Parameter class to set absolute url/defaultFS handling.
@@ -92,13 +92,13 @@ abstract class TestOzoneFileInterfaces {
    * and file path without the schema, or use absolute url-s even with
    * different defaultFS. This parameter matrix would test both the use cases.
    */
-  static class TestDefaultFS extends TestOzoneFileInterfaces {
+  static class TestDefaultFS extends OzoneFileInterfaceTests {
     TestDefaultFS() {
       super(true, false, false);
     }
   }
 
-  static class TestAbsolutePath extends TestOzoneFileInterfaces {
+  static class TestAbsolutePath extends OzoneFileInterfaceTests {
     TestAbsolutePath() {
       super(false, true, false);
     }
@@ -129,7 +129,7 @@ abstract class TestOzoneFileInterfaces {
   @SuppressWarnings("checkstyle:VisibilityModifier")
   protected boolean enableFileSystemPathsInstance;
 
-  TestOzoneFileInterfaces(boolean setDefaultFs,
+  OzoneFileInterfaceTests(boolean setDefaultFs,
       boolean useAbsolutePath, boolean enabledFileSystemPaths) {
     enableFileSystemPathsInstance = enabledFileSystemPaths;
     this.setDefaultFs = setDefaultFs;

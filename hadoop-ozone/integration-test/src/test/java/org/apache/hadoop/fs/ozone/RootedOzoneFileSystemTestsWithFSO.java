@@ -36,25 +36,25 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests to verify ofs with prefix enabled cases.
  */
-abstract class TestRootedOzoneFileSystemWithFSO
-    extends TestRootedOzoneFileSystem {
+abstract class RootedOzoneFileSystemTestsWithFSO
+    extends RootedOzoneFileSystemTests {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestRootedOzoneFileSystemWithFSO.class);
+      LoggerFactory.getLogger(RootedOzoneFileSystemTestsWithFSO.class);
 
-  static class TestOFSWithFSO extends TestRootedOzoneFileSystemWithFSO {
+  static class TestOFSWithFSO extends RootedOzoneFileSystemTestsWithFSO {
     TestOFSWithFSO() {
       super(false);
     }
   }
 
-  static class TestOFSWithRatisAndFSO extends TestRootedOzoneFileSystemWithFSO {
+  static class TestOFSWithRatisAndFSO extends RootedOzoneFileSystemTestsWithFSO {
     TestOFSWithRatisAndFSO() {
       super(true);
     }
   }
 
-  TestRootedOzoneFileSystemWithFSO(boolean enableOMRatis) {
+  RootedOzoneFileSystemTestsWithFSO(boolean enableOMRatis) {
     super(true, enableOMRatis, false);
   }
 

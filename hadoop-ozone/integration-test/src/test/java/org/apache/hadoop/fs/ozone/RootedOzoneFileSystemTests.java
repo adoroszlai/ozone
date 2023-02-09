@@ -130,45 +130,45 @@ import static org.junit.Assert.fail;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(300)
-abstract class TestRootedOzoneFileSystem {
+abstract class RootedOzoneFileSystemTests {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestRootedOzoneFileSystem.class);
+      LoggerFactory.getLogger(RootedOzoneFileSystemTests.class);
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
 
-  static class TestOFS extends TestRootedOzoneFileSystem {
+  static class TestOFS extends RootedOzoneFileSystemTests {
     TestOFS() {
       super(false, false, false);
     }
   }
 
-  static class TestOFSWithFSPaths extends TestRootedOzoneFileSystem {
+  static class TestOFSWithFSPaths extends RootedOzoneFileSystemTests {
     TestOFSWithFSPaths() {
       super(true, false, false);
     }
   }
 
-  static class TestOFSWithRatis extends TestRootedOzoneFileSystem {
+  static class TestOFSWithRatis extends RootedOzoneFileSystemTests {
     TestOFSWithRatis() {
       super(false, true, false);
     }
   }
 
-  static class TestOFSWithRatisAndFSPaths extends TestRootedOzoneFileSystem {
+  static class TestOFSWithRatisAndFSPaths extends RootedOzoneFileSystemTests {
     TestOFSWithRatisAndFSPaths() {
       super(true, true, false);
     }
   }
 
   static class TestOFSWithRatisAndFSPathsAndACL
-      extends TestRootedOzoneFileSystem {
+      extends RootedOzoneFileSystemTests {
     TestOFSWithRatisAndFSPathsAndACL() {
       super(true, true, true);
     }
   }
 
-  TestRootedOzoneFileSystem(boolean setDefaultFs,
+  RootedOzoneFileSystemTests(boolean setDefaultFs,
       boolean enableOMRatis, boolean isAclEnabled) {
     // Initialize the cluster before EACH set of parameters
     enabledFileSystemPaths = setDefaultFs;

@@ -53,15 +53,15 @@ import static org.junit.Assert.fail;
  * - prefix layout.
  *
  */
-abstract class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
+abstract class OzoneFileSystemTestsWithFSO extends OzoneFileSystemTests {
 
-  static class TestO3FSWithFSO extends TestOzoneFileSystemWithFSO {
+  static class TestO3FSWithFSO extends OzoneFileSystemTestsWithFSO {
     TestO3FSWithFSO() {
       super(false);
     }
   }
 
-  static class TestO3FSWithRatisAndFSO extends TestOzoneFileSystemWithFSO {
+  static class TestO3FSWithRatisAndFSO extends OzoneFileSystemTestsWithFSO {
     TestO3FSWithRatisAndFSO() {
       super(true);
     }
@@ -74,7 +74,7 @@ abstract class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
     super.init();
   }
 
-  TestOzoneFileSystemWithFSO(boolean enableOMRatis) {
+  OzoneFileSystemTestsWithFSO(boolean enableOMRatis) {
     super(true, enableOMRatis);
   }
 
@@ -91,7 +91,7 @@ abstract class TestOzoneFileSystemWithFSO extends TestOzoneFileSystem {
   }
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOzoneFileSystemWithFSO.class);
+      LoggerFactory.getLogger(OzoneFileSystemTestsWithFSO.class);
 
   @Override
   @Test
