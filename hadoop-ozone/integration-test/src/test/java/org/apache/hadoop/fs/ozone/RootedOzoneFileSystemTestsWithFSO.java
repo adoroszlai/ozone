@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Assert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ abstract class RootedOzoneFileSystemTestsWithFSO
     super(true, enableOMRatis, false);
   }
 
+  @BeforeAll
   @Override
   void init() throws IOException, InterruptedException, TimeoutException {
     setIsBucketFSOptimized(true);
