@@ -48,8 +48,8 @@ abstract class RootedOzoneFileSystemTestsWithFSO
     }
   }
 
-  static class TestOFSWithRatisAndFSO extends RootedOzoneFileSystemTestsWithFSO {
-    TestOFSWithRatisAndFSO() {
+  static class TestOFSWithRatisFSO extends RootedOzoneFileSystemTestsWithFSO {
+    TestOFSWithRatisFSO() {
       super(true);
     }
   }
