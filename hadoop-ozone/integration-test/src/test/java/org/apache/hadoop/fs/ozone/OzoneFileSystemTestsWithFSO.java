@@ -528,7 +528,6 @@ abstract class OzoneFileSystemTestsWithFSO extends OzoneFileSystemTests {
     Path parent = new Path("/d1/d2/");
     Path file = new Path(parent, "file1");
     FSDataOutputStream outputStream = getFs().create(file);
-    String openFileKey = "";
 
     OMMetadataManager omMgr =
         getCluster().getOzoneManager().getMetadataManager();
@@ -545,10 +544,10 @@ abstract class OzoneFileSystemTestsWithFSO extends OzoneFileSystemTests {
                 "d1", "/d1", dirKeys, omMgr);
     long d2ObjectID = verifyDirKey(volumeId, bucketId, d1ObjectID,
             "d2", "/d1/d2", dirKeys, omMgr);
-    openFileKey = OzoneConsts.OM_KEY_PREFIX + volumeId +
-            OzoneConsts.OM_KEY_PREFIX + bucketId +
-            OzoneConsts.OM_KEY_PREFIX + d2ObjectID +
-            OzoneConsts.OM_KEY_PREFIX + file.getName();
+    String openFileKey = OzoneConsts.OM_KEY_PREFIX + volumeId +
+        OzoneConsts.OM_KEY_PREFIX + bucketId +
+        OzoneConsts.OM_KEY_PREFIX + d2ObjectID +
+        OzoneConsts.OM_KEY_PREFIX + file.getName();
 
     // trigger CommitKeyRequest
     outputStream.close();
@@ -560,7 +559,7 @@ abstract class OzoneFileSystemTestsWithFSO extends OzoneFileSystemTests {
     // wait for DB updates
     GenericTestUtils.waitFor(() -> {
       try {
-        return omMgr.getOpenKeyTable(getBucketLayout()).isEmpty();
+        return !omMgr.getOpenKeyTable(getBucketLayout()).isExist(openFileKey);
       } catch (IOException e) {
         LOG.error("DB failure!", e);
         Assert.fail("DB failure!");
