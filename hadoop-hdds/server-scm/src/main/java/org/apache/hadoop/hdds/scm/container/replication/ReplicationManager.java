@@ -294,10 +294,10 @@ public class ReplicationManager implements SCMService {
       LOG.info("Stopping Replication Monitor Thread.");
       underReplicatedProcessorThread.interrupt();
       overReplicatedProcessorThread.interrupt();
-      running = false;
       legacyReplicationManager.clearInflightActions();
       metrics.unRegister();
       replicationMonitor.interrupt();
+      running = false;
     } else {
       LOG.info("Replication Monitor Thread is not running.");
     }
