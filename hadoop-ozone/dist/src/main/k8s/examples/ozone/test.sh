@@ -36,7 +36,8 @@ execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 # restart datanodes
 kubectl delete pod datanode-0 datanode-1 datanode-2
 
-wait_for_pipeline 2
+wait_for_startup
+retry count_log ${SCM} 2 "Pipeline.*THREE.* moved to OPEN state"
 
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/generate.robot
