@@ -55,6 +55,19 @@ wait_for_startup(){
    fi
 }
 
+wait_for_pipeline() {
+   local -i count
+   count=${1:-1}
+
+   print_phase "Waiting until pipeline is open"
+   if retry all_pods_are_running \
+       && retry count_log scm-0 ${count} "Pipeline .* RATIS/THREE.* moved to OPEN state"; then
+     print_phase "Pipeline is open"
+   else
+     return 1
+   fi
+}
+
 all_pods_are_running() {
    RUNNING_COUNT=$(kubectl get pod --field-selector status.phase=Running | wc -l)
    ALL_COUNT=$(kubectl get pod | wc -l)
