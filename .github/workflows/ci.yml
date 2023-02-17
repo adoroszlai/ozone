@@ -307,7 +307,7 @@ jobs:
           popd
           ./hadoop-ozone/dev-support/checks/kubernetes.sh
         env:
-          OZONE_TEST_SELECTOR: examples/ozone/
+          OZONE_TEST_SELECTOR: ozone/
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
