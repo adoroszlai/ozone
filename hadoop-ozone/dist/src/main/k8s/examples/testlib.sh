@@ -35,15 +35,6 @@ grep_log() {
    kubectl logs "$1"  | grep "$PATTERN"
 }
 
-count_log() {
-   local container="$1"
-   local expected="$2"
-   local pattern="$3"
-   local -i count
-   count=$(kubectl logs "$container" | grep -c "$pattern")
-   test ${count} -eq ${expected}
-}
-
 wait_for_startup(){
    print_phase "Waiting until the k8s cluster is running"
    if retry all_pods_are_running \
