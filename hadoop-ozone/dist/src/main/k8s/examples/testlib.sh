@@ -35,12 +35,34 @@ grep_log() {
    kubectl logs "$1"  | grep "$PATTERN"
 }
 
+count_log() {
+   local container="$1"
+   local expected="$2"
+   local pattern="$3"
+   local -i count
+   count=$(kubectl logs "$container" | grep -c "$pattern")
+   test ${count} -eq ${expected}
+}
+
 wait_for_startup(){
    print_phase "Waiting until the k8s cluster is running"
    if retry all_pods_are_running \
        && retry grep_log scm-0 "SCM exiting safe mode." \
        && retry grep_log om-0 "HTTP server of ozoneManager listening"; then
      print_phase "Cluster is up and running"
+   else
+     return 1
+   fi
+}
+
+wait_for_pipeline() {
+   local -i count
+   count=${1:-1}
+
+   print_phase "Waiting until pipeline is open"
+   if retry all_pods_are_running \
+       && retry count_log scm-0 ${count} "Pipeline .* RATIS/THREE.* moved to OPEN state"; then
+     print_phase "Pipeline is open"
    else
      return 1
    fi
