@@ -150,11 +150,10 @@ public class BlockInputStream extends BlockExtendedInputStream {
       } catch (SCMSecurityException ex) {
         throw ex;
       } catch (StorageContainerException ex) {
-        LOG.info("ZZZ Failed to get chunk info for block {}", blockID, ex);
         refreshPipeline(ex);
         catchEx = ex;
       } catch (IOException ex) {
-        LOG.info("ZZZ Failed to get chunk info for block {}", blockID, ex);
+        LOG.debug("Retry to get chunk info fail", ex);
         if (isConnectivityIssue(ex)) {
           refreshPipeline(ex);
         }
