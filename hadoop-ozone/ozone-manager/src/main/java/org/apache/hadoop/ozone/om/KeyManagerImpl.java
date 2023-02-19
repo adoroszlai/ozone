@@ -1190,6 +1190,10 @@ public class KeyManagerImpl implements KeyManager {
       // in different volume/bucket, such as "/vol1/bucket2/dir2/key2".
       if (keyValue != null && keyValue.getKey().startsWith(targetKey)) {
         fakeDirKeyInfo = createDirectoryKey(keyValue.getValue(), dirKey);
+        LOG.debug("Returning fake dir {} for {} -> {}",
+            dirKey, targetKey, keyValue.getKey());
+      } else {
+        LOG.debug("No fake dir {} needed for {}", dirKey, targetKey);
       }
     }
 
