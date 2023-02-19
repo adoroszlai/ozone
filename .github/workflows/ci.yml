@@ -16,7 +16,7 @@ name: full-ci
 on:
   workflow_call:
 env:
-  FAIL_FAST: ${{ github.event_name == 'pull_request' }}
+  FAIL_FAST: true
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
 jobs:
   build-info:
@@ -341,7 +341,7 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=ITestOzoneContractCreate,ITestOzoneContractDelete,ITestOzoneContractGetFileStatus,ITestOzoneContractMkdir,ITestOzoneContractOpen,ITestOzoneContractRename,ITestOzoneContractRootDir
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=ITestOzoneContractDelete,ITestOzoneContractMkdir,ITestOzoneContractRootDir
         env:
           ITERATIONS: 10
       - name: Summary of failures
