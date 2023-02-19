@@ -317,7 +317,6 @@ jobs:
     needs:
       - build-info
     runs-on: ubuntu-20.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
@@ -341,7 +340,7 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=ITestOzoneContractDelete,ITestOzoneContractMkdir,ITestOzoneContractRootDir
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=ITestOzoneContractDelete,ITestOzoneContractRootDir,TestOzoneFileSystem,TestRootedOzoneFileSystem
         env:
           ITERATIONS: 10
       - name: Summary of failures
