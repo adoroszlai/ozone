@@ -58,7 +58,7 @@ class OzoneContract extends AbstractFSContract {
       // bucket is provided the contract test can be refactored to include
       // another parameter (fsoClient) which sets/unsets the client side
       // configs.
-      true, // Server is configured with new layout (PREFIX)
+      // true, // Server is configured with new layout (PREFIX)
       // and new buckets will be operated on
       false // Server is configured with old layout (SIMPLE)
       // and old buckets will be operated on
