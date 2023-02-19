@@ -61,12 +61,20 @@ services:
       <<: *replication
     command: ["ozone","scm"]
   s3g:
-    <<: *common-config
-    environment:
-      OZONE_OPTS:
-      <<: *replication
+    image: haproxy:lts
+    volumes:
+      - ../..:/opt/hadoop
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
     ports:
       - 9878:9878
+  s3g1:
+    <<: *common-config
+    command: ["ozone","s3g"]
+  s3g2:
+    <<: *common-config
+    command: ["ozone","s3g"]
+  s3g3:
+    <<: *common-config
     command: ["ozone","s3g"]
   recon:
     <<: *common-config
