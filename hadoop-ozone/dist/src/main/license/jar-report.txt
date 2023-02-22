@@ -263,5 +263,5 @@ share/ozone/lib/stax2-api.jar
 share/ozone/lib/stax-ex.jar
 share/ozone/lib/token-provider.jar
 share/ozone/lib/txw2.jar
-share/ozone/lib/weld-servlet.Final.jar
+share/ozone/lib/weld-servlet-shaded.Final.jar
 share/ozone/lib/woodstox-core.jar

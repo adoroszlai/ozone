@@ -753,7 +753,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <dependency>
         <groupId>javax.enterprise</groupId>
         <artifactId>cdi-api</artifactId>
-        <version>1.2</version>
+        <version>2.0</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
@@ -1220,7 +1220,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <dependency>
         <groupId>org.codehaus.woodstox</groupId>
         <artifactId>stax2-api</artifactId>
-        <version>3.1.4</version>
+        <version>4.2.2</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
@@ -1572,8 +1572,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </dependency>
       <dependency>
         <groupId>org.jboss.weld.servlet</groupId>
-        <artifactId>weld-servlet</artifactId>
-        <version>2.4.7.Final</version>
+        <artifactId>weld-servlet-shaded</artifactId>
+        <version>3.1.9.Final</version>
       </dependency>
       <dependency>
         <groupId>org.jruby.jcodings</groupId>
