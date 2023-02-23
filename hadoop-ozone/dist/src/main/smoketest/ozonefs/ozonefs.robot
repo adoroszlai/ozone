@@ -118,6 +118,7 @@ Touch file
                    Should contain        ${result}       TOUCHFILE-${SCHEME}.txt
 
 Delete file with Trash
+    [tags]         Trash
                    Execute               ozone fs -touch ${DEEP_URL}/testFile.txt
                    Execute               ozone fs -rm ${DEEP_URL}/testFile.txt
     ${result} =    Execute               ozone fs -ls -R ${BASE_URL}/
