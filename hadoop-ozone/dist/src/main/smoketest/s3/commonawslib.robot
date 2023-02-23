@@ -24,11 +24,7 @@ ${OZONE_S3_HEADER_VERSION}     v4
 ${OZONE_S3_SET_CREDENTIALS}    true
 ${BUCKET}                      generated
 ${KEY_NAME}                    key1
-${OZONE_S3_EC_BUCKET_CREATED}     ${FALSE}
-${OZONE_S3_ENCRYPTED_BUCKET_CREATED}     ${FALSE}
-${OZONE_S3_GENERATED_BUCKET_CREATED}     ${FALSE}
-${OZONE_S3_LINK_BUCKET_CREATED}     ${FALSE}
-${OZONE_S3_HEADERS_SET_UP}     ${FALSE}
+${OZONE_S3_TESTS_SET_UP}       ${FALSE}
 ${OZONE_AWS_ACCESS_KEY_ID}     ${EMPTY}
 
 *** Keywords ***
@@ -71,11 +67,9 @@ Setup v2 headers
                         Set Environment Variable   AWS_SECRET_ACCESS_KEY   ANYKEY
 
 Setup v4 headers
-    Return From Keyword if    ${OZONE_S3_HEADERS_SET_UP}
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user    testuser    testuser.keytab
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Setup secure v4 headers
     Run Keyword if      '${SECURITY_ENABLED}' == 'false'    Setup dummy credentials for S3
-    Set Suite Variable  ${OZONE_S3_HEADERS_SET_UP}    ${TRUE}
 
 Setup secure v4 headers
     ${result} =         Execute                    ozone s3 getsecret ${OM_HA_PARAM}
@@ -98,7 +92,7 @@ Setup dummy credentials for S3
 
 Save AWS access key
     ${OZONE_AWS_ACCESS_KEY_ID} =      Execute     aws configure get aws_access_key_id
-    Set Suite Variable    ${OZONE_AWS_ACCESS_KEY_ID}
+    Set Test Variable     ${OZONE_AWS_ACCESS_KEY_ID}
 
 Restore AWS access key
     Execute    aws configure set aws_access_key_id ${OZONE_AWS_ACCESS_KEY_ID}
@@ -120,6 +114,7 @@ Create bucket with name
                          Should contain              ${result}         ${bucket}
 
 Setup s3 tests
+    Return From Keyword if    ${OZONE_S3_TESTS_SET_UP}
     Run Keyword        Generate random prefix
     Run Keyword        Install aws cli
     Run Keyword if    '${OZONE_S3_SET_CREDENTIALS}' == 'true'    Setup v4 headers
@@ -127,29 +122,24 @@ Setup s3 tests
     Run Keyword if    '${BUCKET}' == 'link'                 Setup links for S3 tests
     Run Keyword if    '${BUCKET}' == 'encrypted'            Create encrypted bucket
     Run Keyword if    '${BUCKET}' == 'erasure'              Create EC bucket
+    Set Global Variable  ${OZONE_S3_TESTS_SET_UP}    ${TRUE}
 
 Setup links for S3 tests
-    Return From Keyword if    ${OZONE_S3_LINK_BUCKET_CREATED}
     ${exists} =        Bucket Exists    o3://${OM_SERVICE_ID}/s3v/link
     Return From Keyword If    ${exists}
     Execute            ozone sh volume create o3://${OM_SERVICE_ID}/legacy
     Execute            ozone sh bucket create o3://${OM_SERVICE_ID}/legacy/source-bucket
     Create link        link
-    Set Suite Variable  ${OZONE_S3_LINK_BUCKET_CREATED}    ${TRUE}
 
 Create generated bucket
-    Return From Keyword if    ${OZONE_S3_GENERATED_BUCKET_CREATED}
     ${BUCKET} =          Create bucket
-    Set Suite Variable   ${BUCKET}
-    Set Suite Variable   ${OZONE_S3_GENERATED_BUCKET_CREATED}    ${TRUE}
+    Set Global Variable   ${BUCKET}
 
 Create encrypted bucket
     Return From Keyword if    '${SECURITY_ENABLED}' == 'false'
-    Return From Keyword if    ${OZONE_S3_ENCRYPTED_BUCKET_CREATED}
     ${exists} =        Bucket Exists    o3://${OM_SERVICE_ID}/s3v/encrypted
     Return From Keyword If    ${exists}
     Execute            ozone sh bucket create -k ${KEY_NAME} o3://${OM_SERVICE_ID}/s3v/encrypted
-    Set Suite Variable  ${OZONE_S3_ENCRYPTED_BUCKET_CREATED}    ${TRUE}
 
 Create link
     [arguments]       ${bucket}
@@ -157,15 +147,13 @@ Create link
     [return]          ${bucket}
 
 Create EC bucket
-    Return From Keyword if    ${OZONE_S3_EC_BUCKET_CREATED}
     ${exists} =        Bucket Exists    o3://${OM_SERVICE_ID}/s3v/erasure
     Return From Keyword If    ${exists}
     Execute            ozone sh bucket create --replication rs-3-2-1024k --type EC o3://${OM_SERVICE_ID}/s3v/erasure
-    Set Suite Variable  ${OZONE_S3_EC_BUCKET_CREATED}    ${TRUE}
 
 Generate random prefix
     ${random} =          Generate Ozone String
-                         Set Suite Variable  ${PREFIX}  ${random}
+                         Set Global Variable  ${PREFIX}  ${random}
 
 Perform Multipart Upload
     [arguments]    ${bucket}    ${key}    @{files}
