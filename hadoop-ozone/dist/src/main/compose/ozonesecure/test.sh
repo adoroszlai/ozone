@@ -37,9 +37,8 @@ execute_robot_test scm basic
 
 execute_robot_test scm security
 
-exclude="--exclude Trash"
-execute_robot_test scm -v SCHEME:ofs -v BUCKET_TYPE:bucket -N ozonefs-ofs-bucket ${exclude} ozonefs/ozonefs.robot
-execute_robot_test scm -v SCHEME:o3fs -v BUCKET_TYPE:link -N ozonefs-o3fs-link ${exclude} ozonefs/ozonefs.robot
+execute_robot_test scm -v SCHEME:ofs -v BUCKET_TYPE:bucket -N ozonefs-ofs-bucket ozonefs/ozonefs.robot
+execute_robot_test scm -v SCHEME:o3fs -v BUCKET_TYPE:link -N ozonefs-o3fs-link ozonefs/ozonefs.robot
 
 exclude=""
 for bucket in encrypted link generated; do
