@@ -28,6 +28,8 @@ ${OZONE_S3_EC_BUCKET_CREATED}     ${FALSE}
 ${OZONE_S3_ENCRYPTED_BUCKET_CREATED}     ${FALSE}
 ${OZONE_S3_GENERATED_BUCKET_CREATED}     ${FALSE}
 ${OZONE_S3_LINK_BUCKET_CREATED}     ${FALSE}
+${OZONE_S3_HEADERS_SET_UP}     ${FALSE}
+${OZONE_AWS_ACCESS_KEY_ID}     ${EMPTY}
 
 *** Keywords ***
 Execute AWSS3APICli
@@ -69,9 +71,11 @@ Setup v2 headers
                         Set Environment Variable   AWS_SECRET_ACCESS_KEY   ANYKEY
 
 Setup v4 headers
+    Return From Keyword if    ${OZONE_S3_HEADERS_SET_UP}
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user    testuser    testuser.keytab
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Setup secure v4 headers
     Run Keyword if      '${SECURITY_ENABLED}' == 'false'    Setup dummy credentials for S3
+    Set Suite Variable  ${OZONE_S3_HEADERS_SET_UP}    ${TRUE}
 
 Setup secure v4 headers
     ${result} =         Execute                    ozone s3 getsecret ${OM_HA_PARAM}
@@ -91,6 +95,13 @@ Setup dummy credentials for S3
                         Execute                    aws configure set aws_access_key_id dlfknslnfslf
                         Execute                    aws configure set aws_secret_access_key dlfknslnfslf
                         Execute                    aws configure set region us-west-1
+
+Save AWS access key
+    ${OZONE_AWS_ACCESS_KEY_ID} =      Execute     aws configure get aws_access_key_id
+    Set Suite Variable    ${OZONE_AWS_ACCESS_KEY_ID}
+
+Restore AWS access key
+    Execute    aws configure set aws_access_key_id ${OZONE_AWS_ACCESS_KEY_ID}
 
 Generate Ozone String
     ${randStr} =         Generate Random String     10  [NUMBERS]
