@@ -358,7 +358,7 @@ jobs:
         if: always()
       - name: Remove huge logs
         run: |
-          find hadoop-ozone/integration-test/target/surefire-reports -size '+250M' | xargs rm -v
+          find hadoop-ozone/integration-test/target/surefire-reports -size '+250M' | xargs -r rm -v
         if: always()
       - name: Archive build results
         uses: actions/upload-artifact@v3
