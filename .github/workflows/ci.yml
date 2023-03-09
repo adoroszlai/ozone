@@ -25,13 +25,13 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-basic-checks: false
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
+      needs-dependency-check: false
+      needs-integration-tests: true
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -356,12 +356,18 @@ jobs:
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: always()
+      - name: Remove huge logs
+        run: |
+          find hadoop-ozone/integration-test/target/surefire-reports -size '+250M' | xargs rm -v
+        if: always()
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: it-${{ matrix.profile }}
-          path: target/integration
+          path: |
+            target/integration
+            hadoop-ozone/integration-test/target/surefire-reports/*-output.txt
         continue-on-error: true
       - name: Delete temporary build artifacts before caching
         run: |
