@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
-import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.slf4j.Logger;
@@ -62,6 +61,10 @@ public class HttpFSServerWebServer {
 
   private static final String NAME = "webhdfs";
   private static final String SERVLET_PATH = "/webhdfs";
+
+  private static final String PROXY_USER_AUTH_FILTER_CLASS_NAME =
+      "org.apache.hadoop.security.authentication.server."
+          + "ProxyUserAuthenticationFilterInitializer";
 
   static {
     Configuration.addDefaultResource(HTTPFS_DEFAULT_XML);
@@ -110,7 +113,7 @@ public class HttpFSServerWebServer {
       for (String filterInitializer : parts) {
         if (!filterInitializer.equals(AuthenticationFilterInitializer.class.
             getName()) && !filterInitializer.equals(
-            ProxyUserAuthenticationFilterInitializer.class.getName())) {
+            PROXY_USER_AUTH_FILTER_CLASS_NAME)) {
           target.add(filterInitializer);
         }
       }
