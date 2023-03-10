@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.ozone.OzoneStreamCapabilities;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;

@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.ozone;
 
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.ozone.client.io.ECKeyOutputStream;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.util.StringUtils;
@@ -67,6 +66,6 @@ public class CapableOzoneFSOutputStream  extends OzoneFSOutputStream
       }
     }
     // this is unexpected. try last resort
-    return StoreImplementationUtils.hasCapability(os, capability);
+    return OzoneStreamCapabilities.objectHasCapability(os, capability);
   }
 }

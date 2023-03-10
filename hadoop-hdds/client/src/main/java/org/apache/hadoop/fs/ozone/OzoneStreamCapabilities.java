@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.hadoop.fs.CanUnbuffer;
+import org.apache.hadoop.fs.StreamCapabilities;
 
 import java.nio.ByteBuffer;
 
@@ -25,23 +25,25 @@ import java.nio.ByteBuffer;
  * Utility class to query streams for supported capabilities of Ozone.
  * Capability strings must be in lower case.
  */
-final class OzoneStreamCapabilities {
+public final class OzoneStreamCapabilities {
 
   private OzoneStreamCapabilities() {
   }
 
   /**
-   * Stream read(ByteBuffer) capability implemented by
-   * {@link OzoneFSInputStream#read(ByteBuffer)}.
-   *
-   * TODO: If Hadoop dependency is upgraded, this string can be removed.
+   * Stream capability defined by
+   * {@link org.apache.hadoop.fs.ByteBufferReadable#read(ByteBuffer)}.
    */
-  static final String READBYTEBUFFER = "in:readbytebuffer";
+  public static final String READBYTEBUFFER = "in:readbytebuffer";
 
   /**
-   * Stream unbuffer capability implemented by {@link CanUnbuffer#unbuffer()}.
-   *
-   * TODO: If Hadoop dependency is upgraded, this string can be removed.
+   * Stream capability defined by
+   * {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer()}.
    */
-  static final String UNBUFFER = "in:unbuffer";
+  public static final String UNBUFFER = "in:unbuffer";
+
+  public static boolean objectHasCapability(Object object, String capability) {
+    return object instanceof StreamCapabilities
+        && ((StreamCapabilities) object).hasCapability(capability);
+  }
 }
