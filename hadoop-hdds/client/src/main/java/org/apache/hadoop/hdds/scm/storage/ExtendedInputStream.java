@@ -94,8 +94,8 @@ public abstract class ExtendedInputStream extends InputStream
   @Override
   public boolean hasCapability(String capability) {
     switch (StringUtils.toLowerCase(capability)) {
-    case StreamCapabilities.READBYTEBUFFER:
-    case StreamCapabilities.UNBUFFER:
+    case OzoneStreamCapabilities.READBYTEBUFFER:
+    case OzoneStreamCapabilities.UNBUFFER:
       return true;
     default:
       return false;

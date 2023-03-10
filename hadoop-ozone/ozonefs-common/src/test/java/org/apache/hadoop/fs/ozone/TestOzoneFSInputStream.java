@@ -25,7 +25,6 @@ import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.Decryptor;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.ozone.client.io.KeyInputStream;
 
 import org.junit.Test;
@@ -137,7 +136,7 @@ public class TestOzoneFSInputStream {
           new FileSystem.Statistics("test"));
 
       assertTrue(capableOzoneFSInputStream.
-          hasCapability(StreamCapabilities.READBYTEBUFFER));
+          hasCapability(OzoneStreamCapabilities.READBYTEBUFFER));
     } finally {
       if (capableOzoneFSInputStream != null) {
         capableOzoneFSInputStream.close();

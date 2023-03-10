@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,27 +17,31 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.CanUnbuffer;
 
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 
-final class CapableOzoneFSInputStream extends OzoneFSInputStream
-    implements StreamCapabilities {
+/**
+ * Utility class to query streams for supported capabilities of Ozone.
+ * Capability strings must be in lower case.
+ */
+final class OzoneStreamCapabilities {
 
-  CapableOzoneFSInputStream(InputStream inputStream, Statistics statistics) {
-    super(inputStream, statistics);
+  private OzoneStreamCapabilities() {
   }
 
-  @Override
-  public boolean hasCapability(String capability) {
-    switch (StringUtils.toLowerCase(capability)) {
-    case OzoneStreamCapabilities.READBYTEBUFFER:
-    case OzoneStreamCapabilities.UNBUFFER:
-      return true;
-    default:
-      return false;
-    }
-  }
+  /**
+   * Stream read(ByteBuffer) capability implemented by
+   * {@link OzoneFSInputStream#read(ByteBuffer)}.
+   *
+   * TODO: If Hadoop dependency is upgraded, this string can be removed.
+   */
+  static final String READBYTEBUFFER = "in:readbytebuffer";
+
+  /**
+   * Stream unbuffer capability implemented by {@link CanUnbuffer#unbuffer()}.
+   *
+   * TODO: If Hadoop dependency is upgraded, this string can be removed.
+   */
+  static final String UNBUFFER = "in:unbuffer";
 }
