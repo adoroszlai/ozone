@@ -21,9 +21,11 @@ package org.apache.hadoop.hdds.scm;
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.hdds.conf.Config;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
@@ -46,6 +48,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.hadoop.hdds.conf.ConfigTag.OZONE;
 import static org.apache.hadoop.hdds.conf.ConfigTag.PERFORMANCE;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.NO_REPLICA_FOUND;
+
+import org.apache.ratis.util.MemoizedSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,10 +72,10 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
   private final ConfigurationSource conf;
   private final ScmClientConfig clientConfig;
   private final Cache<String, XceiverClientSpi> clientCache;
-  private List<X509Certificate> caCerts;
+  private final Supplier<List<X509Certificate>> caCerts;
 
   private static XceiverClientMetrics metrics;
-  private boolean isSecurityEnabled;
+  private final boolean isSecurityEnabled;
   private final boolean topologyAwareRead;
   /**
    * Creates a new XceiverClientManager for non secured ozone cluster.
@@ -81,12 +85,18 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
    * @param conf configuration
    */
   public XceiverClientManager(ConfigurationSource conf) throws IOException {
-    this(conf, conf.getObject(ScmClientConfig.class), null);
+    this(conf, conf.getObject(ScmClientConfig.class), Collections.emptyList());
   }
 
   public XceiverClientManager(ConfigurationSource conf,
       ScmClientConfig clientConf,
       List<X509Certificate> caCerts) throws IOException {
+    this(conf, clientConf, () -> caCerts);
+  }
+
+  public XceiverClientManager(ConfigurationSource conf,
+      ScmClientConfig clientConf,
+      Supplier<List<X509Certificate>> caCerts) throws IOException {
     Preconditions.checkNotNull(clientConf);
     Preconditions.checkNotNull(conf);
     this.clientConfig = clientConf;
@@ -95,7 +105,9 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
     this.isSecurityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
     if (isSecurityEnabled) {
       Preconditions.checkNotNull(caCerts);
-      this.caCerts = caCerts;
+      this.caCerts = MemoizedSupplier.valueOf(caCerts);
+    } else {
+      this.caCerts = Collections::emptyList;
     }
 
     this.clientCache = CacheBuilder.newBuilder()
@@ -228,13 +240,13 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
             switch (type) {
             case RATIS:
               client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf,
-                  caCerts);
+                  caCerts.get());
               break;
             case STAND_ALONE:
-              client = new XceiverClientGrpc(pipeline, conf, caCerts);
+              client = new XceiverClientGrpc(pipeline, conf, caCerts.get());
               break;
             case EC:
-              client = new ECXceiverClientGrpc(pipeline, conf, caCerts);
+              client = new ECXceiverClientGrpc(pipeline, conf, caCerts.get());
               break;
             case CHAINED:
             default:

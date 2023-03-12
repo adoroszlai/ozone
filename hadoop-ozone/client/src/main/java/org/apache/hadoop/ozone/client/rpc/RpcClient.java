@@ -23,6 +23,7 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.security.InvalidKeyException;
 import java.security.PrivilegedExceptionAction;
@@ -234,7 +235,8 @@ public class RpcClient implements ClientProtocol {
 
     this.clientConfig = conf.getObject(OzoneClientConfig.class);
 
-    OmTransport omTransport = time("createTransport", () -> createOmTransport(omServiceId));
+    OmTransport omTransport = time("createTransport",
+        () -> createOmTransport(omServiceId));
     OzoneManagerProtocolClientSideTranslatorPB
         ozoneManagerProtocolClientSideTranslatorPB =
         new OzoneManagerProtocolClientSideTranslatorPB(omTransport,
@@ -244,8 +246,10 @@ public class RpcClient implements ClientProtocol {
         OzoneManagerClientProtocol.class, conf);
     dtService = omTransport.getDelegationTokenService();
     List<X509Certificate> x509Certificates = null;
-    ServiceInfoEx serviceInfoEx = time("serviceInfo", ozoneManagerClient::getServiceInfo);
+    ServiceInfoEx serviceInfoEx = time("serviceInfo",
+        ozoneManagerClient::getServiceInfo);
     omVersion = getOmVersion(serviceInfoEx);
+    final List<String> caCertPems = new ArrayList<>();
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
       // If the client is authenticating using S3 style auth, all future
       // requests serviced by this client will need S3 Auth set.
@@ -270,10 +274,9 @@ public class RpcClient implements ClientProtocol {
               + " meet the criteria.");
         }
       }
-      String caCertPem = serviceInfoEx.getCaCertificate();
-      final List<String> caCertPems = new ArrayList<>();
       List<String> caCertPemList = serviceInfoEx.getCaCertPemList();
       if (caCertPemList == null || caCertPemList.isEmpty()) {
+        String caCertPem = serviceInfoEx.getCaCertificate();
         if (caCertPem == null) {
           LOG.error("RpcClient received empty caCertPems from serviceInfo");
           CertificateException ex = new CertificateException(
@@ -286,12 +289,16 @@ public class RpcClient implements ClientProtocol {
       } else {
         caCertPems.addAll(caCertPemList);
       }
-      x509Certificates = time("convertCertificates",
-          () -> OzoneSecurityUtil.convertToX509(caCertPems));
     }
 
     this.xceiverClientManager =
-        createXceiverClientFactory(x509Certificates);
+        createXceiverClientFactory(() -> {
+          try {
+            return OzoneSecurityUtil.convertToX509(caCertPems);
+          } catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        });
 
     int configuredChunkSize = (int) conf
         .getStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
@@ -366,7 +373,8 @@ public class RpcClient implements ClientProtocol {
     return version;
   }
 
-  private static <T> T time(String name, CheckedSupplier<T, IOException> func) throws IOException {
+  private static <T> T time(String name, CheckedSupplier<T, IOException> func)
+      throws IOException {
     long start = System.nanoTime();
     try {
       return func.get();
@@ -376,7 +384,8 @@ public class RpcClient implements ClientProtocol {
     }
   }
 
-  private static void time(String name, CheckedRunnable<IOException> func) throws IOException {
+  private static void time(String name, CheckedRunnable<IOException> func)
+      throws IOException {
     long start = System.nanoTime();
     try {
       func.run();
@@ -415,10 +424,9 @@ public class RpcClient implements ClientProtocol {
     return found;
   }
 
-  @NotNull
   @VisibleForTesting
   protected XceiverClientFactory createXceiverClientFactory(
-      List<X509Certificate> x509Certificates) throws IOException {
+      Supplier<List<X509Certificate>> x509Certificates) throws IOException {
     return new XceiverClientManager(conf,
         conf.getObject(XceiverClientManager.ScmClientConfig.class),
         x509Certificates);
@@ -502,7 +510,8 @@ public class RpcClient implements ClientProtocol {
               + "and space quota set to {} bytes, counts quota set" +
               " to {}", volumeName, owner, quotaInBytes, quotaInNamespace);
     }
-    time("createVolume", () -> ozoneManagerClient.createVolume(builder.build()));
+    time("createVolume",
+        () -> ozoneManagerClient.createVolume(builder.build()));
   }
 
   @Override
@@ -534,7 +543,8 @@ public class RpcClient implements ClientProtocol {
   public OzoneVolume getVolumeDetails(String volumeName)
       throws IOException {
     verifyVolumeName(volumeName);
-    OmVolumeArgs volume = time("volumeInfo", () -> ozoneManagerClient.getVolumeInfo(volumeName));
+    OmVolumeArgs volume = time("volumeInfo",
+        () -> ozoneManagerClient.getVolumeInfo(volumeName));
     return time("buildVolume", () -> buildOzoneVolume(volume));
   }
 

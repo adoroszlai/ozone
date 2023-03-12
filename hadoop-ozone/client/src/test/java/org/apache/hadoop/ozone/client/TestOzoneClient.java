@@ -33,7 +33,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.protocolPB.OmTransport;
 import org.apache.ozone.test.LambdaTestUtils.VoidCallable;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,6 +44,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
@@ -87,10 +87,9 @@ public class TestOzoneClient {
         return new MockOmTransport(blkAllocator);
       }
 
-      @NotNull
       @Override
       protected XceiverClientFactory createXceiverClientFactory(
-          List<X509Certificate> x509Certificates) throws IOException {
+          Supplier<List<X509Certificate>> x509Certificates) {
         return new MockXceiverClientFactory();
       }
     });

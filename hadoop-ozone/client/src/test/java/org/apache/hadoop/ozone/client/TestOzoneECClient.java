@@ -61,6 +61,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -116,7 +117,7 @@ public class TestOzoneECClient {
 
       @Override
       protected XceiverClientFactory createXceiverClientFactory(
-          List<X509Certificate> x509Certificates) throws IOException {
+          Supplier<List<X509Certificate>> x509Certificates) {
         return factoryStub;
       }
     });

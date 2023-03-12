@@ -95,6 +95,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -169,10 +170,9 @@ public class TestOmContainerLocationCache {
     metadataManager = omTestManagers.getMetadataManager();
 
     rpcClient = new RpcClient(conf, null) {
-      @NotNull
       @Override
       protected XceiverClientFactory createXceiverClientFactory(
-          List<X509Certificate> x509Certificates) throws IOException {
+          Supplier<List<X509Certificate>> x509Certificates) throws IOException {
         return mockDataNodeClientFactory();
       }
     };

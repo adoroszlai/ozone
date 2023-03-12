@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
@@ -119,7 +120,7 @@ public class TestXceiverClientManager {
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig, null);
+        new XceiverClientManager(conf, clientConfig, Collections.emptyList());
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -176,7 +177,7 @@ public class TestXceiverClientManager {
         TestXceiverClientManager.class.getName() + UUID.randomUUID());
     conf.set(HDDS_METADATA_DIR_NAME, metaDir);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig, null);
+        new XceiverClientManager(conf, clientConfig, Collections.emptyList());
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
@@ -224,7 +225,7 @@ public class TestXceiverClientManager {
     ScmClientConfig clientConfig = conf.getObject(ScmClientConfig.class);
     clientConfig.setMaxSize(1);
     XceiverClientManager clientManager =
-        new XceiverClientManager(conf, clientConfig, null);
+        new XceiverClientManager(conf, clientConfig, Collections.emptyList());
     Cache<String, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
