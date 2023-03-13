@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -38,6 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,12 +108,12 @@ public class TestOzoneManagerRestInterface {
     Assert.assertEquals(server.getHttpAddress().getPort(),
         omInfo.getPort(ServicePort.Type.HTTP));
 
-    Assert.assertTrue(getScmAddressForClients(conf).iterator().hasNext());
-    InetSocketAddress scmAddress =
-        getScmAddressForClients(conf).iterator().next();
+    Collection<HostAndPort> scmList = getScmAddressForClients(conf);
+    Assert.assertTrue(scmList.iterator().hasNext());
+    HostAndPort scmAddress = scmList.iterator().next();
     ServiceInfo scmInfo = serviceMap.get(HddsProtos.NodeType.SCM);
 
-    Assert.assertEquals(scmAddress.getHostName(), scmInfo.getHostname());
+    Assert.assertEquals(scmAddress.getHost(), scmInfo.getHostname());
     Assert.assertEquals(scmAddress.getPort(),
         scmInfo.getPort(ServicePort.Type.RPC));
   }

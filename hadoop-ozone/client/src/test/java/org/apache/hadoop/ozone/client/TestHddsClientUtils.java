@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.ConfigurationException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -117,13 +118,13 @@ public class TestHddsClientUtils {
           scmServiceId, nodeId), "localhost");
     }
 
-    Collection<InetSocketAddress> scmClientAddr =
+    Collection<HostAndPort> scmClientAddr =
         HddsUtils.getScmAddressForClients(conf);
 
     port = 9880;
 
-    for (InetSocketAddress scmAddr : scmClientAddr) {
-      assertEquals(scmAddr.getHostName(), "localhost");
+    for (HostAndPort scmAddr : scmClientAddr) {
+      assertEquals(scmAddr.getHost(), "localhost");
       assertEquals(scmAddr.getPort(), port++);
     }
 
@@ -131,11 +132,11 @@ public class TestHddsClientUtils {
 
   private void checkAddr(OzoneConfiguration conf, String address,
       int port) {
-    Iterator<InetSocketAddress> scmAddrIterator =
+    Iterator<HostAndPort> scmAddrIterator =
         HddsUtils.getScmAddressForClients(conf).iterator();
     Assert.assertTrue(scmAddrIterator.hasNext());
-    InetSocketAddress scmAddr = scmAddrIterator.next();
-    assertThat(scmAddr.getHostString(), is(address));
+    HostAndPort scmAddr = scmAddrIterator.next();
+    assertThat(scmAddr.getHost(), is(address));
     assertThat(scmAddr.getPort(), is(port));
   }
 
@@ -184,11 +185,11 @@ public class TestHddsClientUtils {
     final String scmHost = "host456";
     final OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final Collection<InetSocketAddress> address =
+    final Collection<HostAndPort> address =
         HddsUtils.getScmAddressForClients(conf);
     Assert.assertTrue(address.iterator().hasNext());
-    InetSocketAddress socketAddress = address.iterator().next();
-    assertEquals(scmHost, socketAddress.getHostName());
+    HostAndPort socketAddress = address.iterator().next();
+    assertEquals(scmHost, socketAddress.getHost());
     assertEquals(OZONE_SCM_CLIENT_PORT_DEFAULT, socketAddress.getPort());
   }
 
@@ -203,12 +204,12 @@ public class TestHddsClientUtils {
     final String scmHost = "host456:300";
     final OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_NAMES, scmHost);
-    final Collection<InetSocketAddress> address =
+    final Collection<HostAndPort> address =
         HddsUtils.getScmAddressForClients(conf);
     Assert.assertTrue(address.iterator().hasNext());
-    InetSocketAddress socketAddress = address.iterator().next();
+    HostAndPort socketAddress = address.iterator().next();
     assertEquals(scmHost.split(":")[0],
-        socketAddress.getHostName());
+        socketAddress.getHost());
     assertEquals(OZONE_SCM_CLIENT_PORT_DEFAULT, socketAddress.getPort());
   }
 

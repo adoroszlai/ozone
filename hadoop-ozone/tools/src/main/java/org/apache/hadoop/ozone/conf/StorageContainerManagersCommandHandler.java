@@ -16,9 +16,10 @@
  */
 package org.apache.hadoop.ozone.conf;
 
-import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.Callable;
+
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -41,11 +42,11 @@ public class StorageContainerManagersCommandHandler implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    Collection<InetSocketAddress> addresses = HddsUtils
+    Collection<HostAndPort> addresses = HddsUtils
         .getScmAddressForClients(OzoneConfiguration.of(tool.getConf()));
 
-    for (InetSocketAddress addr : addresses) {
-      tool.printOut(addr.getHostName());
+    for (HostAndPort addr : addresses) {
+      tool.printOut(addr.getHost());
     }
     return null;
   }

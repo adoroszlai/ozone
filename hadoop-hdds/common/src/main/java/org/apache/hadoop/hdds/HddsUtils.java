@@ -117,12 +117,12 @@ public final class HddsUtils {
    *
    * @return Target {@code InetSocketAddress} for the SCM client endpoint.
    */
-  public static Collection<InetSocketAddress> getScmAddressForClients(
+  public static Collection<HostAndPort> getScmAddressForClients(
       ConfigurationSource conf) {
 
     if (SCMHAUtils.getScmServiceId(conf) != null) {
       List<SCMNodeInfo> scmNodeInfoList = SCMNodeInfo.buildNodeInfo(conf);
-      Collection<InetSocketAddress> scmAddressList =
+      Collection<HostAndPort> scmAddressList =
           new HashSet<>(scmNodeInfoList.size());
       for (SCMNodeInfo scmNodeInfo : scmNodeInfoList) {
         if (scmNodeInfo.getScmClientAddress() == null) {
@@ -131,7 +131,7 @@ public final class HddsUtils {
               "node-id" + scmNodeInfo.getNodeId());
         }
         scmAddressList.add(
-            NetUtils.createSocketAddr(scmNodeInfo.getScmClientAddress()));
+            HostAndPort.fromString(scmNodeInfo.getScmClientAddress()));
       }
       return scmAddressList;
     } else {
@@ -165,7 +165,7 @@ public final class HddsUtils {
       }
 
       return Collections.singletonList(
-          NetUtils.createSocketAddr(getHostName(address).get() + ":" + port));
+          HostAndPort.fromParts(getHostName(address).get(), port));
     }
   }
 

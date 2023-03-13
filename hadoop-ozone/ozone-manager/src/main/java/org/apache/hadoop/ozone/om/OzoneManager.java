@@ -54,6 +54,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
@@ -3032,13 +3033,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // not block protocol. This is information is being not used by
     // RpcClient, but for compatibility leaving as it is and also making sure
     // that this works for SCM HA.
-    Collection<InetSocketAddress> scmAddresses = getScmAddressForClients(
+    Collection<HostAndPort> scmAddresses = getScmAddressForClients(
         configuration);
 
-    for (InetSocketAddress scmAddr : scmAddresses) {
+    for (HostAndPort scmAddr : scmAddresses) {
       ServiceInfo.Builder scmServiceInfoBuilder = ServiceInfo.newBuilder()
           .setNodeType(HddsProtos.NodeType.SCM)
-          .setHostname(scmAddr.getHostName())
+          .setHostname(scmAddr.getHost())
           .addServicePort(ServicePort.newBuilder()
               .setType(ServicePort.Type.RPC)
               .setValue(scmAddr.getPort()).build());
