@@ -725,7 +725,7 @@ public class BlockOutputStream extends OutputStream {
             throw ce;
           });
       containerBlockData.addChunks(chunkInfo);
-      clientMetrics.recordWriteChunk(pipeline, chunkInfo.getLen());
+      //clientMetrics.recordWriteChunk(pipeline, chunkInfo.getLen());
       return validateFuture;
     } catch (IOException | ExecutionException e) {
       throw new IOException(EXCEPTION_MSG + e.toString(), e);
