@@ -71,7 +71,9 @@ for i in $(seq 1 ${ITERATIONS}); do
   fi
 done
 
-#Archive combined jacoco records
-mvn -B -N jacoco:merge -Djacoco.destFile=$REPORT_DIR/jacoco-combined.exec
+if [[ "${OZONE_WITH_COVERAGE:-false}" == "true" ]]; then
+  #Archive combined jacoco records
+  mvn -B -N jacoco:merge -Djacoco.destFile=$REPORT_DIR/jacoco-combined.exec
+fi
 
 exit ${rc}

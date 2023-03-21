@@ -16,6 +16,11 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
+coverage=""
+if [[ "${OZONE_WITH_COVERAGE:-false}" == "true" ]]; then
+  coverage="-Pcoverage"
+fi
+
 export MAVEN_OPTS="-Xmx4096m $MAVEN_OPTS"
-mvn -V -B -Dmaven.javadoc.skip=true -DskipTests -DskipDocs --no-transfer-progress clean install "$@"
+mvn -V -B -Dmaven.javadoc.skip=true -DskipTests -DskipDocs --no-transfer-progress ${coverage} clean install "$@"
 exit $?
