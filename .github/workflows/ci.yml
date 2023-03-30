@@ -16,13 +16,15 @@ name: full-ci
 on:
   workflow_call:
 env:
-  FAIL_FAST: true
+  FAIL_FAST: false
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_WITH_COVERAGE: ${{ github.repository == 'apache/ozone' && github.event_name != 'pull_request' }}
 jobs:
   unit:
     runs-on: ubuntu-20.04
-    timeout-minutes: 150
+    strategy:
+      matrix:
+       split: [ 01, 02, 03, 04, 05, 06, 07, 08, 09, 10 ]
     steps:
       - name: Checkout project
         uses: actions/checkout@v3
