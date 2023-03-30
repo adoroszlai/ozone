@@ -47,8 +47,9 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.tag.Flaky;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -90,7 +91,7 @@ public class TestParentAcl {
   private static UserGroupInformation testUgi, testUgi1;
   private static OzoneManagerProtocol writeClient;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException, AuthenticationException {
     ozConfig = new OzoneConfiguration();
     ozConfig.set(OZONE_ACL_AUTHORIZER_CLASS,
@@ -118,7 +119,7 @@ public class TestParentAcl {
         new String[]{"test1"});
   }
 
-  @Test
+  @RepeatedTest(100)
   @Flaky("HDDS-6335")
   public void testKeyAcl()
       throws IOException {
