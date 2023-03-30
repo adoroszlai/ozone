@@ -47,6 +47,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.tag.Flaky;
 import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -254,7 +255,8 @@ public class TestParentAcl {
       OzoneAcl parentVolumeAcl = new OzoneAcl(USER,
           testUgi1.getUserName(), READ, ACCESS);
       addVolumeAcl(child.getVolumeName(), parentVolumeAcl);
-      Assert.assertTrue(nativeAuthorizer.checkAccess(child, requestContext));
+      Assertions.assertTrue(nativeAuthorizer.checkAccess(child, requestContext),
+          () -> "Expected " + child.getVolumeName() + " to be accessible");
     }
   }
 
