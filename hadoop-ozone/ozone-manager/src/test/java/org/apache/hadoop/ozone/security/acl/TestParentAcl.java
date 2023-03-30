@@ -48,7 +48,6 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.tag.Flaky;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -119,7 +118,7 @@ public class TestParentAcl {
         new String[]{"test1"});
   }
 
-  @RepeatedTest(100)
+  @Test
   @Flaky("HDDS-6335")
   public void testKeyAcl()
       throws IOException {
