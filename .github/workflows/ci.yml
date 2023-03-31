@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: unit
+          name: unit-${{ matrix.split }}
           path: target/unit
         continue-on-error: true
       - name: Delete temporary build artifacts before caching
