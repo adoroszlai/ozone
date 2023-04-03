@@ -181,7 +181,7 @@ public class TestContainerStateMachine {
         (ContainerStateMachine) TestHelper.getStateMachine(cluster);
     SimpleStateMachineStorage storage =
         (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Assert.assertNull(storage.findLatestSnapshot());
+    Assert.assertNull(storage.getLatestSnapshot());
 
     // Write 10 keys. Num snapshots should be equal to config value.
     for (int i = 1; i <= 10; i++) {
@@ -202,7 +202,7 @@ public class TestContainerStateMachine {
     stateMachine =
         (ContainerStateMachine) TestHelper.getStateMachine(cluster);
     storage = (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.getLatestSnapshot().getFile().getPath();
     int numSnapshots = parentPath.getParent().toFile().listFiles().length;
     Assert.assertTrue(Math.abs(ratisServerConfiguration
         .getNumSnapshotsRetained() - numSnapshots) <= 1);
@@ -222,7 +222,7 @@ public class TestContainerStateMachine {
     stateMachine =
         (ContainerStateMachine) TestHelper.getStateMachine(cluster);
     storage = (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    parentPath = storage.findLatestSnapshot().getFile().getPath();
+    parentPath = storage.getLatestSnapshot().getFile().getPath();
     numSnapshots = parentPath.getParent().toFile().listFiles().length;
     Assert.assertTrue(Math.abs(ratisServerConfiguration
         .getNumSnapshotsRetained() - numSnapshots) <= 1);
