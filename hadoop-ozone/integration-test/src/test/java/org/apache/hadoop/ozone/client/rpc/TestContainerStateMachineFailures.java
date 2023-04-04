@@ -421,11 +421,11 @@ public class TestContainerStateMachineFailures {
     SimpleStateMachineStorage storage =
             (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
     stateMachine.takeSnapshot();
-    Path parentPath = storage.getLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     // Since the snapshot threshold is set to 1, since there are
     // applyTransactions, we should see snapshots
     Assert.assertTrue(parentPath.getParent().toFile().listFiles().length > 0);
-    FileInfo snapshot = storage.getLatestSnapshot().getFile();
+    FileInfo snapshot = storage.findLatestSnapshot().getFile();
     Assert.assertNotNull(snapshot);
     long containerID = omKeyLocationInfo.getContainerID();
     // delete the container db file
@@ -465,7 +465,7 @@ public class TestContainerStateMachineFailures {
     if (snapshot.getPath().toFile().exists()) {
       // Make sure the latest snapshot is same as the previous one
       try {
-        FileInfo latestSnapshot = storage.getLatestSnapshot().getFile();
+        FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
         Assert.assertTrue(snapshot.getPath().equals(latestSnapshot.getPath()));
       } catch (Throwable e) {
         Assert.assertFalse(snapshot.getPath().toFile().exists());
@@ -507,10 +507,10 @@ public class TestContainerStateMachineFailures {
                     omKeyLocationInfo.getPipeline());
     SimpleStateMachineStorage storage =
             (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Path parentPath = storage.getLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     stateMachine.takeSnapshot();
     Assert.assertTrue(parentPath.getParent().toFile().listFiles().length > 0);
-    FileInfo snapshot = storage.getLatestSnapshot().getFile();
+    FileInfo snapshot = storage.findLatestSnapshot().getFile();
     Assert.assertNotNull(snapshot);
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerLocationClient()
@@ -541,7 +541,7 @@ public class TestContainerStateMachineFailures {
     } catch (IOException ioe) {
       Assert.fail("Exception should not be thrown");
     }
-    FileInfo latestSnapshot = storage.getLatestSnapshot().getFile();
+    FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
     Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
   }
 
@@ -582,12 +582,12 @@ public class TestContainerStateMachineFailures {
                     omKeyLocationInfo.getPipeline());
     SimpleStateMachineStorage storage =
             (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Path parentPath = storage.getLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     stateMachine.takeSnapshot();
     // Since the snapshot threshold is set to 1, since there are
     // applyTransactions, we should see snapshots
     Assert.assertTrue(parentPath.getParent().toFile().listFiles().length > 0);
-    FileInfo snapshot = storage.getLatestSnapshot().getFile();
+    FileInfo snapshot = storage.findLatestSnapshot().getFile();
     Assert.assertNotNull(snapshot);
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerLocationClient()
@@ -668,7 +668,7 @@ public class TestContainerStateMachineFailures {
     } catch (IOException ioe) {
       Assert.fail("Exception should not be thrown");
     }
-    FileInfo latestSnapshot = storage.getLatestSnapshot().getFile();
+    FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
     Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
 
     r2.run();

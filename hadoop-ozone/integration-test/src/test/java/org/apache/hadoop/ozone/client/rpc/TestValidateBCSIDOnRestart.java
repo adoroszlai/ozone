@@ -191,7 +191,7 @@ public class TestValidateBCSIDOnRestart {
     SimpleStateMachineStorage storage =
             (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
     stateMachine.takeSnapshot();
-    Path parentPath = storage.getLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     stateMachine.buildMissingContainerSet(parentPath.toFile());
     // Since the snapshot threshold is set to 1, since there are
     // applyTransactions, we should see snapshots
