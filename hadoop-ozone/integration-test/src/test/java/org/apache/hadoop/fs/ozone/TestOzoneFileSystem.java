@@ -65,6 +65,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -642,7 +643,10 @@ public class TestOzoneFileSystem {
     FileStatus[] fileStatuses = fs.listStatus(parent);
 
     // the number of immediate children of root is 1
-    Assert.assertEquals(1, fileStatuses.length);
+    Assertions.assertEquals(1, fileStatuses.length,
+        () -> "Found " + Arrays.toString(fileStatuses) + " with "
+            + "layout:" + bucketLayout
+            + ", fsPaths:" + enabledFileSystemPaths);
     writeClient.deleteKey(keyArgs);
   }
 
