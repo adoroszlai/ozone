@@ -20,6 +20,9 @@ package org.apache.ratis.statemachine.impl;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Helper for integration test using `SimpleStateMachineStorage`.
+ */
 public interface StatemachineImplTestUtil {
   static SingleFileSnapshotInfo findLatestSnapshot(
       SimpleStateMachineStorage storage) throws IOException {
