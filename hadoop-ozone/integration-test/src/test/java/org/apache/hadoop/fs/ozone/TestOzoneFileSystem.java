@@ -82,6 +82,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -640,11 +641,14 @@ public class TestOzoneFileSystem {
       }, 1000, 120000);
     }
 
-    FileStatus[] fileStatuses = fs.listStatus(parent);
+    List<FileStatus> fileStatuses = new ArrayList<>(Arrays.asList(
+        fs.listStatus(parent)));
+    Path trashRoot = new Path(OZONE_URI_DELIMITER, TRASH_PREFIX);
+    fileStatuses.removeIf(fs -> trashRoot.equals(fs.getPath()));
 
     // the number of immediate children of root is 1
-    Assertions.assertEquals(1, fileStatuses.length,
-        () -> "Found " + Arrays.toString(fileStatuses) + " with "
+    Assertions.assertEquals(1, fileStatuses.size(),
+        () -> "Found " + fileStatuses + " with "
             + "layout:" + bucketLayout
             + ", fsPaths:" + enabledFileSystemPaths);
     writeClient.deleteKey(keyArgs);
