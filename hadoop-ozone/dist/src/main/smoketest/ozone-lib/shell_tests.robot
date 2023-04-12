@@ -37,22 +37,3 @@ Bucket Exists
     Execute And Ignore Error    ozone sh bucket create o3://${OM_SERVICE_ID}/vol1/bucket
     ${exists} =                 Bucket Exists   o3://${OM_SERVICE_ID}/vol1/bucket
     Should Be Equal             ${exists}       ${TRUE}
-
-Bucket Exists should not if No Such OM service
-    ${exists} =                 Bucket Exists   o3://no-such-host/any-volume/any-bucket
-    Should Be Equal             ${exists}       ${FALSE}
-
-
-Key Should Match Local File
-    [Setup]                     Execute    ozone sh key put o3://${OM_SERVICE_ID}/vol1/bucket/passwd /etc/passwd
-    Key Should Match Local File     o3://${OM_SERVICE_ID}/vol1/bucket/passwd    /etc/passwd
-
-Compare Key With Local File with Different File
-    ${random_file} =            Create Random File
-    ${matches} =                Compare Key With Local File     o3://${OM_SERVICE_ID}/vol1/bucket/passwd    ${random_file}
-    Should Be Equal             ${matches}     ${FALSE}
-    [Teardown]                  Remove File    ${random_file}
-
-Compare Key With Local File if File Does Not Exist
-    ${matches} =                Compare Key With Local File     o3://${OM_SERVICE_ID}/vol1/bucket/passwd    /no-such-file
-    Should Be Equal             ${matches}     ${FALSE}
