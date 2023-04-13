@@ -637,6 +637,12 @@ public final class OzoneManagerRatisServer {
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
     RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
         false);
+
+    long minWaitTimeMillis = conf.getTimeDuration(
+        "ozone.om.ratis.log.appender.wait-time.min", 10, TimeUnit.MILLISECONDS);
+    RaftServerConfigKeys.Log.Appender.setWaitTimeMin(properties,
+        TimeDuration.valueOf(minWaitTimeMillis, TimeUnit.MILLISECONDS));
+
     final int logPurgeGap = conf.getInt(
         OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP,
         OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT);
