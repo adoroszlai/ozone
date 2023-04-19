@@ -152,7 +152,9 @@ public class TestObjectStoreWithFSO {
 
     fileStatuses = fs.listStatus(root);
     if (fileStatuses != null) {
-      Assert.assertEquals("Delete root failed!", 0, fileStatuses.length);
+      Assert.assertEquals(
+          "Delete root failed, leftover: " + Arrays.toString(fileStatuses),
+          0, fileStatuses.length);
     }
   }
 
