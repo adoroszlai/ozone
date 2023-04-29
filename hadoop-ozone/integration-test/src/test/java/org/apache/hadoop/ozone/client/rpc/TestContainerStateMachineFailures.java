@@ -43,12 +43,12 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.ratis.conf.RatisClientConfig;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -75,6 +75,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.ozone.test.LambdaTestUtils;
+import org.apache.ozone.test.tag.Flaky;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
@@ -92,17 +93,16 @@ import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import static org.hamcrest.core.Is.is;
 
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the containerStateMachine failure handling.
  */
-
 public class TestContainerStateMachineFailures {
 
   private static MiniOzoneCluster cluster;
@@ -119,7 +119,7 @@ public class TestContainerStateMachineFailures {
    *
    * @throws IOException
    */
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
 
@@ -136,7 +136,6 @@ public class TestContainerStateMachineFailures {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 30, TimeUnit.SECONDS);
     conf.setTimeDuration(OZONE_SCM_PIPELINE_DESTROY_TIMEOUT, 1,
         TimeUnit.SECONDS);
-    conf.setBoolean(ScmConfigKeys.OZONE_SCM_HA_ENABLE_KEY, false);
 
     RatisClientConfig ratisClientConfig =
         conf.getObject(RatisClientConfig.class);
@@ -177,8 +176,12 @@ public class TestContainerStateMachineFailures {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @AfterClass
+  @AfterAll
   public static void shutdown() {
+    IOUtils.closeQuietly(client);
+    if (xceiverClientManager != null) {
+      xceiverClientManager.close();
+    }
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -388,6 +391,7 @@ public class TestContainerStateMachineFailures {
   }
 
   @Test
+  @Flaky("HDDS-6935")
   public void testApplyTransactionFailure() throws Exception {
     OzoneOutputStream key =
             objectStore.getVolume(volumeName).getBucket(bucketName)
@@ -448,6 +452,8 @@ public class TestContainerStateMachineFailures {
       Assert.fail("Expected exception not thrown");
     } catch (IOException e) {
       // Exception should be thrown
+    } finally {
+      xceiverClientManager.releaseClient(xceiverClient, false);
     }
     // Make sure the container is marked unhealthy
     Assert.assertTrue(dn.getDatanodeStateMachine()
@@ -477,6 +483,7 @@ public class TestContainerStateMachineFailures {
   }
 
   @Test
+  @Flaky("HDDS-6115")
   public void testApplyTransactionIdempotencyWithClosedContainer()
           throws Exception {
     OzoneOutputStream key =
@@ -538,6 +545,8 @@ public class TestContainerStateMachineFailures {
       stateMachine.takeSnapshot();
     } catch (IOException ioe) {
       Assert.fail("Exception should not be thrown");
+    } finally {
+      xceiverClientManager.releaseClient(xceiverClient, false);
     }
     FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
     Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
@@ -615,8 +624,7 @@ public class TestContainerStateMachineFailures {
         ByteString data = ByteString.copyFromUtf8("hello");
         ContainerProtos.ContainerCommandRequestProto.Builder writeChunkRequest =
             ContainerTestHelper.newWriteChunkRequestBuilder(pipeline,
-                omKeyLocationInfo.getBlockID(), data.size(), random.nextInt()
-            );
+                omKeyLocationInfo.getBlockID(), data.size());
         writeChunkRequest.setWriteChunk(writeChunkRequest.getWriteChunkBuilder()
                 .setData(data));
         xceiverClient.sendCommand(writeChunkRequest.build());
@@ -635,42 +643,46 @@ public class TestContainerStateMachineFailures {
       }
     };
 
-    List<Thread> threadList = new ArrayList<>();
-
-    for (int i = 0; i < 100; i++) {
-      count++;
-      Thread r = new Thread(r2);
-      r.start();
-      threadList.add(r);
-    }
-
-    Thread closeContainerThread = new Thread(r1);
-    closeContainerThread.start();
-    threadList.add(closeContainerThread);
-    latch.await(600, TimeUnit.SECONDS);
-    for (int i = 0; i < 101; i++) {
-      threadList.get(i).join();
-    }
-
-    if (failCount.get() > 0) {
-      fail("testWriteStateMachineDataIdempotencyWithClosedContainer failed");
-    }
-    Assert.assertTrue(
-            TestHelper.getDatanodeService(omKeyLocationInfo, cluster)
-                    .getDatanodeStateMachine()
-                    .getContainer().getContainerSet().getContainer(containerID)
-                    .getContainerState()
-                    == ContainerProtos.ContainerDataProto.State.CLOSED);
-    Assert.assertTrue(stateMachine.isStateMachineHealthy());
     try {
-      stateMachine.takeSnapshot();
-    } catch (IOException ioe) {
-      Assert.fail("Exception should not be thrown");
-    }
-    FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
-    Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
+      List<Thread> threadList = new ArrayList<>();
 
-    r2.run();
+      for (int i = 0; i < 100; i++) {
+        count++;
+        Thread r = new Thread(r2);
+        r.start();
+        threadList.add(r);
+      }
+
+      Thread closeContainerThread = new Thread(r1);
+      closeContainerThread.start();
+      threadList.add(closeContainerThread);
+      latch.await(600, TimeUnit.SECONDS);
+      for (int i = 0; i < 101; i++) {
+        threadList.get(i).join();
+      }
+
+      if (failCount.get() > 0) {
+        fail("testWriteStateMachineDataIdempotencyWithClosedContainer failed");
+      }
+      Assert.assertTrue(
+          TestHelper.getDatanodeService(omKeyLocationInfo, cluster)
+              .getDatanodeStateMachine()
+              .getContainer().getContainerSet().getContainer(containerID)
+              .getContainerState()
+              == ContainerProtos.ContainerDataProto.State.CLOSED);
+      Assert.assertTrue(stateMachine.isStateMachineHealthy());
+      try {
+        stateMachine.takeSnapshot();
+      } catch (IOException ioe) {
+        Assert.fail("Exception should not be thrown");
+      }
+      FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
+      Assert.assertFalse(snapshot.getPath().equals(latestSnapshot.getPath()));
+
+      r2.run();
+    } finally {
+      xceiverClientManager.releaseClient(xceiverClient, false);
+    }
   }
 
   @Test
@@ -782,7 +794,6 @@ public class TestContainerStateMachineFailures {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(key)
-        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = null;
     try {
@@ -790,13 +801,11 @@ public class TestContainerStateMachineFailures {
 
       Assert.assertEquals(locationCount,
           keyInfo.getLatestVersionLocations().getLocationListCount());
-      OzoneInputStream
-          o = objectStore
-          .getVolume(volumeName)
-          .getBucket(bucketName)
-          .readKey(key);
       byte[] buffer = new byte[1024];
-      o.read(buffer, 0, 1024);
+      try (OzoneInputStream o = objectStore.getVolume(volumeName)
+          .getBucket(bucketName).readKey(key)) {
+        o.read(buffer, 0, 1024);
+      }
       int end = ArrayUtils.indexOf(buffer, (byte) 0);
       String response = new String(buffer, 0,
           end,

@@ -16,11 +16,11 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
-import com.google.common.base.Optional;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.server.OzoneAdmins;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -159,7 +159,7 @@ public class TestOzoneNativeAuthorizer {
     writeClient = omTestManagers.getWriteClient();
     nativeAuthorizer = new OzoneNativeAuthorizer(volumeManager, bucketManager,
         keyManager, prefixManager,
-        Collections.singletonList("om"));
+        new OzoneAdmins(Collections.singletonList("om")));
     adminUgi = UserGroupInformation.createUserForTesting("om",
         new String[]{"ozone"});
     testUgi = UserGroupInformation.createUserForTesting("testuser",
@@ -172,8 +172,8 @@ public class TestOzoneNativeAuthorizer {
         .setVolumeName(volume)
         .setBucketName(bucket)
         .setKeyName(keyName)
-        .setReplicationConfig(
-            new StandaloneReplicationConfig(HddsProtos.ReplicationFactor.ONE))
+        .setReplicationConfig(StandaloneReplicationConfig
+            .getInstance(HddsProtos.ReplicationFactor.ONE))
         .setDataSize(0)
         .setAcls(OzoneAclUtil.getAclList(testUgi.getUserName(),
             testUgi.getGroupNames(), ALL, ALL))
@@ -311,7 +311,7 @@ public class TestOzoneNativeAuthorizer {
     omVolumeArgs.setAcls(ozoneAcls);
 
     metadataManager.getVolumeTable().addCacheEntry(new CacheKey<>(volumeKey),
-        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+        CacheValue.get(1L, omVolumeArgs));
   }
 
   private void setBucketAcl(List<OzoneAcl> ozoneAcls) throws IOException {
@@ -321,7 +321,7 @@ public class TestOzoneNativeAuthorizer {
     omBucketInfo.setAcls(ozoneAcls);
 
     metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+        CacheValue.get(1L, omBucketInfo));
   }
 
   private void addVolumeAcl(OzoneAcl ozoneAcl) throws IOException {
@@ -332,7 +332,7 @@ public class TestOzoneNativeAuthorizer {
     omVolumeArgs.addAcl(ozoneAcl);
 
     metadataManager.getVolumeTable().addCacheEntry(new CacheKey<>(volumeKey),
-        new CacheValue<>(Optional.of(omVolumeArgs), 1L));
+        CacheValue.get(1L, omVolumeArgs));
   }
 
   private void addBucketAcl(OzoneAcl ozoneAcl) throws IOException {
@@ -342,7 +342,7 @@ public class TestOzoneNativeAuthorizer {
     omBucketInfo.addAcl(ozoneAcl);
 
     metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(omBucketInfo), 1L));
+        CacheValue.get(1L, omBucketInfo));
   }
 
   private void resetAclsAndValidateAccess(OzoneObj obj,
@@ -400,7 +400,8 @@ public class TestOzoneNativeAuthorizer {
       String msg = "Acl to check:" + a1 + " accessType:" +
           accessType + " path:" + obj.getPath();
       if (a1.equals(CREATE) && obj.getResourceType().equals(VOLUME)) {
-        assertEquals(msg, nativeAuthorizer.getOzoneAdmins().contains(user),
+        assertEquals(msg, nativeAuthorizer.getOzoneAdmins()
+                         .getAdminUsernames().contains(user),
             nativeAuthorizer.checkAccess(obj,
                 builder.setAclRights(a1).build()));
       } else {
@@ -521,7 +522,7 @@ public class TestOzoneNativeAuthorizer {
     allAcls.remove(NONE);
     RequestContext ctx = builder.build();
     boolean expectedResult = expectedAclResult;
-    if (nativeAuthorizer.getOzoneAdmins().contains(
+    if (nativeAuthorizer.getOzoneAdmins().getAdminUsernames().contains(
         ctx.getClientUgi().getUserName())) {
       expectedResult = true;
     }

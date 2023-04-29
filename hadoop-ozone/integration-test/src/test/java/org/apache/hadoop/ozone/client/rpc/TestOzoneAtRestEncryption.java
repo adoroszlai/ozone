@@ -47,17 +47,17 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.CertificateClientTestImpl;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.io.MultipartCryptoKeyInputStream;
+import org.apache.hadoop.hdds.scm.storage.MultipartInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -382,7 +382,6 @@ public class TestOzoneAtRestEncryption {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
-        .setRefreshPipeline(true)
         .build();
     HddsProtos.ReplicationType replicationType =
         HddsProtos.ReplicationType.valueOf(type.toString());
@@ -475,8 +474,9 @@ public class TestOzoneAtRestEncryption {
       // Adding a random int with a cap at 8K (the default crypto buffer
       // size) to get parts whose last byte does not coincide with crypto
       // buffer boundary.
-      byte[] data = generateRandomData((MPU_PART_MIN_SIZE * i) +
-          RANDOM.nextInt(DEFAULT_CRYPTO_BUFFER_SIZE));
+      int partSize = (MPU_PART_MIN_SIZE * i) +
+          RANDOM.nextInt(DEFAULT_CRYPTO_BUFFER_SIZE - 1) + 1;
+      byte[] data = generateRandomData(partSize);
       String partName = uploadPart(bucket, keyName, uploadID, i, data);
       partsMap.put(i, partName);
       partsData.add(data);
@@ -495,39 +495,49 @@ public class TestOzoneAtRestEncryption {
     // Complete MPU
     completeMultipartUpload(bucket, keyName, uploadID, partsMap);
 
-    // Read different data lengths and starting from different offsets and
-    // verify the data matches.
-    Random random = new Random();
-    int randomSize = random.nextInt(keySize / 2);
-    int randomOffset = random.nextInt(keySize - randomSize);
-
-    int[] readDataSizes = {keySize, keySize / 3 + 1, BLOCK_SIZE,
-        BLOCK_SIZE * 2 + 1, CHUNK_SIZE, CHUNK_SIZE / 4 - 1,
-        DEFAULT_CRYPTO_BUFFER_SIZE, DEFAULT_CRYPTO_BUFFER_SIZE / 2, 1,
-        randomSize};
-
-    int[] readFromPositions = {0, DEFAULT_CRYPTO_BUFFER_SIZE + 10, CHUNK_SIZE,
-        BLOCK_SIZE - DEFAULT_CRYPTO_BUFFER_SIZE + 1, BLOCK_SIZE, keySize / 3,
-        keySize - 1, randomOffset};
-
     // Create an input stream to read the data
-    OzoneInputStream inputStream = bucket.readKey(keyName);
-    Assert.assertTrue(inputStream instanceof MultipartCryptoKeyInputStream);
-    MultipartCryptoKeyInputStream cryptoInputStream =
-        (MultipartCryptoKeyInputStream) inputStream;
+    try (OzoneInputStream inputStream = bucket.readKey(keyName)) {
 
-    for (int readDataLen : readDataSizes) {
-      for (int readFromPosition : readFromPositions) {
-        // Check that offset + buffer size does not exceed the key size
-        if (readFromPosition + readDataLen > keySize) {
-          continue;
+      Assert.assertTrue(inputStream.getInputStream()
+          instanceof MultipartInputStream);
+
+      // Test complete read
+      byte[] completeRead = new byte[keySize];
+      int bytesRead = inputStream.read(completeRead, 0, keySize);
+      Assert.assertEquals(bytesRead, keySize);
+      Assert.assertArrayEquals(inputData, completeRead);
+
+      // Read different data lengths and starting from different offsets and
+      // verify the data matches.
+      Random random = new Random();
+      int randomSize = random.nextInt(keySize / 2);
+      int randomOffset = random.nextInt(keySize - randomSize);
+
+      int[] readDataSizes = {keySize, keySize / 3 + 1, BLOCK_SIZE,
+          BLOCK_SIZE * 2 + 1, CHUNK_SIZE, CHUNK_SIZE / 4 - 1,
+          DEFAULT_CRYPTO_BUFFER_SIZE, DEFAULT_CRYPTO_BUFFER_SIZE / 2, 1,
+          randomSize};
+
+      int[] readFromPositions = {0, DEFAULT_CRYPTO_BUFFER_SIZE + 10, CHUNK_SIZE,
+          BLOCK_SIZE - DEFAULT_CRYPTO_BUFFER_SIZE + 1, BLOCK_SIZE, keySize / 3,
+          keySize - 1, randomOffset};
+
+      for (int readDataLen : readDataSizes) {
+        for (int readFromPosition : readFromPositions) {
+          // Check that offset + buffer size does not exceed the key size
+          if (readFromPosition + readDataLen > keySize) {
+            continue;
+          }
+
+          byte[] readData = new byte[readDataLen];
+          inputStream.seek(readFromPosition);
+          int actualReadLen = inputStream.read(readData, 0, readDataLen);
+
+          assertReadContent(inputData, readData, readFromPosition);
+          Assert.assertEquals(readFromPosition + readDataLen,
+              inputStream.getPos());
+          Assert.assertEquals(readDataLen, actualReadLen);
         }
-
-        byte[] readData = new byte[readDataLen];
-        cryptoInputStream.seek(readFromPosition);
-        inputStream.read(readData, 0, readDataLen);
-
-        assertReadContent(inputData, readData, readFromPosition);
       }
     }
   }

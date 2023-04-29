@@ -61,7 +61,7 @@ HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
 HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
 CORE-SITE.XML_dfs.data.transfer.protection=authentication
 CORE-SITE.XML_hadoop.security.authentication=kerberos
-CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*@EXAMPLE.COM)s/@.*///L
+CORE-SITE.XML_hadoop.security.auth_to_local="DEFAULT"
 CORE-SITE.XML_hadoop.security.group.mapping=org.apache.hadoop.security.NullGroupsMapping
 CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
 
@@ -143,7 +143,6 @@ CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.queue-mappings-override.enable=fa
 OZONE_DATANODE_SECURE_USER=root
 JAVA_HOME=/usr/lib/jvm/jre
 JSVC_HOME=/usr/bin
-SLEEP_SECONDS=5
 
 HADOOP_CLASSPATH=/opt/ozone/share/ozone/lib/ozone-filesystem-hadoop3-@project.version@.jar
 OZONE_CLASSPATH=

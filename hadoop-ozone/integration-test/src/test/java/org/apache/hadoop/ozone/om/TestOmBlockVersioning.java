@@ -20,12 +20,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -56,6 +58,7 @@ public class TestOmBlockVersioning {
   @Rule
   public Timeout timeout = Timeout.seconds(300);
   private static MiniOzoneCluster cluster = null;
+  private static OzoneClient client;
   private static OzoneConfiguration conf;
   private static OzoneManager ozoneManager;
   private static OzoneManagerProtocol writeClient;
@@ -75,8 +78,9 @@ public class TestOmBlockVersioning {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
+    client = cluster.newClient();
     ozoneManager = cluster.getOzoneManager();
-    writeClient = cluster.getRpcClient().getObjectStore()
+    writeClient = client.getObjectStore()
         .getClientProxy().getOzoneManagerClient();
   }
 
@@ -85,6 +89,7 @@ public class TestOmBlockVersioning {
    */
   @AfterClass
   public static void shutdown() {
+    IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -97,7 +102,7 @@ public class TestOmBlockVersioning {
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
     OzoneBucket bucket =
-        TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
+        TestDataUtil.createVolumeAndBucket(client, volumeName, bucketName);
     // Versioning isn't supported currently, but just preserving old behaviour
     bucket.setVersioning(true);
 
@@ -106,9 +111,8 @@ public class TestOmBlockVersioning {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(1000)
-        .setRefreshPipeline(true)
         .setAcls(new ArrayList<>())
-        .setReplicationConfig(new StandaloneReplicationConfig(ONE))
+        .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
         .build();
 
     // 1st update, version 0
@@ -179,14 +183,13 @@ public class TestOmBlockVersioning {
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
     OzoneBucket bucket =
-        TestDataUtil.createVolumeAndBucket(cluster, volumeName, bucketName);
+        TestDataUtil.createVolumeAndBucket(client, volumeName, bucketName);
 
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(1000)
-        .setRefreshPipeline(true)
         .build();
 
     String dataString = RandomStringUtils.randomAlphabetic(100);
@@ -198,14 +201,13 @@ public class TestOmBlockVersioning {
     assertEquals(1,
         keyInfo.getLatestVersionLocations().getLocationList().size());
 
-    // this write will create 2nd version, 2nd version will contain block from
-    // version 1, and add a new block
+    // When bucket versioning is disabled, overwriting a key doesn't increment
+    // its version count. Rather it always resets the version to 0
     TestDataUtil.createKey(bucket, keyName, dataString);
-
 
     keyInfo = ozoneManager.lookupKey(omKeyArgs);
     assertEquals(dataString, TestDataUtil.getKey(bucket, keyName));
-    assertEquals(1, keyInfo.getLatestVersionLocations().getVersion());
+    assertEquals(0, keyInfo.getLatestVersionLocations().getVersion());
     assertEquals(1,
         keyInfo.getLatestVersionLocations().getLocationList().size());
 
@@ -214,7 +216,7 @@ public class TestOmBlockVersioning {
 
     keyInfo = ozoneManager.lookupKey(omKeyArgs);
     assertEquals(dataString, TestDataUtil.getKey(bucket, keyName));
-    assertEquals(2, keyInfo.getLatestVersionLocations().getVersion());
+    assertEquals(0, keyInfo.getLatestVersionLocations().getVersion());
     assertEquals(1,
         keyInfo.getLatestVersionLocations().getLocationList().size());
   }

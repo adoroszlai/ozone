@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.s3.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Function;
+
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
@@ -120,6 +122,9 @@ public final class S3ErrorTable {
       "NotImplemented", "This part of feature is not implemented yet.",
       HTTP_NOT_IMPLEMENTED);
 
+  public static final OS3Exception NO_OVERWRITE = new OS3Exception(
+      "Conflict", "Cannot overwrite file with directory", HTTP_CONFLICT);
+
   public static OS3Exception newError(OS3Exception e, String resource) {
     return newError(e, resource, null);
   }
@@ -142,5 +147,12 @@ public final class S3ErrorTable {
       LOG.debug(err.toXml(), ex);
     }
     return err;
+  }
+
+  private static Function<Exception, OS3Exception> generateInternalError = e ->
+      new OS3Exception("InternalError", e.getMessage(), HTTP_INTERNAL_ERROR);
+
+  public static OS3Exception getInternalError(Exception e) {
+    return generateInternalError.apply(e);
   }
 }

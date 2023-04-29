@@ -97,7 +97,6 @@ public class ChunkKeyHandler extends KeyHandler implements
             .setVolumeName(volumeName)
             .setBucketName(bucketName)
             .setKeyName(keyName)
-            .setRefreshPipeline(true)
             .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     // querying  the keyLocations.The OM is queried to get containerID and
@@ -120,7 +119,8 @@ public class ChunkKeyHandler extends KeyHandler implements
       Pipeline pipeline = keyLocation.getPipeline();
       if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
         pipeline = Pipeline.newBuilder(pipeline)
-            .setReplicationConfig(new StandaloneReplicationConfig(ONE)).build();
+            .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
+            .build();
       }
       xceiverClient = xceiverClientManager
               .acquireClientForReadData(pipeline);

@@ -108,7 +108,7 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
     String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     Preconditions.checkNotNull(idFilePath);
     File idFile = new File(idFilePath);
-    ContainerUtils.writeDatanodeDetailsTo(dnDetails, idFile);
+    ContainerUtils.writeDatanodeDetailsTo(dnDetails, idFile, conf);
   }
 
   /**
@@ -142,5 +142,10 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
     final int invocations = invocationCount.get();
     return invocations == 0 ?
         0 : totalTime.get() / invocations;
+  }
+
+  @Override
+  public int getQueuedCount() {
+    return 0;
   }
 }

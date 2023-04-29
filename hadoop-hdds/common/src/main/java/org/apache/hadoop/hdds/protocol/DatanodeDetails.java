@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.hdds.DatanodeVersions;
+import org.apache.hadoop.hdds.DatanodeVersion;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
@@ -37,11 +37,14 @@ import org.apache.hadoop.hdds.scm.net.NodeImpl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.upgrade.BelongsToHDDSLayoutVersion;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.ClientVersions.CURRENT_VERSION;
-import static org.apache.hadoop.ozone.ClientVersions.VERSION_HANDLES_UNKNOWN_DN_PORTS;
+import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.WEBUI_PORTS_IN_DATANODEDETAILS;
+import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.RATIS_DATASTREAM_PORT_IN_DATANODEDETAILS;
+import static org.apache.hadoop.ozone.ClientVersion.VERSION_HANDLES_UNKNOWN_DN_PORTS;
 
 /**
  * DatanodeDetails class contains details about DataNode like:
@@ -235,6 +238,17 @@ public class DatanodeDetails extends NodeImpl implements
   }
 
   /**
+   * Checks if the OperationalState is Node is Decomissioned or Decomissioning.
+   * @return True if OperationalState is Decommissioned or Decomissioning.
+   */
+  public boolean isDecomissioned() {
+    return this.getPersistedOpState() ==
+            HddsProtos.NodeOperationalState.DECOMMISSIONED ||
+            this.getPersistedOpState() ==
+            HddsProtos.NodeOperationalState.DECOMMISSIONING;
+  }
+
+  /**
    * Set the persistedOpState for this instance.
    *
    * @param state The new operational state.
@@ -273,8 +287,10 @@ public class DatanodeDetails extends NodeImpl implements
         return port;
       }
     }
-    // if no separate admin/server port, return single Ratis one for compat
-    if (name == Name.RATIS_ADMIN || name == Name.RATIS_SERVER) {
+    // if no separate admin/server/datastream port, return single Ratis one for
+    // compat
+    if (name == Name.RATIS_ADMIN || name == Name.RATIS_SERVER ||
+        name == Name.RATIS_DATASTREAM) {
       return getPort(Name.RATIS);
     }
     return null;
@@ -373,7 +389,7 @@ public class DatanodeDetails extends NodeImpl implements
    */
   @JsonIgnore
   public HddsProtos.DatanodeDetailsProto getProtoBufMessage() {
-    return toProto(CURRENT_VERSION);
+    return toProto(ClientVersion.CURRENT_VERSION);
   }
 
   public HddsProtos.DatanodeDetailsProto toProto(int clientVersion) {
@@ -415,7 +431,8 @@ public class DatanodeDetails extends NodeImpl implements
     builder.setPersistedOpStateExpiry(persistedOpStateExpiryEpochSec);
 
     final boolean handlesUnknownPorts =
-        clientVersion >= VERSION_HANDLES_UNKNOWN_DN_PORTS;
+        ClientVersion.fromProtoValue(clientVersion)
+        .compareTo(VERSION_HANDLES_UNKNOWN_DN_PORTS) >= 0;
     for (Port port : ports) {
       if (handlesUnknownPorts || Name.V0_PORTS.contains(port.getName())) {
         builder.addPorts(port.toProto());
@@ -480,6 +497,10 @@ public class DatanodeDetails extends NodeImpl implements
 
   @Override
   public String toString() {
+    return uuidString + "(" + hostName + "/" + ipAddress + ")";
+  }
+
+  public String toDebugString() {
     return uuid.toString() + "{" +
         "ip: " +
         ipAddress +
@@ -545,7 +566,7 @@ public class DatanodeDetails extends NodeImpl implements
     private HddsProtos.NodeOperationalState persistedOpState;
     private long persistedOpStateExpiryEpochSec = 0;
     private int initialVersion;
-    private int currentVersion = DatanodeVersions.CURRENT_VERSION;
+    private int currentVersion = DatanodeVersion.CURRENT_VERSION;
 
     /**
      * Default private constructor. To create Builder instance use
@@ -783,7 +804,13 @@ public class DatanodeDetails extends NodeImpl implements
      * Ports that are supported in DataNode.
      */
     public enum Name {
-      STANDALONE, RATIS, REST, REPLICATION, RATIS_ADMIN, RATIS_SERVER;
+      STANDALONE, RATIS, REST, REPLICATION, RATIS_ADMIN, RATIS_SERVER,
+      @BelongsToHDDSLayoutVersion(RATIS_DATASTREAM_PORT_IN_DATANODEDETAILS)
+      RATIS_DATASTREAM,
+      @BelongsToHDDSLayoutVersion(WEBUI_PORTS_IN_DATANODEDETAILS)
+      HTTP,
+      @BelongsToHDDSLayoutVersion(WEBUI_PORTS_IN_DATANODEDETAILS)
+      HTTPS;
 
       public static final Set<Name> ALL_PORTS = ImmutableSet.copyOf(
           Name.values());

@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.client.checksum;
 
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientReply;
@@ -86,6 +88,11 @@ public class TestReplicatedFileChecksumHelper {
   @Before
   public void init() throws IOException {
     ConfigurationSource config = new InMemoryConfiguration();
+    OzoneClientConfig clientConfig = config.getObject(OzoneClientConfig.class);
+    clientConfig.setChecksumType(ContainerProtos.ChecksumType.CRC32C);
+
+    ((InMemoryConfiguration)config).setFromObject(clientConfig);
+
     rpcClient = new RpcClient(config, null) {
 
       @Override
@@ -103,6 +110,7 @@ public class TestReplicatedFileChecksumHelper {
         return new MockXceiverClientFactory();
       }
     };
+
     client = new OzoneClient(config, rpcClient);
 
     store = client.getObjectStore();
@@ -131,7 +139,7 @@ public class TestReplicatedFileChecksumHelper {
         .setCreationTime(Time.now())
         .setModificationTime(Time.now())
         .setDataSize(0)
-        .setReplicationConfig(new RatisReplicationConfig(
+        .setReplicationConfig(RatisReplicationConfig.getInstance(
             HddsProtos.ReplicationFactor.ONE))
         .setFileEncryptionInfo(null)
         .setAcls(null)
@@ -144,8 +152,11 @@ public class TestReplicatedFileChecksumHelper {
     OzoneBucket bucket = Mockito.mock(OzoneBucket.class);
     when(bucket.getName()).thenReturn("bucket1");
 
+    OzoneClientConfig.ChecksumCombineMode combineMode =
+        OzoneClientConfig.ChecksumCombineMode.MD5MD5CRC;
+
     ReplicatedFileChecksumHelper helper = new ReplicatedFileChecksumHelper(
-        mockVolume, bucket, "dummy", 10, mockRpcClient);
+        mockVolume, bucket, "dummy", 10, combineMode, mockRpcClient);
     helper.compute();
     FileChecksum fileChecksum = helper.getFileChecksum();
     assertTrue(fileChecksum instanceof MD5MD5CRC32GzipFileChecksum);
@@ -154,7 +165,7 @@ public class TestReplicatedFileChecksumHelper {
 
     // test negative length
     helper = new ReplicatedFileChecksumHelper(
-        mockVolume, bucket, "dummy", -1, mockRpcClient);
+        mockVolume, bucket, "dummy", -1, combineMode, mockRpcClient);
     helper.compute();
     assertNull(helper.getKeyLocationInfoList());
   }
@@ -172,20 +183,21 @@ public class TestReplicatedFileChecksumHelper {
     pipeline = Pipeline.newBuilder()
         .setId(PipelineID.randomId())
         .setReplicationConfig(
-            new RatisReplicationConfig(HddsProtos.ReplicationFactor.THREE))
+            RatisReplicationConfig
+                .getInstance(HddsProtos.ReplicationFactor.THREE))
         .setState(Pipeline.PipelineState.CLOSED)
         .setNodes(dns)
         .build();
 
     XceiverClientGrpc xceiverClientGrpc =
         new XceiverClientGrpc(pipeline, conf) {
-      @Override
-      public XceiverClientReply sendCommandAsync(
-          ContainerProtos.ContainerCommandRequestProto request,
-          DatanodeDetails dn) {
-        return buildValidResponse();
-      }
-    };
+          @Override
+          public XceiverClientReply sendCommandAsync(
+              ContainerProtos.ContainerCommandRequestProto request,
+              DatanodeDetails dn) {
+            return buildValidResponse();
+          }
+        };
     XceiverClientFactory factory = Mockito.mock(XceiverClientFactory.class);
     when(factory.acquireClientForReadData(ArgumentMatchers.any())).
         thenReturn(xceiverClientGrpc);
@@ -213,7 +225,7 @@ public class TestReplicatedFileChecksumHelper {
         .setCreationTime(Time.now())
         .setModificationTime(Time.now())
         .setDataSize(0)
-        .setReplicationConfig(new RatisReplicationConfig(
+        .setReplicationConfig(RatisReplicationConfig.getInstance(
             HddsProtos.ReplicationFactor.ONE))
         .setFileEncryptionInfo(null)
         .setAcls(null)
@@ -226,11 +238,44 @@ public class TestReplicatedFileChecksumHelper {
     OzoneBucket bucket = Mockito.mock(OzoneBucket.class);
     when(bucket.getName()).thenReturn("bucket1");
 
+    OzoneClientConfig.ChecksumCombineMode combineMode =
+        OzoneClientConfig.ChecksumCombineMode.MD5MD5CRC;
+
     ReplicatedFileChecksumHelper helper = new ReplicatedFileChecksumHelper(
-        mockVolume, bucket, "dummy", 10, mockRpcClient);
+        mockVolume, bucket, "dummy", 10, combineMode, mockRpcClient);
 
     helper.compute();
     FileChecksum fileChecksum = helper.getFileChecksum();
+    assertTrue(fileChecksum instanceof MD5MD5CRC32GzipFileChecksum);
+    assertEquals(1, helper.getKeyLocationInfoList().size());
+
+    FileChecksum cachedChecksum = new MD5MD5CRC32GzipFileChecksum();
+    /// test cached checksum
+    OmKeyInfo omKeyInfoWithChecksum = new OmKeyInfo.Builder()
+        .setVolumeName(null)
+        .setBucketName(null)
+        .setKeyName(null)
+        .setOmKeyLocationInfos(Collections.singletonList(
+            new OmKeyLocationInfoGroup(0, omKeyLocationInfoList)))
+        .setCreationTime(Time.now())
+        .setModificationTime(Time.now())
+        .setDataSize(0)
+        .setReplicationConfig(
+            RatisReplicationConfig.getInstance(
+                HddsProtos.ReplicationFactor.ONE))
+        .setFileEncryptionInfo(null)
+        .setAcls(null)
+        .setFileChecksum(cachedChecksum)
+        .build();
+    when(om.lookupKey(ArgumentMatchers.any())).
+        thenReturn(omKeyInfoWithChecksum);
+
+    helper = new ReplicatedFileChecksumHelper(
+        mockVolume, bucket, "dummy", 10, combineMode,
+        mockRpcClient);
+
+    helper.compute();
+    fileChecksum = helper.getFileChecksum();
     assertTrue(fileChecksum instanceof MD5MD5CRC32GzipFileChecksum);
     assertEquals(1, helper.getKeyLocationInfoList().size());
   }
@@ -311,12 +356,17 @@ public class TestReplicatedFileChecksumHelper {
         out.write(value.getBytes(UTF_8));
       }
 
+      OzoneClientConfig.ChecksumCombineMode combineMode =
+          OzoneClientConfig.ChecksumCombineMode.MD5MD5CRC;
+
       ReplicatedFileChecksumHelper helper = new ReplicatedFileChecksumHelper(
-          volume, bucket, keyName, 10, rpcClient);
+          volume, bucket, keyName, 10, combineMode, rpcClient);
 
       helper.compute();
       FileChecksum fileChecksum = helper.getFileChecksum();
-      assertTrue(fileChecksum instanceof MD5MD5CRC32GzipFileChecksum);
+      //assertTrue(fileChecksum instanceof MD5MD5CRC32GzipFileChecksum);
+      assertEquals(DataChecksum.Type.CRC32C,
+          ((MD5MD5CRC32FileChecksum)fileChecksum).getCrcType());
       assertEquals(1, helper.getKeyLocationInfoList().size());
     }
   }

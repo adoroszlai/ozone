@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.ozone.om.request.bucket;
 
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.upgrade.OMLayoutVersionManager;
 import org.junit.After;
 import org.junit.Before;
@@ -37,6 +38,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 
 
+import static org.apache.hadoop.ozone.om.request.OMRequestTestUtils.setupReplicationConfigValidation;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -69,10 +71,17 @@ public class TestBucketRequest {
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
     ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
         folder.newFolder().getAbsolutePath());
+    when(ozoneManager.getConfiguration()).thenReturn(ozoneConfiguration);
     omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
+    when(ozoneManager.getOMDefaultBucketLayout()).thenReturn(
+        BucketLayout.fromString(
+            OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT));
+
+    setupReplicationConfigValidation(ozoneManager, ozoneConfiguration);
+
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);

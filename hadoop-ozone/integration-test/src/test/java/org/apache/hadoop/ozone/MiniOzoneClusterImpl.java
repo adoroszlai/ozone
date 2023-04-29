@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,8 +28,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -48,15 +49,20 @@ import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ha.SCMHANodeDetails;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.ha.SCMRatisServerImpl;
+import org.apache.hadoop.hdds.scm.node.NodeStatus;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.proxy.SCMClientConfig;
 import org.apache.hadoop.hdds.scm.proxy.SCMContainerLocationFailoverProxyProvider;
 import org.apache.hadoop.hdds.scm.safemode.HealthyPipelineSafeModeRule;
 import org.apache.hadoop.hdds.scm.server.OzoneStorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
+import org.apache.hadoop.hdds.utils.IOUtils;
+import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksObjectMetrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
@@ -70,6 +76,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.recon.ConfigurationProvider;
 import org.apache.hadoop.ozone.recon.ReconServer;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.logging.log4j.util.Strings;
 import org.apache.ozone.test.GenericTestUtils;
 
 import org.apache.commons.io.FileUtils;
@@ -77,15 +84,18 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.RATIS;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.RATIS_ADMIN;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.RATIS_SERVER;
+import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.REPLICATION;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.STANDALONE;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.hdds.recon.ReconConfigKeys.OZONE_RECON_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.recon.ReconConfigKeys.OZONE_RECON_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.recon.ReconConfigKeys.OZONE_RECON_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.recon.ReconConfigKeys.OZONE_RECON_TASK_SAFEMODE_WAIT_THRESHOLD;
 import static org.apache.hadoop.hdds.scm.ScmConfig.ConfigStrings.HDDS_SCM_INIT_DEFAULT_LAYOUT_VERSION;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_IPC_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ADMIN_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_DATASTREAM_RANDOM_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_SERVER_PORT;
@@ -111,6 +121,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       LoggerFactory.getLogger(MiniOzoneClusterImpl.class);
 
   private OzoneConfiguration conf;
+  private final SCMConfigurator scmConfigurator;
   private StorageContainerManager scm;
   private OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
@@ -119,21 +130,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   // Timeout for the cluster to be ready
   private int waitForClusterToBeReadyTimeout = 120000; // 2 min
   private CertificateClient caClient;
-
-  /**
-   * Creates a new MiniOzoneCluster.
-   *
-   * @throws IOException if there is an I/O error
-   */
-  protected MiniOzoneClusterImpl(OzoneConfiguration conf,
-                                 OzoneManager ozoneManager,
-                                 StorageContainerManager scm,
-                                 List<HddsDatanodeService> hddsDatanodes) {
-    this.conf = conf;
-    this.ozoneManager = ozoneManager;
-    this.scm = scm;
-    this.hddsDatanodes = hddsDatanodes;
-  }
+  private final Set<AutoCloseable> clients = ConcurrentHashMap.newKeySet();
 
   /**
    * Creates a new MiniOzoneCluster with Recon.
@@ -141,6 +138,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    * @throws IOException if there is an I/O error
    */
   MiniOzoneClusterImpl(OzoneConfiguration conf,
+                       SCMConfigurator scmConfigurator,
                        OzoneManager ozoneManager,
                        StorageContainerManager scm,
                        List<HddsDatanodeService> hddsDatanodes,
@@ -150,6 +148,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     this.scm = scm;
     this.hddsDatanodes = hddsDatanodes;
     this.reconServer = reconServer;
+    this.scmConfigurator = scmConfigurator;
   }
 
   /**
@@ -161,11 +160,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    * @param conf
    * @param hddsDatanodes
    */
-  MiniOzoneClusterImpl(OzoneConfiguration conf,
+  MiniOzoneClusterImpl(OzoneConfiguration conf, SCMConfigurator scmConfigurator,
       List<HddsDatanodeService> hddsDatanodes, ReconServer reconServer) {
+    this.scmConfigurator = scmConfigurator;
     this.conf = conf;
     this.hddsDatanodes = hddsDatanodes;
     this.reconServer = reconServer;
+  }
+
+  public SCMConfigurator getSCMConfigurator() {
+    return scmConfigurator;
   }
 
   @Override
@@ -238,7 +242,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
       int openPipelineCount = scm.getPipelineManager().
-          getPipelines(new RatisReplicationConfig(factor),
+          getPipelines(RatisReplicationConfig.getInstance(factor),
               Pipeline.PipelineState.OPEN).size();
       return openPipelineCount >= 1;
     }, 1000, timeoutInMs);
@@ -290,6 +294,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
+  public HddsDatanodeService getHddsDatanode(DatanodeDetails dn)
+      throws IOException {
+    for (HddsDatanodeService service : hddsDatanodes) {
+      if (service.getDatanodeDetails().equals(dn)) {
+        return service;
+      }
+    }
+    throw new IOException(
+        "Not able to find datanode with datanode Id " + dn.getUuid());
+  }
+
+  @Override
   public ReconServer getReconServer() {
     return this.reconServer;
   }
@@ -306,12 +322,13 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public OzoneClient getClient() throws IOException {
-    return OzoneClientFactory.getRpcClient(conf);
+  public OzoneClient newClient() throws IOException {
+    OzoneClient client = createClient();
+    clients.add(client);
+    return client;
   }
 
-  @Override
-  public OzoneClient getRpcClient() throws IOException {
+  protected OzoneClient createClient() throws IOException {
     return OzoneClientFactory.getRpcClient(conf);
   }
 
@@ -326,11 +343,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   @Override
   public StorageContainerLocationProtocolClientSideTranslatorPB
       getStorageContainerLocationClient() throws IOException {
-    InetSocketAddress address = scm.getClientRpcAddress();
-    LOG.info(
-        "Creating StorageContainerLocationProtocol RPC client with address {}",
-        address);
-
     SCMContainerLocationFailoverProxyProvider proxyProvider =
         new SCMContainerLocationFailoverProxyProvider(conf, null);
 
@@ -345,7 +357,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     LOG.info("Restarting SCM in cluster " + this.getClass());
     scm.stop();
     scm.join();
-    scm = HddsTestUtils.getScmSimple(conf);
+    scm = HddsTestUtils.getScmSimple(conf, scmConfigurator);
     scm.start();
     if (waitForDatanode) {
       waitForClusterToBeReady();
@@ -364,16 +376,21 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     startRecon();
   }
 
-  private void waitForHddsDatanodesStop() throws TimeoutException,
-      InterruptedException {
+  private void waitForHddsDatanodeToStop(DatanodeDetails dn)
+      throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      final int healthy = scm.getNodeCount(HEALTHY);
-      boolean isReady = healthy == hddsDatanodes.size();
-      if (!isReady) {
-        LOG.info("Waiting on {} datanodes out of {} to be marked unhealthy.",
-            healthy, hddsDatanodes.size());
+      NodeStatus status;
+      try {
+        status = scm.getScmNodeManager().getNodeStatus(dn);
+      } catch (NodeNotFoundException e) {
+        return true;
       }
-      return isReady;
+      if (status.equals(NodeStatus.inServiceHealthy())) {
+        LOG.info("Waiting on datanode to be marked stale.");
+        return false;
+      } else {
+        return true;
+      }
     }, 1000, waitForClusterToBeReadyTimeout);
   }
 
@@ -395,10 +412,12 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         dn.getPort(RATIS_ADMIN).getValue());
     config.setInt(DFS_CONTAINER_RATIS_SERVER_PORT,
         dn.getPort(RATIS_SERVER).getValue());
+    config.setFromObject(conf.getObject(ReplicationConfig.class)
+        .setPort(dn.getPort(REPLICATION).getValue()));
     hddsDatanodes.remove(i);
     if (waitForDatanode) {
       // wait for node to be removed from SCM healthy node list.
-      waitForHddsDatanodesStop();
+      waitForHddsDatanodeToStop(datanodeService.getDatanodeDetails());
     }
     String[] args = new String[] {};
     HddsDatanodeService service =
@@ -435,6 +454,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   public void shutdown() {
     try {
       LOG.info("Shutting down the Mini Ozone Cluster");
+      IOUtils.closeQuietly(clients.toArray(new AutoCloseable[0]));
       File baseDir = new File(GenericTestUtils.getTempPath(
           MiniOzoneClusterImpl.class.getSimpleName() + "-" +
               getClusterId()));
@@ -442,6 +462,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       FileUtils.deleteDirectory(baseDir);
       ContainerCache.getInstance(conf).shutdownCache();
       DefaultMetricsSystem.shutdown();
+
+      ManagedRocksObjectMetrics.INSTANCE.assertNoLeaks();
     } catch (IOException e) {
       LOG.error("Exception while shutting down the cluster.", e);
     }
@@ -470,7 +492,11 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   @Override
   public void startHddsDatanodes() {
     hddsDatanodes.forEach((datanode) -> {
-      datanode.setCertificateClient(getCAClient());
+      try {
+        datanode.setCertificateClient(getCAClient());
+      } catch (IOException e) {
+        LOG.error("Exception while setting certificate client to DataNode.", e);
+      }
       datanode.start();
     });
   }
@@ -589,7 +615,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         hddsDatanodes = createHddsDatanodes(
             Collections.singletonList(scm), reconServer);
 
-        MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf, om, scm,
+        MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf,
+            scmConfigurator, om, scm,
             hddsDatanodes, reconServer);
 
         cluster.setCAClient(certClient);
@@ -641,6 +668,15 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       if (!streamBufferMaxSize.isPresent()) {
         streamBufferMaxSize = Optional.of(2 * streamBufferFlushSize.get());
       }
+      if (!dataStreamBufferFlushSize.isPresent()) {
+        dataStreamBufferFlushSize = Optional.of((long) 4 * chunkSize.get());
+      }
+      if (!dataStreamMinPacketSize.isPresent()) {
+        dataStreamMinPacketSize = OptionalInt.of(chunkSize.get() / 4);
+      }
+      if (!datastreamWindowSize.isPresent()) {
+        datastreamWindowSize = Optional.of((long) 8 * chunkSize.get());
+      }
       if (!blockSize.isPresent()) {
         blockSize = Optional.of(2 * streamBufferMaxSize.get());
       }
@@ -657,6 +693,13 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
           streamBufferSizeUnit.get().toBytes(streamBufferMaxSize.get())));
       clientConfig.setStreamBufferFlushSize(Math.round(
           streamBufferSizeUnit.get().toBytes(streamBufferFlushSize.get())));
+      clientConfig.setDataStreamBufferFlushSize(Math.round(
+          streamBufferSizeUnit.get().toBytes(dataStreamBufferFlushSize.get())));
+      clientConfig.setDataStreamMinPacketSize((int) Math.round(
+          streamBufferSizeUnit.get()
+              .toBytes(dataStreamMinPacketSize.getAsInt())));
+      clientConfig.setStreamWindowSize(Math.round(
+          streamBufferSizeUnit.get().toBytes(datastreamWindowSize.get())));
       conf.setFromObject(clientConfig);
 
       conf.setStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
@@ -666,8 +709,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
           streamBufferSizeUnit.get());
       // MiniOzoneCluster should have global pipeline upper limit.
       conf.setInt(ScmConfigKeys.OZONE_SCM_RATIS_PIPELINE_LIMIT,
-          pipelineNumLimit >= DEFAULT_PIPELIME_LIMIT ?
-              pipelineNumLimit : DEFAULT_PIPELIME_LIMIT);
+          pipelineNumLimit >= DEFAULT_PIPELINE_LIMIT ?
+              pipelineNumLimit : DEFAULT_PIPELINE_LIMIT);
       conf.setTimeDuration(OMConfigKeys.OZONE_OM_RATIS_MINIMUM_TIMEOUT_KEY,
           DEFAULT_RATIS_RPC_TIMEOUT_SEC, TimeUnit.SECONDS);
       SCMClientConfig scmClientConfig = conf.getObject(SCMClientConfig.class);
@@ -703,7 +746,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
       scmStore = new SCMStorageConfig(conf);
       initializeScmStorage(scmStore);
-      StorageContainerManager scm = HddsTestUtils.getScmSimple(conf);
+      StorageContainerManager scm = HddsTestUtils.getScmSimple(conf,
+          scmConfigurator);
       HealthyPipelineSafeModeRule rule =
           scm.getScmSafeModeManager().getHealthyPipelineSafeModeRule();
       if (rule != null) {
@@ -713,7 +757,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       }
       return scm;
     }
-
     protected void initializeScmStorage(SCMStorageConfig scmStore)
         throws IOException {
       if (scmStore.getState() == StorageState.INITIALIZED) {
@@ -725,11 +768,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       }
       scmStore.setScmId(scmId.get());
       scmStore.initialize();
-      if (SCMHAUtils.isSCMHAEnabled(conf)) {
+      //TODO: HDDS-6897
+      //Disabling Ratis for only of MiniOzoneClusterImpl.
+      //MiniOzoneClusterImpl doesn't work with Ratis enabled SCM
+      if (Strings.isNotEmpty(conf.get(ScmConfigKeys.OZONE_SCM_HA_ENABLE_KEY))
+              && SCMHAUtils.isSCMHAEnabled(conf)) {
         scmStore.setSCMHAFlag(true);
         scmStore.persistCurrentState();
         SCMRatisServerImpl.initialize(clusterId, scmId.get(),
-            SCMHANodeDetails.loadSCMHAConfig(conf).getLocalNodeDetails(), conf);
+                SCMHANodeDetails.loadSCMHAConfig(conf, scmStore)
+                        .getLocalNodeDetails(), conf);
       }
     }
 
@@ -821,8 +869,6 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
             reservedSpaceString);
         dnConf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
             ratisDir.toString());
-        dnConf.set(OzoneConfigKeys.OZONE_CONTAINER_COPY_WORKDIR,
-            workDir.toString());
         if (reconServer != null) {
           OzoneStorageContainerManager reconScm =
               reconServer.getReconStorageContainerManager();
@@ -899,6 +945,10 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
           randomContainerPort);
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
           randomContainerPort);
+      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATASTREAM_ENABLED,
+          enableContainerDatastream);
+      conf.setBoolean(DFS_CONTAINER_RATIS_DATASTREAM_RANDOM_PORT,
+          randomContainerStreamPort);
 
       conf.setFromObject(new ReplicationConfig().setPort(0));
     }
@@ -932,6 +982,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
       conf.set(OZONE_RECON_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       conf.set(OZONE_RECON_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+      conf.set(OZONE_RECON_TASK_SAFEMODE_WAIT_THRESHOLD, "10s");
 
       ConfigurationProvider.setConfiguration(conf);
     }

@@ -39,6 +39,8 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static java.lang.String.format;
+
 /**
  * Holds the data structures which maintain the information about pipeline and
  * its state.
@@ -80,8 +82,8 @@ class PipelineStateMap {
 
     if (pipelineMap.putIfAbsent(pipeline.getId(), pipeline) != null) {
       LOG.warn("Duplicate pipeline ID detected. {}", pipeline.getId());
-      throw new IOException(String
-          .format("Duplicate pipeline ID %s detected.", pipeline.getId()));
+      throw new DuplicatedPipelineIdException(
+          format("Duplicate pipeline ID %s detected.", pipeline.getId()));
     }
     pipeline2container.put(pipeline.getId(), new TreeSet<>());
     if (pipeline.getPipelineState() == PipelineState.OPEN) {
@@ -106,9 +108,8 @@ class PipelineStateMap {
 
     Pipeline pipeline = getPipeline(pipelineID);
     if (pipeline.isClosed()) {
-      throw new IOException(String
-          .format("Cannot add container to pipeline=%s in closed state",
-              pipelineID));
+      throw new InvalidPipelineStateException(format(
+          "Cannot add container to pipeline=%s in closed state", pipelineID));
     }
     pipeline2container.get(pipelineID).add(containerID);
   }
@@ -145,7 +146,7 @@ class PipelineStateMap {
    *
    * @param pipelineID - PipelineID of the pipeline to be retrieved
    * @return Pipeline
-   * @throws IOException if pipeline is not found
+   * @throws PipelineNotFoundException if pipeline is not found
    */
   Pipeline getPipeline(PipelineID pipelineID) throws PipelineNotFoundException {
     Preconditions.checkNotNull(pipelineID,
@@ -154,7 +155,7 @@ class PipelineStateMap {
     Pipeline pipeline = pipelineMap.get(pipelineID);
     if (pipeline == null) {
       throw new PipelineNotFoundException(
-          String.format("%s not found", pipelineID));
+          format("%s not found", pipelineID));
     }
     return pipeline;
   }
@@ -205,7 +206,7 @@ class PipelineStateMap {
     if (state == PipelineState.OPEN) {
       return new ArrayList<>(
           query2OpenPipelines.getOrDefault(
-              replicationConfig, Collections.EMPTY_LIST));
+              replicationConfig, Collections.emptyList()));
     }
 
     List<Pipeline> pipelines = new ArrayList<>();
@@ -217,6 +218,36 @@ class PipelineStateMap {
     }
 
     return pipelines;
+  }
+
+  /**
+   * Get a count of pipelines with the given replicationConfig and state.
+   * This method is most efficient when getting a count for OPEN pipeline
+   * as the result can be obtained directly from the cached open list.
+   *
+   * @param replicationConfig - ReplicationConfig
+   * @param state             - Required PipelineState
+   * @return Count of pipelines with the specified replication config and state
+   */
+  int getPipelineCount(ReplicationConfig replicationConfig,
+      PipelineState state) {
+    Preconditions
+        .checkNotNull(replicationConfig, "ReplicationConfig cannot be null");
+    Preconditions.checkNotNull(state, "Pipeline state cannot be null");
+
+    if (state == PipelineState.OPEN) {
+      return query2OpenPipelines.getOrDefault(
+              replicationConfig, Collections.emptyList()).size();
+    }
+
+    int count = 0;
+    for (Pipeline pipeline : pipelineMap.values()) {
+      if (pipeline.getReplicationConfig().equals(replicationConfig)
+          && pipeline.getPipelineState() == state) {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**
@@ -239,12 +270,12 @@ class PipelineStateMap {
     Preconditions
         .checkNotNull(excludeDns, "Datanode exclude list cannot be null");
     Preconditions
-        .checkNotNull(excludeDns, "Pipeline exclude list cannot be null");
+        .checkNotNull(excludePipelines, "Pipeline exclude list cannot be null");
 
     List<Pipeline> pipelines = null;
     if (state == PipelineState.OPEN) {
       pipelines = new ArrayList<>(query2OpenPipelines.getOrDefault(
-          replicationConfig, Collections.EMPTY_LIST));
+          replicationConfig, Collections.emptyList()));
     } else {
       pipelines = new ArrayList<>(pipelineMap.values());
     }
@@ -274,7 +305,7 @@ class PipelineStateMap {
    *
    * @param pipelineID - PipelineID
    * @return Set of containerIDs belonging to the pipeline
-   * @throws IOException if pipeline is not found
+   * @throws PipelineNotFoundException if pipeline is not found
    */
   NavigableSet<ContainerID> getContainers(PipelineID pipelineID)
       throws PipelineNotFoundException {
@@ -284,7 +315,7 @@ class PipelineStateMap {
     NavigableSet<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
       throw new PipelineNotFoundException(
-          String.format("%s not found", pipelineID));
+          format("%s not found", pipelineID));
     }
     return new TreeSet<>(containerIDs);
   }
@@ -294,7 +325,7 @@ class PipelineStateMap {
    *
    * @param pipelineID - PipelineID
    * @return Number of containers belonging to the pipeline
-   * @throws IOException if pipeline is not found
+   * @throws PipelineNotFoundException if pipeline is not found
    */
   int getNumberOfContainers(PipelineID pipelineID)
       throws PipelineNotFoundException {
@@ -304,7 +335,7 @@ class PipelineStateMap {
     Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
       throw new PipelineNotFoundException(
-          String.format("%s not found", pipelineID));
+          format("%s not found", pipelineID));
     }
     return containerIDs.size();
   }
@@ -320,8 +351,8 @@ class PipelineStateMap {
 
     Pipeline pipeline = getPipeline(pipelineID);
     if (!pipeline.isClosed()) {
-      throw new IOException(
-          String.format("Pipeline with %s is not yet closed", pipelineID));
+      throw new InvalidPipelineStateException(
+          format("Pipeline with %s is not yet closed", pipelineID));
     }
 
     pipelineMap.remove(pipelineID);
@@ -347,7 +378,7 @@ class PipelineStateMap {
     Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
       throw new PipelineNotFoundException(
-          String.format("%s not found", pipelineID));
+          format("%s not found", pipelineID));
     }
     containerIDs.remove(containerID);
   }
@@ -359,7 +390,7 @@ class PipelineStateMap {
    *                   to be updated
    * @param state - new state of the pipeline
    * @return Pipeline with the updated state
-   * @throws IOException if pipeline does not exist
+   * @throws PipelineNotFoundException if pipeline does not exist
    */
   Pipeline updatePipelineState(PipelineID pipelineID, PipelineState state)
       throws PipelineNotFoundException {

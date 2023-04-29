@@ -19,9 +19,12 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -34,7 +37,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 
-import org.apache.hadoop.hdds.scm.ha.MockSCMHAManager;
+import org.apache.hadoop.hdds.scm.container.replication.ContainerReplicaPendingOps;
+import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -44,10 +48,10 @@ import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
 import org.apache.hadoop.util.Time;
 import org.apache.ozone.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.mockito.Mockito.when;
@@ -64,10 +68,10 @@ public class TestContainerStateManager {
   private DBStore dbStore;
   private Pipeline pipeline;
 
-  @Before
-  public void init() throws IOException {
+  @BeforeEach
+  public void init() throws IOException, TimeoutException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    scmhaManager = MockSCMHAManager.getInstance(true);
+    scmhaManager = SCMHAManagerStub.getInstance(true);
     testDir = GenericTestUtils.getTestDir(
         TestContainerManagerImpl.class.getSimpleName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
@@ -76,10 +80,10 @@ public class TestContainerStateManager {
     pipelineManager = Mockito.mock(PipelineManager.class);
     pipeline = Pipeline.newBuilder().setState(Pipeline.PipelineState.CLOSED)
             .setId(PipelineID.randomId())
-            .setReplicationConfig(new StandaloneReplicationConfig(
+            .setReplicationConfig(StandaloneReplicationConfig.getInstance(
                 ReplicationFactor.THREE))
             .setNodes(new ArrayList<>()).build();
-    when(pipelineManager.createPipeline(new StandaloneReplicationConfig(
+    when(pipelineManager.createPipeline(StandaloneReplicationConfig.getInstance(
         ReplicationFactor.THREE))).thenReturn(pipeline);
     when(pipelineManager.containsPipeline(Mockito.any(PipelineID.class)))
         .thenReturn(true);
@@ -91,11 +95,13 @@ public class TestContainerStateManager {
         .setRatisServer(scmhaManager.getRatisServer())
         .setContainerStore(SCMDBDefinition.CONTAINERS.getTable(dbStore))
         .setSCMDBTransactionBuffer(scmhaManager.getDBTransactionBuffer())
+        .setContainerReplicaPendingOps(new ContainerReplicaPendingOps(
+            conf, Clock.system(ZoneId.systemDefault())))
         .build();
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     containerStateManager.close();
     if (dbStore != null) {
@@ -106,7 +112,8 @@ public class TestContainerStateManager {
   }
 
   @Test
-  public void checkReplicationStateOK() throws IOException {
+  public void checkReplicationStateOK()
+      throws IOException, TimeoutException {
     //GIVEN
     ContainerInfo c1 = allocateContainer();
 
@@ -120,14 +127,15 @@ public class TestContainerStateManager {
 
     //WHEN
     Set<ContainerReplica> replicas = containerStateManager
-        .getContainerReplicas(c1.containerID().getProtobuf());
+        .getContainerReplicas(c1.containerID());
 
     //THEN
-    Assert.assertEquals(3, replicas.size());
+    Assertions.assertEquals(3, replicas.size());
   }
 
   @Test
-  public void checkReplicationStateMissingReplica() throws IOException {
+  public void checkReplicationStateMissingReplica()
+      throws IOException, TimeoutException {
     //GIVEN
 
     ContainerInfo c1 = allocateContainer();
@@ -140,10 +148,10 @@ public class TestContainerStateManager {
 
     //WHEN
     Set<ContainerReplica> replicas = containerStateManager
-        .getContainerReplicas(c1.containerID().getProtobuf());
+        .getContainerReplicas(c1.containerID());
 
-    Assert.assertEquals(2, replicas.size());
-    Assert.assertEquals(3, c1.getReplicationConfig().getRequiredNodes());
+    Assertions.assertEquals(2, replicas.size());
+    Assertions.assertEquals(3, c1.getReplicationConfig().getRequiredNodes());
   }
 
   private void addReplica(ContainerInfo cont, DatanodeDetails node) {
@@ -153,10 +161,11 @@ public class TestContainerStateManager {
         .setDatanodeDetails(node)
         .build();
     containerStateManager
-        .updateContainerReplica(cont.containerID().getProtobuf(), replica);
+        .updateContainerReplica(cont.containerID(), replica);
   }
 
-  private ContainerInfo allocateContainer() throws IOException {
+  private ContainerInfo allocateContainer()
+      throws IOException, TimeoutException {
 
     final ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(HddsProtos.LifeCycleState.OPEN)

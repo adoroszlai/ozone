@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.scm.storage;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,12 +28,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.ByteBufferReadable;
-import org.apache.hadoop.fs.CanUnbuffer;
-import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.DatanodeBlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.GetBlockResponseProto;
@@ -50,6 +47,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.ratis.thirdparty.io.grpc.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,18 +57,15 @@ import org.slf4j.LoggerFactory;
  * This class encapsulates all state management for iterating
  * through the sequence of chunks through {@link ChunkInputStream}.
  */
-public class BlockInputStream extends InputStream
-    implements Seekable, CanUnbuffer, ByteBufferReadable {
+public class BlockInputStream extends BlockExtendedInputStream {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockInputStream.class);
 
-  private static final int EOF = -1;
-
   private final BlockID blockID;
   private final long length;
   private Pipeline pipeline;
-  private final Token<OzoneBlockTokenIdentifier> token;
+  private Token<OzoneBlockTokenIdentifier> token;
   private final boolean verifyChecksum;
   private XceiverClientFactory xceiverClientFactory;
   private XceiverClientSpi xceiverClient;
@@ -109,19 +104,19 @@ public class BlockInputStream extends InputStream
   // can be reset if a new position is seeked.
   private int chunkIndexOfPrevPosition;
 
-  private final Function<BlockID, Pipeline> refreshPipelineFunction;
+  private final Function<BlockID, BlockLocationInfo> refreshFunction;
 
   public BlockInputStream(BlockID blockId, long blockLen, Pipeline pipeline,
       Token<OzoneBlockTokenIdentifier> token, boolean verifyChecksum,
       XceiverClientFactory xceiverClientFactory,
-      Function<BlockID, Pipeline> refreshPipelineFunction) {
+      Function<BlockID, BlockLocationInfo> refreshFunction) {
     this.blockID = blockId;
     this.length = blockLen;
     this.pipeline = pipeline;
     this.token = token;
     this.verifyChecksum = verifyChecksum;
     this.xceiverClientFactory = xceiverClientFactory;
-    this.refreshPipelineFunction = refreshPipelineFunction;
+    this.refreshFunction = refreshFunction;
   }
 
   public BlockInputStream(BlockID blockId, long blockLen, Pipeline pipeline,
@@ -147,18 +142,22 @@ public class BlockInputStream extends InputStream
     IOException catchEx = null;
     do {
       try {
-        // If refresh returns new pipeline, retry with it.
-        // If we get IOException due to connectivity issue,
-        // retry according to retry policy.
         chunks = getChunkInfos();
         break;
+        // If we get a StorageContainerException or an IOException due to
+        // datanodes are not reachable, refresh to get the latest pipeline
+        // info and retry.
+        // Otherwise, just retry according to the retry policy.
       } catch (SCMSecurityException ex) {
         throw ex;
       } catch (StorageContainerException ex) {
-        refreshPipeline(ex);
+        refreshBlockInfo(ex);
         catchEx = ex;
       } catch (IOException ex) {
         LOG.debug("Retry to get chunk info fail", ex);
+        if (isConnectivityIssue(ex)) {
+          refreshBlockInfo(ex);
+        }
         catchEx = ex;
       }
     } while (shouldRetryRead(catchEx));
@@ -194,18 +193,26 @@ public class BlockInputStream extends InputStream
     }
   }
 
-  private void refreshPipeline(IOException cause) throws IOException {
+  /**
+   * Check if this exception is because datanodes are not reachable.
+   */
+  private boolean isConnectivityIssue(IOException ex) {
+    return Status.fromThrowable(ex).getCode() == Status.UNAVAILABLE.getCode();
+  }
+
+  private void refreshBlockInfo(IOException cause) throws IOException {
     LOG.info("Unable to read information for block {} from pipeline {}: {}",
         blockID, pipeline.getId(), cause.getMessage());
-    if (refreshPipelineFunction != null) {
-      LOG.debug("Re-fetching pipeline for block {}", blockID);
-      Pipeline newPipeline = refreshPipelineFunction.apply(blockID);
-      if (newPipeline == null || newPipeline.sameDatanodes(pipeline)) {
-        LOG.warn("No new pipeline for block {}", blockID);
-        throw cause;
+    if (refreshFunction != null) {
+      LOG.debug("Re-fetching pipeline and block token for block {}", blockID);
+      BlockLocationInfo blockLocationInfo = refreshFunction.apply(blockID);
+      if (blockLocationInfo == null) {
+        LOG.debug("No new block location info for block {}", blockID);
       } else {
-        LOG.debug("New pipeline got for block {}", blockID);
-        this.pipeline = newPipeline;
+        LOG.debug("New pipeline for block {}: {}", blockID,
+            blockLocationInfo.getPipeline());
+        this.pipeline = blockLocationInfo.getPipeline();
+        this.token = blockLocationInfo.getToken();
       }
     } else {
       throw cause;
@@ -219,40 +226,63 @@ public class BlockInputStream extends InputStream
   protected List<ChunkInfo> getChunkInfos() throws IOException {
     // irrespective of the container state, we will always read via Standalone
     // protocol.
-    if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
+    if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE && pipeline
+        .getType() != HddsProtos.ReplicationType.EC) {
       pipeline = Pipeline.newBuilder(pipeline)
-          .setReplicationConfig(new StandaloneReplicationConfig(
+          .setReplicationConfig(StandaloneReplicationConfig.getInstance(
               ReplicationConfig
                   .getLegacyFactor(pipeline.getReplicationConfig())))
           .build();
     }
     acquireClient();
-    boolean success = false;
-    List<ChunkInfo> chunks;
     try {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Initializing BlockInputStream for get key to access {}",
             blockID.getContainerID());
       }
 
-      DatanodeBlockID datanodeBlockID = blockID
-          .getDatanodeBlockIDProtobuf();
-      GetBlockResponseProto response = ContainerProtocolCalls
-          .getBlock(xceiverClient, datanodeBlockID, token);
+      DatanodeBlockID.Builder blkIDBuilder =
+          DatanodeBlockID.newBuilder().setContainerID(blockID.getContainerID())
+              .setLocalID(blockID.getLocalID())
+              .setBlockCommitSequenceId(blockID.getBlockCommitSequenceId());
 
-      chunks = response.getBlockData().getChunksList();
-      success = true;
+      int replicaIndex = pipeline.getReplicaIndex(pipeline.getClosestNode());
+      if (replicaIndex > 0) {
+        blkIDBuilder.setReplicaIndex(replicaIndex);
+      }
+      GetBlockResponseProto response = ContainerProtocolCalls
+          .getBlock(xceiverClient, VALIDATORS, blkIDBuilder.build(), token);
+
+      return response.getBlockData().getChunksList();
     } finally {
-      if (!success) {
-        xceiverClientFactory.releaseClientForReadData(xceiverClient, false);
+      releaseClient();
+    }
+  }
+
+  private static final List<CheckedBiFunction> VALIDATORS
+      = ContainerProtocolCalls.toValidatorList(
+          (request, response) -> validate(response));
+
+  static void validate(ContainerCommandResponseProto response)
+      throws IOException {
+    if (!response.hasGetBlock()) {
+      throw new IllegalArgumentException("Not GetBlock: response=" + response);
+    }
+    final GetBlockResponseProto b = response.getGetBlock();
+    final List<ChunkInfo> chunks = b.getBlockData().getChunksList();
+    for (int i = 0; i < chunks.size(); i++) {
+      final ChunkInfo c = chunks.get(i);
+      if (c.getLen() <= 0) {
+        throw new IOException("Failed to get chunkInfo["
+            + i + "]: len == " + c.getLen());
       }
     }
-
-    return chunks;
   }
 
   protected void acquireClient() throws IOException {
-    xceiverClient = xceiverClientFactory.acquireClientForReadData(pipeline);
+    if (xceiverClientFactory != null && xceiverClient == null) {
+      xceiverClient = xceiverClientFactory.acquireClientForReadData(pipeline);
+    }
   }
 
   /**
@@ -269,46 +299,9 @@ public class BlockInputStream extends InputStream
         xceiverClientFactory, () -> pipeline, verifyChecksum, token);
   }
 
-  public synchronized long getRemaining() {
-    return length - getPos();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public synchronized int read() throws IOException {
-    byte[] buf = new byte[1];
-    if (read(buf, 0, 1) == EOF) {
-      return EOF;
-    }
-    return Byte.toUnsignedInt(buf[0]);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public synchronized int read(byte[] b, int off, int len) throws IOException {
-    ByteReaderStrategy strategy = new ByteArrayReader(b, off, len);
-    if (len == 0) {
-      return 0;
-    }
-    return readWithStrategy(strategy);
-  }
-
-  @Override
-  public synchronized int read(ByteBuffer byteBuffer) throws IOException {
-    ByteReaderStrategy strategy = new ByteBufferReader(byteBuffer);
-    int len = strategy.getTargetLength();
-    if (len == 0) {
-      return 0;
-    }
-    return readWithStrategy(strategy);
-  }
-
-  synchronized int readWithStrategy(ByteReaderStrategy strategy) throws
-      IOException {
+  protected synchronized int readWithStrategy(ByteReaderStrategy strategy)
+      throws IOException {
     Preconditions.checkArgument(strategy != null);
     if (!initialized) {
       initialize();
@@ -332,7 +325,13 @@ public class BlockInputStream extends InputStream
       int numBytesRead;
       try {
         numBytesRead = strategy.readFromBlock(current, numBytesToRead);
-        retries = 0; // reset retries after successful read
+        retries = 0;
+        // If we get a StorageContainerException or an IOException due to
+        // datanodes are not reachable, refresh to get the latest pipeline
+        // info and retry.
+        // Otherwise, just retry according to the retry policy.
+      } catch (SCMSecurityException ex) {
+        throw ex;
       } catch (StorageContainerException e) {
         if (shouldRetryRead(e)) {
           handleReadError(e);
@@ -340,13 +339,13 @@ public class BlockInputStream extends InputStream
         } else {
           throw e;
         }
-      } catch (SCMSecurityException ex) {
-        throw ex;
       } catch (IOException ex) {
-        // We got a IOException which might be due
-        // to DN down or connectivity issue.
         if (shouldRetryRead(ex)) {
-          current.releaseClient();
+          if (isConnectivityIssue(ex)) {
+            handleReadError(ex);
+          } else {
+            current.releaseClient();
+          }
           continue;
         } else {
           throw ex;
@@ -398,7 +397,7 @@ public class BlockInputStream extends InputStream
     }
 
     checkOpen();
-    if (pos < 0 || pos >= length) {
+    if (pos < 0 || pos > length) {
       if (pos == 0) {
         // It is possible for length and pos to be zero in which case
         // seek should return instead of throwing exception
@@ -473,13 +472,9 @@ public class BlockInputStream extends InputStream
 
   private void releaseClient() {
     if (xceiverClientFactory != null && xceiverClient != null) {
-      xceiverClientFactory.releaseClient(xceiverClient, false);
+      xceiverClientFactory.releaseClientForReadData(xceiverClient, false);
       xceiverClient = null;
     }
-  }
-
-  public synchronized void resetPosition() {
-    this.blockPosition = 0;
   }
 
   /**
@@ -493,10 +488,12 @@ public class BlockInputStream extends InputStream
     }
   }
 
+  @Override
   public BlockID getBlockID() {
     return blockID;
   }
 
+  @Override
   public long getLength() {
     return length;
   }
@@ -549,7 +546,7 @@ public class BlockInputStream extends InputStream
       }
     }
 
-    refreshPipeline(cause);
+    refreshBlockInfo(cause);
   }
 
   @VisibleForTesting

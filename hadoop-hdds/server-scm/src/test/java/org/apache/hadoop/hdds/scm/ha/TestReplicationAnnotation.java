@@ -20,15 +20,16 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.SCMRatisProtocol;
 import org.apache.hadoop.hdds.protocol.proto.SCMRatisProtocol.RequestType;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
+import org.apache.hadoop.hdds.scm.RemoveSCMRequest;
 import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CertificateStore;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
 import org.apache.ratis.server.RaftServer;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -44,7 +45,7 @@ public class TestReplicationAnnotation {
   private SCMHAInvocationHandler scmhaInvocationHandler;
   private SCMRatisServer scmRatisServer;
 
-  @Before
+  @BeforeEach
   public void setup() {
     scmRatisServer = new SCMRatisServer() {
       @Override
@@ -64,6 +65,11 @@ public class TestReplicationAnnotation {
 
       @Override
       public void stop() throws IOException {
+      }
+
+      @Override
+      public boolean isStopped() {
+        return false;
       }
 
       @Override
@@ -88,6 +94,11 @@ public class TestReplicationAnnotation {
       }
 
       @Override
+      public boolean removeSCM(RemoveSCMRequest request) throws IOException {
+        return false;
+      }
+
+      @Override
       public SCMStateMachine getSCMStateMachine() {
         return null;
       }
@@ -107,15 +118,16 @@ public class TestReplicationAnnotation {
 
     ContainerStateManager proxy =
         (ContainerStateManager) Proxy.newProxyInstance(
-        SCMHAInvocationHandler.class.getClassLoader(),
-        new Class<?>[]{ContainerStateManager.class}, scmhaInvocationHandler);
+            SCMHAInvocationHandler.class.getClassLoader(),
+            new Class<?>[]{ContainerStateManager.class},
+            scmhaInvocationHandler);
 
     try {
       proxy.addContainer(HddsProtos.ContainerInfoProto.getDefaultInstance());
-      Assert.fail("Cannot reach here: should have seen a IOException");
+      Assertions.fail("Cannot reach here: should have seen a IOException");
     } catch (IOException ignore) {
-      Assert.assertNotNull(ignore.getMessage() != null);
-      Assert.assertEquals("submitRequest is called.",
+      Assertions.assertNotNull(ignore.getMessage() != null);
+      Assertions.assertEquals("submitRequest is called.",
           ignore.getMessage());
     }
 
@@ -124,18 +136,19 @@ public class TestReplicationAnnotation {
 
     CertificateStore certificateStore =
         (CertificateStore) Proxy.newProxyInstance(
-        SCMHAInvocationHandler.class.getClassLoader(),
-        new Class<?>[]{CertificateStore.class}, scmhaInvocationHandler);
+            SCMHAInvocationHandler.class.getClassLoader(),
+            new Class<?>[]{CertificateStore.class},
+            scmhaInvocationHandler);
 
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     try {
       certificateStore.storeValidCertificate(BigInteger.valueOf(100L),
           KeyStoreTestUtil.generateCertificate("CN=Test", keyPair, 30,
           "SHA256withRSA"), HddsProtos.NodeType.DATANODE);
-      Assert.fail("Cannot reach here: should have seen a IOException");
+      Assertions.fail("Cannot reach here: should have seen a IOException");
     } catch (IOException ignore) {
-      Assert.assertNotNull(ignore.getMessage() != null);
-      Assert.assertEquals("submitRequest is called.",
+      Assertions.assertNotNull(ignore.getMessage() != null);
+      Assertions.assertEquals("submitRequest is called.",
           ignore.getMessage());
     }
 

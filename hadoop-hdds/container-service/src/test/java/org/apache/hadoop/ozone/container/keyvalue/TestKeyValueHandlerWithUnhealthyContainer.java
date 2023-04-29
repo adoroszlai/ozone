@@ -18,29 +18,33 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.TestHddsDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 
 import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_UNHEALTHY;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.SUCCESS;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNKNOWN_BCSID;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.DATANODE_UUID;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getDummyCommandRequestProto;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.apache.hadoop.ozone.container.ContainerTestHelper.getPutBlockRequest;
+import static org.apache.hadoop.ozone.container.ContainerTestHelper.getTestBlockID;
+import static org.apache.hadoop.ozone.container.ContainerTestHelper.getWriteChunkRequest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -61,7 +65,7 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
         handler.handleReadContainer(
             getDummyCommandRequestProto(ContainerProtos.Type.ReadContainer),
             container);
-    assertThat(response.getResult(), is(SUCCESS));
+    assertEquals(SUCCESS, response.getResult());
   }
 
   @Test
@@ -73,7 +77,7 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
         handler.handleGetBlock(
             getDummyCommandRequestProto(ContainerProtos.Type.GetBlock),
             container);
-    assertThat(response.getResult(), is(UNKNOWN_BCSID));
+    assertEquals(UNKNOWN_BCSID, response.getResult());
   }
 
   @Test
@@ -86,7 +90,7 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
             getDummyCommandRequestProto(
                 ContainerProtos.Type.GetCommittedBlockLength),
             container);
-    assertThat(response.getResult(), is(UNKNOWN_BCSID));
+    assertEquals(UNKNOWN_BCSID, response.getResult());
   }
 
   @Test
@@ -99,20 +103,7 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
             getDummyCommandRequestProto(
                 ContainerProtos.Type.ReadChunk),
             container, null);
-    assertThat(response.getResult(), is(UNKNOWN_BCSID));
-  }
-
-  @Test
-  public void testDeleteChunk() throws IOException {
-    KeyValueContainer container = getMockUnhealthyContainer();
-    KeyValueHandler handler = getDummyHandler();
-
-    ContainerProtos.ContainerCommandResponseProto response =
-        handler.handleDeleteChunk(
-            getDummyCommandRequestProto(
-                ContainerProtos.Type.DeleteChunk),
-            container);
-    assertThat(response.getResult(), is(CONTAINER_UNHEALTHY));
+    assertEquals(UNKNOWN_BCSID, response.getResult());
   }
 
   @Test
@@ -125,7 +116,25 @@ public class TestKeyValueHandlerWithUnhealthyContainer {
             getDummyCommandRequestProto(
                 ContainerProtos.Type.GetSmallFile),
             container);
-    assertThat(response.getResult(), is(UNKNOWN_BCSID));
+    assertEquals(UNKNOWN_BCSID, response.getResult());
+  }
+
+  @Test
+  void testNPEFromPutBlock() throws IOException {
+    KeyValueContainer container = new KeyValueContainer(
+        mock(KeyValueContainerData.class),
+        new OzoneConfiguration());
+    KeyValueHandler subject = getDummyHandler();
+
+    BlockID blockID = getTestBlockID(1);
+    ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
+        getWriteChunkRequest(MockPipeline.createSingleNodePipeline(),
+            blockID, 123);
+    ContainerProtos.ContainerCommandResponseProto response =
+        subject.handle(
+            getPutBlockRequest(writeChunkRequest),
+            container, null);
+    assertEquals(CONTAINER_INTERNAL_ERROR, response.getResult());
   }
 
   // -- Helper methods below.

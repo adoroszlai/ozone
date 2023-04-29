@@ -21,11 +21,11 @@ package org.apache.hadoop.ozone.container.keyvalue.impl;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
 import org.apache.hadoop.ozone.container.common.impl.ContainerLayoutVersion;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
+import org.apache.ratis.statemachine.StateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +75,20 @@ public class ChunkManagerDispatcher implements ChunkManager {
         .writeChunk(container, blockID, info, data, dispatcherContext);
   }
 
+  public String streamInit(Container container, BlockID blockID)
+      throws StorageContainerException {
+    return selectHandler(container)
+        .streamInit(container, blockID);
+  }
+
+  @Override
+  public StateMachine.DataChannel getStreamDataChannel(
+          Container container, BlockID blockID, ContainerMetrics metrics)
+          throws StorageContainerException {
+    return selectHandler(container)
+            .getStreamDataChannel(container, blockID, metrics);
+  }
+
   @Override
   public void finishWriteChunks(KeyValueContainer kvContainer,
       BlockData blockData) throws IOException {
@@ -102,9 +117,12 @@ public class ChunkManagerDispatcher implements ChunkManager {
 
     Preconditions.checkNotNull(blockID, "Block ID cannot be null.");
 
-    selectHandler(container)
-        .deleteChunk(container, blockID, info);
-    container.getContainerData().decrBytesUsed(info.getLen());
+    // Delete the chunk from disk.
+    // Do not decrement the ContainerData counters (usedBytes) here as it
+    // will be updated while deleting the block from the DB
+
+    selectHandler(container).deleteChunk(container, blockID, info);
+
   }
 
   @Override
@@ -113,11 +131,11 @@ public class ChunkManagerDispatcher implements ChunkManager {
 
     Preconditions.checkNotNull(blockData, "Block data cannot be null.");
 
-    selectHandler(container).deleteChunks(container, blockData);
+    // Delete the chunks belonging to blockData.
+    // Do not decrement the ContainerData counters (usedBytes) here as it
+    // will be updated while deleting the block from the DB
 
-    container.getContainerData().decrBytesUsed(
-        blockData.getChunks().stream()
-            .mapToLong(ContainerProtos.ChunkInfo::getLen).sum());
+    selectHandler(container).deleteChunks(container, blockData);
   }
 
   @Override

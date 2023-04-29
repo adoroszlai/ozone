@@ -156,8 +156,7 @@ public class ContainerController {
   public Container importContainer(
       final ContainerData containerData,
       final InputStream rawContainerStream,
-      final TarContainerPacker packer)
-      throws IOException {
+      final TarContainerPacker packer) throws IOException {
     return handlers.get(containerData.getContainerType())
         .importContainer(containerData, rawContainerStream, packer);
   }
@@ -195,6 +194,10 @@ public class ContainerController {
 
   public Iterator<Container<?>> getContainers() {
     return containerSet.getContainerIterator();
+  }
+
+  public Iterable<Container<?>> getContainerSet() {
+    return containerSet;
   }
 
   /**

@@ -79,6 +79,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -107,6 +108,7 @@ import static org.apache.hadoop.hdds.utils.HddsServerUtil.getScmRpcRetryInterval
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true,
     showDefaultValues = true)
+@SuppressWarnings("java:S2245") // no need for secure random
 public final class SCMThroughputBenchmark implements Callable<Void> {
 
   public static final Logger LOG =
@@ -161,7 +163,7 @@ public final class SCMThroughputBenchmark implements Callable<Void> {
       defaultValue = "4")
   private int numHeartbeats = 4;
 
-  @CommandLine.Option(names = {"--scmHost"},
+  @CommandLine.Option(names = {"--scmHost", "--scm-host"},
       required = true,
       description = "The leader scm host x.x.x.x.")
   private String scm;
@@ -501,7 +503,7 @@ public final class SCMThroughputBenchmark implements Callable<Void> {
       public void run() {
         while (totalBlockCounter.getAndIncrement() < totalBlocks) {
           doAllocateBlock(blockSize, 1,
-              new RatisReplicationConfig(ReplicationFactor.THREE));
+              RatisReplicationConfig.getInstance(ReplicationFactor.THREE));
         }
       }
     }
@@ -761,7 +763,7 @@ public final class SCMThroughputBenchmark implements Callable<Void> {
           try {
             datanode.sendHeartbeat();
             succReportSendCounter.incrementAndGet();
-          } catch (IOException e) {
+          } catch (IOException | TimeoutException e) {
             LOG.error("{}", e);
             failReportSendCounter.incrementAndGet();
           }
@@ -801,7 +803,7 @@ public final class SCMThroughputBenchmark implements Callable<Void> {
       }
     }
 
-    public void sendHeartbeat() throws IOException {
+    public void sendHeartbeat() throws IOException, TimeoutException {
       SCMHeartbeatRequestProto heartbeatRequest = SCMHeartbeatRequestProto
           .newBuilder()
           .setDatanodeDetails(datanodeDetails.getProtoBufMessage())

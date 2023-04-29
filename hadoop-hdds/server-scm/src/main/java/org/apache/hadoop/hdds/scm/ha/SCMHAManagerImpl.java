@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
+import org.apache.hadoop.hdds.scm.RemoveSCMRequest;
 import org.apache.hadoop.hdds.scm.metadata.DBTransactionBuffer;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBTransactionBufferImpl;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdds.utils.HAUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -334,12 +336,20 @@ public class SCMHAManagerImpl implements SCMHAManager {
    * {@inheritDoc}
    */
   @Override
-  public void shutdown() throws IOException {
+  public void stop() throws IOException {
     if (ratisServer != null) {
       ratisServer.stop();
-      ratisServer.getSCMStateMachine().close();
       grpcServer.stop();
+      close();
     }
+  }
+
+  /**
+   * Releases resources that are allocated even if not {@link #start()}ed.
+   */
+  @Override
+  public void close() {
+    IOUtils.close(LOG, transactionBuffer);
   }
 
   @Override
@@ -355,6 +365,26 @@ public class SCMHAManagerImpl implements SCMHAManager {
         getRatisServer().getDivision().getGroup().getGroupId());
     return getRatisServer().addSCM(request);
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean removeSCM(RemoveSCMRequest request) throws IOException {
+    // Currently we don't support decommission of Primordial SCM
+    // The caller should make sure that the requested node is not Primordial SCM
+
+    String clusterId = scm.getClusterId();
+    if (!request.getClusterId().equals(scm.getClusterId())) {
+      throw new IOException("SCM " + request.getScmId() +
+          " with address " + request.getRatisAddr() +
+          " has cluster Id " + request.getClusterId() +
+          " but leader SCM cluster id is " + clusterId);
+    }
+    Preconditions.checkNotNull(ratisServer.getDivision().getGroup());
+    return ratisServer.removeSCM(request);
+  }
+
 
   void stopServices() throws Exception {
 
@@ -376,12 +406,17 @@ public class SCMHAManagerImpl implements SCMHAManager {
         metadataStore.getDeletedBlocksTXTable());
     scm.getReplicationManager().getMoveScheduler()
         .reinitialize(metadataStore.getMoveTable());
+    scm.getStatefulServiceStateManager().reinitialize(
+        metadataStore.getStatefulServiceConfigTable());
     if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
       if (scm.getRootCertificateServer() != null) {
         scm.getRootCertificateServer().reinitialize(metadataStore);
       }
       scm.getScmCertificateServer().reinitialize(metadataStore);
     }
+    // This call also performs upgrade finalization if the new table contains a
+    // higher metadata layout version than the SCM's current one.
+    scm.getFinalizationManager().reinitialize(metadataStore.getMetaTable());
   }
 
   @VisibleForTesting

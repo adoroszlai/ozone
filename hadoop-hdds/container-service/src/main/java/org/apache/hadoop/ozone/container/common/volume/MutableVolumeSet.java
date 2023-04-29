@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -121,6 +122,10 @@ public class MutableVolumeSet implements VolumeSet {
       this.volumeFactory = new MetadataVolumeFactory(conf, usageCheckFactory,
           this);
       maxVolumeFailuresTolerated = dnConf.getFailedMetadataVolumesTolerated();
+    } else if (volumeType == StorageVolume.VolumeType.DB_VOLUME) {
+      this.volumeFactory = new DbVolumeFactory(conf, usageCheckFactory,
+          this, datanodeUuid, clusterID);
+      maxVolumeFailuresTolerated = dnConf.getFailedDbVolumesTolerated();
     } else {
       this.volumeFactory = new HddsVolumeFactory(conf, usageCheckFactory,
           this, datanodeUuid, clusterID);
@@ -150,6 +155,8 @@ public class MutableVolumeSet implements VolumeSet {
     Collection<String> rawLocations;
     if (volumeType == StorageVolume.VolumeType.META_VOLUME) {
       rawLocations = HddsServerUtil.getOzoneDatanodeRatisDirectory(conf);
+    } else if (volumeType == StorageVolume.VolumeType.DB_VOLUME) {
+      rawLocations = HddsServerUtil.getDatanodeDbDirs(conf);
     } else {
       rawLocations = HddsServerUtil.getDatanodeStorageDirs(conf);
     }
@@ -449,6 +456,11 @@ public class MutableVolumeSet implements VolumeSet {
   }
 
   @VisibleForTesting
+  public void setVolumeMap(Map<String, StorageVolume> map) {
+    this.volumeMap = map;
+  }
+
+  @VisibleForTesting
   public Map<StorageType, List<StorageVolume>> getVolumeStateMap() {
     return ImmutableMap.copyOf(volumeStateMap);
   }
@@ -474,28 +486,32 @@ public class MutableVolumeSet implements VolumeSet {
       StorageVolume volume;
       for (Map.Entry<String, StorageVolume> entry : volumeMap.entrySet()) {
         volume = entry.getValue();
-        VolumeInfo volumeInfo = volume.getVolumeInfo();
-        long scmUsed;
-        long remaining;
-        long capacity;
-        failed = false;
-        try {
-          scmUsed = volumeInfo.getScmUsed();
-          remaining = volumeInfo.getAvailable();
-          capacity = volumeInfo.getCapacity();
-        } catch (UncheckedIOException ex) {
-          LOG.warn("Failed to get scmUsed and remaining for container " +
-              "storage location {}", volumeInfo.getRootDir(), ex);
-          // reset scmUsed and remaining if df/du failed.
-          scmUsed = 0;
-          remaining = 0;
-          capacity = 0;
-          failed = true;
+        Optional<VolumeInfo> volumeInfo = volume.getVolumeInfo();
+        long scmUsed = 0;
+        long remaining = 0;
+        long capacity = 0;
+        String rootDir = "";
+        failed = true;
+        if (volumeInfo.isPresent()) {
+          try {
+            rootDir = volumeInfo.get().getRootDir();
+            scmUsed = volumeInfo.get().getScmUsed();
+            remaining = volumeInfo.get().getAvailable();
+            capacity = volumeInfo.get().getCapacity();
+            failed = false;
+          } catch (UncheckedIOException ex) {
+            LOG.warn("Failed to get scmUsed and remaining for container " +
+                    "storage location {}", volumeInfo.get().getRootDir(), ex);
+            // reset scmUsed and remaining if df/du failed.
+            scmUsed = 0;
+            remaining = 0;
+            capacity = 0;
+          }
         }
 
         StorageLocationReport.Builder builder =
             StorageLocationReport.newBuilder();
-        builder.setStorageLocation(volumeInfo.getRootDir())
+        builder.setStorageLocation(rootDir)
             .setId(volume.getStorageID())
             .setFailed(failed)
             .setCapacity(capacity)

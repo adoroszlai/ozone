@@ -78,12 +78,14 @@ public class PipelineStateManagerImpl implements PipelineStateManager {
       LOG.info("No pipeline exists in current db");
       return;
     }
-    TableIterator<PipelineID, ? extends Table.KeyValue<PipelineID, Pipeline>>
-        iterator = pipelineStore.iterator();
-    while (iterator.hasNext()) {
-      Pipeline pipeline = iterator.next().getValue();
-      pipelineStateMap.addPipeline(pipeline);
-      nodeManager.addPipeline(pipeline);
+    try (TableIterator<PipelineID,
+        ? extends Table.KeyValue<PipelineID, Pipeline>> iterator =
+             pipelineStore.iterator()) {
+      while (iterator.hasNext()) {
+        Pipeline pipeline = iterator.next().getValue();
+        pipelineStateMap.addPipeline(pipeline);
+        nodeManager.addPipeline(pipeline);
+      }
     }
   }
 
@@ -94,10 +96,10 @@ public class PipelineStateManagerImpl implements PipelineStateManager {
     try {
       Pipeline pipeline = Pipeline.getFromProtobuf(pipelineProto);
       if (pipelineStore != null) {
-        transactionBuffer
-            .addToBuffer(pipelineStore, pipeline.getId(), pipeline);
         pipelineStateMap.addPipeline(pipeline);
         nodeManager.addPipeline(pipeline);
+        transactionBuffer
+            .addToBuffer(pipelineStore, pipeline.getId(), pipeline);
         LOG.info("Created pipeline {}.", pipeline);
       }
     } finally {
@@ -183,6 +185,26 @@ public class PipelineStateManagerImpl implements PipelineStateManager {
     try {
       return pipelineStateMap
           .getPipelines(replicationConfig, state, excludeDns, excludePipelines);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+
+  /**
+   * Returns the count of pipelines meeting the given ReplicationConfig and
+   * state.
+   * @param replicationConfig The ReplicationConfig of the pipelines to count
+   * @param state The current state of the pipelines to count
+   * @return The count of pipelines meeting the above criteria
+   */
+  @Override
+  public int getPipelineCount(
+      ReplicationConfig replicationConfig,
+      Pipeline.PipelineState state) {
+    lock.readLock().lock();
+    try {
+      return pipelineStateMap.getPipelineCount(replicationConfig, state);
     } finally {
       lock.readLock().unlock();
     }

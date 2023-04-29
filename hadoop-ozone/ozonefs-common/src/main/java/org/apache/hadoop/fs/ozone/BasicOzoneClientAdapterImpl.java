@@ -21,11 +21,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.HashSet;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -41,7 +44,9 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.OFSPath;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -50,6 +55,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.io.OzoneDataStreamOutput;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -57,14 +63,20 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.snapshot.SnapshotDiffReportOzone;
+import org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
+import static org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse.JobStatus.DONE;
+
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,15 +91,21 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
 
   static final Logger LOG =
       LoggerFactory.getLogger(BasicOzoneClientAdapterImpl.class);
+  public static final String ACTIVE_FS_SNAPSHOT_NAME = ".";
 
   private OzoneClient ozoneClient;
   private ObjectStore objectStore;
   private OzoneVolume volume;
   private OzoneBucket bucket;
-  private ReplicationConfig replicationConfig;
+  private ReplicationConfig bucketReplicationConfig;
+  // Client side configured replication config.
+  private ReplicationConfig clientConfiguredReplicationConfig;
   private boolean securityEnabled;
   private int configuredDnPort;
   private OzoneConfiguration config;
+  private long nextReplicationConfigRefreshTime;
+  private long bucketRepConfigRefreshPeriodMS;
+  private java.time.Clock clock = Clock.system(ZoneOffset.UTC);
 
   /**
    * Create new OzoneClientAdapter implementation.
@@ -112,6 +130,11 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       throws IOException {
 
     OzoneConfiguration conf = OzoneConfiguration.of(hadoopConf);
+    bucketRepConfigRefreshPeriodMS = conf.getLong(
+        OzoneConfigKeys
+            .OZONE_CLIENT_BUCKET_REPLICATION_CONFIG_REFRESH_PERIOD_MS,
+        OzoneConfigKeys
+            .OZONE_CLIENT_BUCKET_REPLICATION_CONFIG_REFRESH_PERIOD_DEFAULT_MS);
     if (omHost == null && OmUtils.isServiceIdsDefined(conf)) {
       // When the host name or service id isn't given
       // but ozone.om.service.ids is defined, declare failure.
@@ -141,7 +164,8 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       this.securityEnabled = true;
     }
 
-    replicationConfig = ReplicationConfig.getDefault(conf);
+    clientConfiguredReplicationConfig =
+        OzoneClientUtils.getClientConfiguredReplicationConfig(conf);
 
     if (OmUtils.isOmHAServiceId(conf, omHost)) {
       // omHost is listed as one of the service ids in the config,
@@ -158,6 +182,9 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     objectStore = ozoneClient.getObjectStore();
     this.volume = objectStore.getVolume(volumeStr);
     this.bucket = volume.getBucket(bucketStr);
+    bucketReplicationConfig = this.bucket.getReplicationConfig();
+    nextReplicationConfigRefreshTime =
+        clock.millis() + bucketRepConfigRefreshPeriodMS;
 
     // resolve the bucket layout in case of Link Bucket
     BucketLayout resolvedBucketLayout =
@@ -172,9 +199,20 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     this.config = conf;
   }
 
+  /**
+   * This API returns the value what is configured at client side only. It could
+   * differ from the server side default values. If no replication config
+   * configured at client, it will return 3.
+   */
   @Override
   public short getDefaultReplication() {
-    return (short) replicationConfig.getRequiredNodes();
+    if (clientConfiguredReplicationConfig == null) {
+      // to provide backward compatibility, we are just retuning 3;
+      // However we need to handle with the correct behavior.
+      // TODO: Please see HDDS-5646
+      return (short) ReplicationFactor.THREE.getValue();
+    }
+    return (short) clientConfiguredReplicationConfig.getRequiredNodes();
   }
 
   @Override
@@ -189,6 +227,7 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       return bucket.readFile(key).getInputStream();
     } catch (OMException ex) {
       if (ex.getResult() == OMException.ResultCodes.FILE_NOT_FOUND
+          || ex.getResult() == OMException.ResultCodes.KEY_NOT_FOUND
           || ex.getResult() == OMException.ResultCodes.NOT_A_FILE) {
         throw new FileNotFoundException(
             ex.getResult().name() + ": " + ex.getMessage());
@@ -207,22 +246,46 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       boolean overWrite, boolean recursive) throws IOException {
     incrementCounter(Statistic.OBJECTS_CREATED, 1);
     try {
-      OzoneOutputStream ozoneOutputStream = null;
-      if (replication == ReplicationFactor.ONE.getValue()
-          || replication == ReplicationFactor.THREE.getValue()) {
-
-        ReplicationConfig customReplicationConfig =
-            ReplicationConfig.adjustReplication(
-                replicationConfig, replication, config
-            );
-        ozoneOutputStream =
-            bucket.createFile(key, 0, customReplicationConfig, overWrite,
-                recursive);
+      OzoneOutputStream ozoneOutputStream = bucket.createFile(key, 0,
+          OzoneClientUtils.resolveClientSideReplicationConfig(replication,
+              this.clientConfiguredReplicationConfig,
+              getReplicationConfigWithRefreshCheck(), config), overWrite,
+          recursive);
+      return new OzoneFSOutputStream(ozoneOutputStream);
+    } catch (OMException ex) {
+      if (ex.getResult() == OMException.ResultCodes.FILE_ALREADY_EXISTS
+          || ex.getResult() == OMException.ResultCodes.NOT_A_FILE) {
+        throw new FileAlreadyExistsException(
+            ex.getResult().name() + ": " + ex.getMessage());
       } else {
-        ozoneOutputStream =
-            bucket.createFile(key, 0, replicationConfig, overWrite, recursive);
+        throw ex;
       }
-      return new OzoneFSOutputStream(ozoneOutputStream.getOutputStream());
+    }
+  }
+
+  private ReplicationConfig getReplicationConfigWithRefreshCheck()
+      throws IOException {
+    if (clock.millis() > nextReplicationConfigRefreshTime) {
+      this.bucketReplicationConfig =
+          volume.getBucket(bucket.getName()).getReplicationConfig();
+      nextReplicationConfigRefreshTime =
+          clock.millis() + bucketRepConfigRefreshPeriodMS;
+    }
+    return this.bucketReplicationConfig;
+  }
+
+  @Override
+  public OzoneFSDataStreamOutput createStreamFile(String key, short replication,
+      boolean overWrite, boolean recursive) throws IOException {
+    incrementCounter(Statistic.OBJECTS_CREATED, 1);
+    try {
+      final ReplicationConfig replicationConfig
+          = OzoneClientUtils.resolveClientSideReplicationConfig(
+          replication, clientConfiguredReplicationConfig,
+          getReplicationConfigWithRefreshCheck(), config);
+      final OzoneDataStreamOutput out = bucket.createStreamFile(
+          key, 0, replicationConfig, overWrite, recursive);
+      return new OzoneFSDataStreamOutput(out.getByteBufStreamOutput());
     } catch (OMException ex) {
       if (ex.getResult() == OMException.ResultCodes.FILE_ALREADY_EXISTS
           || ex.getResult() == OMException.ResultCodes.NOT_A_FILE) {
@@ -399,6 +462,11 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     return objectStore.getCanonicalServiceName();
   }
 
+  @VisibleForTesting
+  void setClock(Clock monotonicClock) {
+    this.clock = monotonicClock;
+  }
+
   /**
    * Ozone Delegation Token Renewer.
    */
@@ -487,6 +555,7 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         .getRequiredNodes();
     return new FileStatusAdapter(
         keyInfo.getDataSize(),
+        keyInfo.getReplicatedSize(),
         new Path(OZONE_URI_DELIMITER + keyInfo.getKeyName())
             .makeQualified(defaultUri, workingDir),
         status.isDirectory(),
@@ -498,7 +567,9 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         owner,
         owner,
         null,
-        getBlockLocations(status)
+        getBlockLocations(status),
+        OzoneClientUtils.isKeyEncrypted(keyInfo),
+        OzoneClientUtils.isKeyErasureCode(keyInfo)
     );
   }
 
@@ -572,5 +643,66 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         volume, bucket, keyName,
         length, combineMode, ozoneClient.getObjectStore().getClientProxy());
 
+  }
+
+  @Override
+  public String createSnapshot(String pathStr, String snapshotName)
+      throws IOException {
+    OFSPath ofsPath = new OFSPath(pathStr, config);
+    return objectStore.createSnapshot(ofsPath.getVolumeName(),
+        ofsPath.getBucketName(),
+        snapshotName);
+  }
+
+  @Override
+  public SnapshotDiffReport getSnapshotDiffReport(Path snapshotDir,
+      String fromSnapshot, String toSnapshot)
+      throws IOException, InterruptedException {
+    boolean takeTemporarySnapshot = false;
+    if (toSnapshot.equals(ACTIVE_FS_SNAPSHOT_NAME)) {
+      takeTemporarySnapshot = true;
+      toSnapshot = createSnapshot(snapshotDir.toString(),
+          "temp" + SnapshotInfo.generateName(Time.now()));
+    }
+    try {
+      SnapshotDiffReportOzone aggregated;
+      SnapshotDiffReportOzone report =
+          getSnapshotDiffReportOnceComplete(fromSnapshot, toSnapshot, "");
+      aggregated = report;
+      while (!report.getToken().isEmpty()) {
+        LOG.info(
+            "Total Snapshot Diff length between snapshot {} and {} exceeds"
+                + " max page size, Performing another " +
+                "snapdiff with index at {}",
+            fromSnapshot, toSnapshot, report.getToken());
+        report = getSnapshotDiffReportOnceComplete(fromSnapshot, toSnapshot,
+            report.getToken());
+        aggregated.aggregate(report);
+      }
+      return aggregated;
+    } finally {
+      // delete the temp snapshot
+      if (takeTemporarySnapshot) {
+        OFSPath snapPath = new OFSPath(snapshotDir.toString(), config);
+        ozoneClient.getObjectStore()
+            .deleteSnapshot(snapPath.getVolumeName(), snapPath.getBucketName(),
+                toSnapshot);
+      }
+    }
+  }
+
+  private SnapshotDiffReportOzone getSnapshotDiffReportOnceComplete(
+      String fromSnapshot, String toSnapshot, String token)
+      throws IOException, InterruptedException {
+    SnapshotDiffResponse snapshotDiffResponse = null;
+    do {
+      snapshotDiffResponse =
+          objectStore.snapshotDiff(volume.getName(), bucket.getName(),
+              fromSnapshot, toSnapshot, token, -1, false);
+      Thread.sleep(snapshotDiffResponse.getWaitTimeInMs());
+    } while (snapshotDiffResponse.getJobStatus() != DONE);
+    SnapshotDiffReportOzone report =
+        snapshotDiffResponse.getSnapshotDiffReport();
+    return report;
   }
 }

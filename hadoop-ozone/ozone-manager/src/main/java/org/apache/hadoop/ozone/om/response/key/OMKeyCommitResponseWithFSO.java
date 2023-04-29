@@ -32,6 +32,7 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.BUCKET_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_FILE_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.FILE_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DELETED_TABLE;
@@ -39,16 +40,22 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DELETED_TABLE;
 /**
  * Response for CommitKey request - prefix layout1.
  */
-@CleanupTableInfo(cleanupTables = {OPEN_FILE_TABLE, FILE_TABLE, DELETED_TABLE})
+@CleanupTableInfo(cleanupTables = {OPEN_FILE_TABLE, FILE_TABLE, DELETED_TABLE,
+    BUCKET_TABLE})
 public class OMKeyCommitResponseWithFSO extends OMKeyCommitResponse {
 
+  private long volumeId;
+
+  @SuppressWarnings("parameternumber")
   public OMKeyCommitResponseWithFSO(@Nonnull OMResponse omResponse,
                                @Nonnull OmKeyInfo omKeyInfo,
                                String ozoneKeyName, String openKeyName,
                                @Nonnull OmBucketInfo omBucketInfo,
-                               RepeatedOmKeyInfo deleteKeys) {
+                               RepeatedOmKeyInfo deleteKeys, long volumeId,
+                                    boolean isHSync) {
     super(omResponse, omKeyInfo, ozoneKeyName, openKeyName,
-            omBucketInfo, deleteKeys);
+            omBucketInfo, deleteKeys, isHSync);
+    this.volumeId = volumeId;
   }
 
   /**
@@ -65,12 +72,14 @@ public class OMKeyCommitResponseWithFSO extends OMKeyCommitResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
                            BatchOperation batchOperation) throws IOException {
 
-    // Delete from OpenKey table
-    omMetadataManager.getOpenKeyTable(getBucketLayout())
-        .deleteWithBatch(batchOperation, getOpenKeyName());
+    // Delete from OpenKey table if commit
+    if (!this.isHSync()) {
+      omMetadataManager.getOpenKeyTable(getBucketLayout())
+              .deleteWithBatch(batchOperation, getOpenKeyName());
+    }
 
     OMFileRequest.addToFileTable(omMetadataManager, batchOperation,
-            getOmKeyInfo());
+            getOmKeyInfo(), volumeId, getOmBucketInfo().getObjectID());
 
     updateDeletedTable(omMetadataManager, batchOperation);
 

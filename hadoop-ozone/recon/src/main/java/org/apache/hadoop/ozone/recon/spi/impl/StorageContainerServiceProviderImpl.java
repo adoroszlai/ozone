@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.hdds.scm.server.SCMHTTPServerConfig.ConfigStrings.HDDS_SCM_HTTP_AUTH_TYPE;
-import static org.apache.hadoop.ozone.ClientVersions.CURRENT_VERSION;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_HTTP_ENDPOINT;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_SCM_SNAPSHOT_DB;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SCM_CONNECTION_REQUEST_TIMEOUT;
@@ -42,6 +41,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.ha.InterSCMGrpcClient;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
@@ -49,11 +49,12 @@ import org.apache.hadoop.hdds.scm.ha.SCMSnapshotDownloader;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.ReconCertificateClient;
+import org.apache.hadoop.ozone.recon.security.ReconCertificateClient;
 import org.apache.hadoop.hdds.server.http.HttpConfig;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.scm.ReconStorageConfig;
 import org.apache.hadoop.ozone.recon.spi.StorageContainerServiceProvider;
@@ -147,12 +148,18 @@ public class StorageContainerServiceProviderImpl
   @Override
   public List<HddsProtos.Node> getNodes() throws IOException {
     return scmClient.queryNode(null, null, HddsProtos.QueryScope.CLUSTER,
-        "", CURRENT_VERSION);
+        "", ClientVersion.CURRENT_VERSION);
   }
 
   @Override
   public long getContainerCount() throws IOException {
     return scmClient.getContainerCount();
+  }
+
+  @Override
+  public long getContainerCount(HddsProtos.LifeCycleState state)
+      throws IOException {
+    return scmClient.getContainerCount(state);
   }
 
   public String getScmDBSnapshotUrl() {
@@ -168,7 +175,7 @@ public class StorageContainerServiceProviderImpl
     String snapshotFileName = RECON_SCM_SNAPSHOT_DB + "_" +
         System.currentTimeMillis();
     File targetFile = new File(scmSnapshotDBParentDir, snapshotFileName +
-            ".tar.gz");
+            ".tar");
 
     try {
       if (!SCMHAUtils.isSCMHAEnabled(configuration)) {
@@ -191,11 +198,12 @@ public class StorageContainerServiceProviderImpl
                 ScmConfigKeys.OZONE_SCM_GRPC_PORT_KEY,
                 ScmConfigKeys.OZONE_SCM_GRPC_PORT_DEFAULT);
 
-            try (SCMSnapshotDownloader downloadClient =
-                 new InterSCMGrpcClient(hostAddress, grpcPort,
-                 configuration, new ReconCertificateClient(
-                 new SecurityConfig(configuration),
-                 reconStorage.getReconCertSerialId()))) {
+            SecurityConfig secConf = new SecurityConfig(configuration);
+            try (ReconCertificateClient certClient =
+                     new ReconCertificateClient(
+                         secConf, reconStorage, null, null);
+                 SCMSnapshotDownloader downloadClient = new InterSCMGrpcClient(
+                     hostAddress, grpcPort, configuration, certClient)) {
               downloadClient.download(targetFile.toPath()).get();
             } catch (ExecutionException | InterruptedException e) {
               LOG.error("Rocks DB checkpoint downloading failed", e);
@@ -216,4 +224,12 @@ public class StorageContainerServiceProviderImpl
     }
     return null;
   }
+
+  @Override
+  public List<ContainerInfo> getListOfContainers(
+      long startContainerID, int count, HddsProtos.LifeCycleState state)
+      throws IOException {
+    return scmClient.getListOfContainers(startContainerID, count, state);
+  }
+
 }

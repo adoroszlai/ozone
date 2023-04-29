@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
@@ -37,9 +38,6 @@ import com.google.protobuf.BlockingService;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorOutputStream;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.DFSConfigKeysLegacy;
@@ -70,6 +68,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_RECON_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_RECON_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
@@ -90,6 +90,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_INFO_WAIT_DURATION;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_INFO_WAIT_DURATION_DEFAULT;
 import static org.apache.hadoop.hdds.server.ServerUtils.sanitizeUserArgs;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_CONTAINER_DB_DIR;
 
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
@@ -253,6 +254,18 @@ public final class HddsServerUtil {
   }
 
   /**
+   * Heartbeat Interval - Defines the heartbeat frequency from a datanode to
+   * Recon.
+   *
+   * @param conf - Ozone Config
+   * @return - HB interval in milli seconds.
+   */
+  public static long getReconHeartbeatInterval(ConfigurationSource conf) {
+    return conf.getTimeDuration(HDDS_RECON_HEARTBEAT_INTERVAL,
+        HDDS_RECON_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+  }
+
+  /**
    * Get the Stale Node interval, which is used by SCM to flag a datanode as
    * stale, if the heartbeat from that node has been missing for this duration.
    *
@@ -390,6 +403,12 @@ public final class HddsServerUtil {
     return rawLocations;
   }
 
+  public static Collection<String> getDatanodeDbDirs(
+      ConfigurationSource conf) {
+    // No fallback here, since this config is optional.
+    return conf.getTrimmedStringCollection(HDDS_DATANODE_CONTAINER_DB_DIR);
+  }
+
   /**
    * Get the path for datanode id file.
    *
@@ -429,8 +448,8 @@ public final class HddsServerUtil {
   }
 
   public static SCMSecurityProtocolClientSideTranslatorPB
-      getScmSecurityClientWithMaxRetry(OzoneConfiguration conf)
-      throws IOException {
+      getScmSecurityClientWithMaxRetry(OzoneConfiguration conf,
+      UserGroupInformation ugi) throws IOException {
     // Certificate from SCM is required for DN startup to succeed, so retry
     // for ever. In this way DN start up is resilient to SCM service running
     // status.
@@ -443,7 +462,7 @@ public final class HddsServerUtil {
 
     return new SCMSecurityProtocolClientSideTranslatorPB(
         new SCMSecurityProtocolFailoverProxyProvider(configuration,
-            UserGroupInformation.getCurrentUser()));
+            ugi == null ? UserGroupInformation.getCurrentUser() : ugi));
   }
 
   public static SCMSecurityProtocolClientSideTranslatorPB
@@ -505,40 +524,44 @@ public final class HddsServerUtil {
   }
 
   /**
-   * Write DB Checkpoint to an output stream as a compressed file (tgz).
+   * Write DB Checkpoint to an output stream as a compressed file (tar).
    *
-   * @param checkpoint  checkpoint file
-   * @param destination destination output stream.
+   * @param checkpoint    checkpoint file
+   * @param destination   destination output stream.
+   * @param toExcludeList the files to be excluded
+   * @param excludedList  the files excluded
    * @throws IOException
    */
-  public static void writeDBCheckpointToStream(DBCheckpoint checkpoint,
-      OutputStream destination)
+  public static void writeDBCheckpointToStream(
+      DBCheckpoint checkpoint,
+      OutputStream destination,
+      List<String> toExcludeList,
+      List<String> excludedList)
       throws IOException {
-    try (CompressorOutputStream gzippedOut = new CompressorStreamFactory()
-        .createCompressorOutputStream(CompressorStreamFactory.GZIP,
-            destination);
-        ArchiveOutputStream archiveOutputStream =
-            new TarArchiveOutputStream(gzippedOut);
+    try (TarArchiveOutputStream archiveOutputStream =
+            new TarArchiveOutputStream(destination);
         Stream<Path> files =
             Files.list(checkpoint.getCheckpointLocation())) {
+      archiveOutputStream.setBigNumberMode(
+          TarArchiveOutputStream.BIGNUMBER_POSIX);
       for (Path path : files.collect(Collectors.toList())) {
         if (path != null) {
-          Path fileName = path.getFileName();
-          if (fileName != null) {
-            includeFile(path.toFile(), fileName.toString(),
-                archiveOutputStream);
+          Path fileNamePath = path.getFileName();
+          if (fileNamePath != null) {
+            String fileName = fileNamePath.toString();
+            if (!toExcludeList.contains(fileName)) {
+              includeFile(path.toFile(), fileName, archiveOutputStream);
+            } else {
+              excludedList.add(fileName);
+            }
           }
         }
       }
-    } catch (CompressorException e) {
-      throw new IOException(
-          "Can't compress the checkpoint: " +
-              checkpoint.getCheckpointLocation(), e);
     }
   }
 
-  private static void includeFile(File file, String entryName,
-      ArchiveOutputStream archiveOutputStream)
+  public static void includeFile(File file, String entryName,
+                                 ArchiveOutputStream archiveOutputStream)
       throws IOException {
     ArchiveEntry archiveEntry =
         archiveOutputStream.createArchiveEntry(file, entryName);

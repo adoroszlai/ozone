@@ -34,6 +34,8 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLog;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLogImpl;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
@@ -136,7 +138,20 @@ public class SCMStateMachine extends BaseStateMachine {
     try {
       final SCMRatisRequest request = SCMRatisRequest.decode(
           Message.valueOf(trx.getStateMachineLogEntry().getLogData()));
-      applyTransactionFuture.complete(process(request));
+
+      try {
+        applyTransactionFuture.complete(process(request));
+      } catch (SCMException ex) {
+        // For SCM exceptions while applying a transaction, if the error
+        // code indicate a FATAL issue, let it crash SCM.
+        if (ex.getResult() == ResultCodes.INTERNAL_ERROR
+            || ex.getResult() == ResultCodes.IO_EXCEPTION) {
+          throw ex;
+        }
+        // Otherwise, it's considered as a logical rejection and is returned to
+        // Ratis client, leaving SCM intact.
+        applyTransactionFuture.completeExceptionally(ex);
+      }
 
       // After previous term transactions are applied, still in safe mode,
       // perform refreshAndValidate to update the safemode rule state.
@@ -268,6 +283,8 @@ public class SCMStateMachine extends BaseStateMachine {
         deletedBlockLog instanceof DeletedBlockLogImpl);
     ((DeletedBlockLogImpl) deletedBlockLog).onBecomeLeader();
     scm.getScmDecommissionManager().onBecomeLeader();
+
+    scm.scmHAMetricsUpdate(newLeaderId.toString());
   }
 
   @Override
@@ -328,6 +345,7 @@ public class SCMStateMachine extends BaseStateMachine {
           .isLeaderReady()) {
         scm.getScmContext().setLeaderReady();
         scm.getSCMServiceManager().notifyStatusChanged();
+        scm.getFinalizationManager().onLeaderReady();
       }
 
       // Means all transactions before this term have been applied.
@@ -352,8 +370,11 @@ public class SCMStateMachine extends BaseStateMachine {
 
   @Override
   public void pause() {
-    getLifeCycle().transition(LifeCycle.State.PAUSING);
-    getLifeCycle().transition(LifeCycle.State.PAUSED);
+    final LifeCycle lc = getLifeCycle();
+    if (lc.getCurrentState() != LifeCycle.State.NEW) {
+      lc.transition(LifeCycle.State.PAUSING);
+      lc.transition(LifeCycle.State.PAUSED);
+    }
   }
 
   @Override
@@ -390,10 +411,17 @@ public class SCMStateMachine extends BaseStateMachine {
     if (!isInitialized) {
       return;
     }
-    super.close();
-    transactionBuffer.close();
-    HadoopExecutors.
-        shutdown(installSnapshotExecutor, LOG, 5, TimeUnit.SECONDS);
+    //if ratis server is stopped , it indicates this `close` originates
+    // from `scm.stop()`, otherwise, it indicates this `close` originates
+    // from ratis.
+    if (scm.getScmHAManager().getRatisServer().isStopped()) {
+      super.close();
+      transactionBuffer.close();
+      HadoopExecutors.
+          shutdown(installSnapshotExecutor, LOG, 5, TimeUnit.SECONDS);
+    } else {
+      scm.shutDown("scm statemachine is closed by ratis, terminate SCM");
+    }
   }
 
   @VisibleForTesting

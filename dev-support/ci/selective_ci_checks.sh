@@ -40,7 +40,7 @@ declare -a pattern_array ignore_array
 
 matched_files=""
 ignore_array=(
-    "/README.md" # exclude root README
+    "^[^/]*.md" # exclude root docs
 )
 
 function check_for_full_tests_needed_label() {
@@ -83,6 +83,7 @@ function get_changed_files() {
 
 function set_outputs_run_everything_and_exit() {
     BASIC_CHECKS="author bats checkstyle docs findbugs rat unit"
+    compile_needed=true
     compose_tests_needed=true
     dependency_check_needed=true
     integration_tests_needed=true
@@ -162,6 +163,8 @@ function filter_changed_files() {
 }
 
 SOURCES_TRIGGERING_TESTS=(
+    "^.github"
+    "^dev-support"
     "^hadoop-hdds"
     "^hadoop-ozone"
     "^pom.xml"
@@ -189,9 +192,13 @@ function check_if_tests_are_needed_at_all() {
 function run_all_tests_if_environment_files_changed() {
     start_end::group_start "Check if everything should be run"
     local pattern_array=(
-        "^.github/workflows/"
+        "^.github/workflows/ci.yml"
+        "^.github/workflows/post-commit.yml"
         "^dev-support/ci"
         "^hadoop-ozone/dev-support/checks/_lib.sh"
+    )
+    local ignore_array=(
+        "^dev-support/ci/pr_title_check"
     )
     filter_changed_files
 
@@ -247,6 +254,7 @@ function get_count_integration_files() {
     local pattern_array=(
         "^hadoop-ozone/dev-support/checks/_mvn_unit_report.sh"
         "^hadoop-ozone/dev-support/checks/integration.sh"
+        "^hadoop-ozone/dev-support/checks/junit.sh"
         "^hadoop-ozone/integration-test"
         "^hadoop-ozone/fault-injection-test/mini-chaos-tests"
         "src/test/java"
@@ -299,6 +307,7 @@ function check_needs_build() {
     start_end::group_start "Check if build is needed"
     local pattern_array=(
         "^hadoop-ozone/dev-support/checks/build.sh"
+        "^hadoop-ozone/dev-support/checks/native_check.sh"
         "src/main/java"
         "src/main/resources"
     )
@@ -306,6 +315,23 @@ function check_needs_build() {
 
     if [[ ${match_count} != "0" ]]; then
         build_needed=true
+    fi
+
+    start_end::group_end
+}
+
+function check_needs_compile() {
+    start_end::group_start "Check if compile is needed"
+    local pattern_array=(
+        "^hadoop-ozone/dev-support/checks/build.sh"
+        "src/..../java"
+        "src/..../proto"
+        "pom.xml"
+    )
+    filter_changed_files
+
+    if [[ ${match_count} != "0" ]]; then
+        compile_needed=true
     fi
 
     start_end::group_end
@@ -411,6 +437,7 @@ function check_needs_unit_test() {
     local pattern_array=(
         "^hadoop-ozone/dev-support/checks/_mvn_unit_report.sh"
         "^hadoop-ozone/dev-support/checks/unit.sh"
+        "^hadoop-ozone/dev-support/checks/junit.sh"
         "src/test/java"
         "src/test/resources"
     )
@@ -433,13 +460,18 @@ function check_needs_unit_test() {
 function get_count_misc_files() {
     start_end::group_start "Count misc. files"
     local pattern_array=(
+        "^dev-support/ci/pr_title_check"
+        "^.github"
         "^hadoop-hdds/dev-support/checkstyle"
         "^hadoop-ozone/dev-support/checks"
         "^hadoop-ozone/dist/src/main/license"
         "\.bats$"
+        "\.txt$"
+        "\.md$"
         "findbugsExcludeFile.xml"
     )
     local ignore_array=(
+        "^.github/workflows/post-commit.yml"
         "^hadoop-ozone/dev-support/checks/_mvn_unit_report.sh"
         "^hadoop-ozone/dev-support/checks/acceptance.sh"
         "^hadoop-ozone/dev-support/checks/integration.sh"
@@ -501,11 +533,14 @@ function set_outputs() {
     initialization::ga_output basic-checks \
         "$(initialization::parameters_to_json ${BASIC_CHECKS})"
 
-    if [[ "${compose_tests_needed}" == "true" ]] || [[ "${kubernetes_tests_needed}" == "true" ]]; then
+    : ${compile_needed:=false}
+
+    if [[ "${compile_needed}" == "true" ]] ||  [[ "${compose_tests_needed}" == "true" ]] || [[ "${kubernetes_tests_needed}" == "true" ]]; then
         build_needed=true
     fi
 
     initialization::ga_output needs-build "${build_needed:-false}"
+    initialization::ga_output needs-compile "${compile_needed}"
     initialization::ga_output needs-compose-tests "${compose_tests_needed}"
     initialization::ga_output needs-dependency-check "${dependency_check_needed}"
     initialization::ga_output needs-integration-tests "${integration_tests_needed}"
@@ -544,6 +579,7 @@ get_count_robot_files
 get_count_misc_files
 
 check_needs_build
+check_needs_compile
 
 # calculate basic checks to run
 BASIC_CHECKS="rat"

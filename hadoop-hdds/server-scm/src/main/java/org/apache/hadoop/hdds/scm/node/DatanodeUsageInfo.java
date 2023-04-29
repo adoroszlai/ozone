@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeUsageInfoProto;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 
 import java.util.Comparator;
@@ -31,6 +31,7 @@ public class DatanodeUsageInfo {
 
   private DatanodeDetails datanodeDetails;
   private SCMNodeStat scmNodeStat;
+  private int containerCount;
 
   /**
    * Constructs a DatanodeUsageInfo with DatanodeDetails and SCMNodeStat.
@@ -43,6 +44,7 @@ public class DatanodeUsageInfo {
       SCMNodeStat scmNodeStat) {
     this.datanodeDetails = datanodeDetails;
     this.scmNodeStat = scmNodeStat;
+    this.containerCount = -1;
   }
 
   /**
@@ -135,6 +137,14 @@ public class DatanodeUsageInfo {
     return scmNodeStat;
   }
 
+  public int getContainerCount() {
+    return containerCount;
+  }
+
+  public void setContainerCount(int containerCount) {
+    this.containerCount = containerCount;
+  }
+
   /**
    * Gets Comparator that compares two DatanodeUsageInfo on the basis of
    * their utilization values. Utilization is (capacity - remaining) divided
@@ -180,23 +190,24 @@ public class DatanodeUsageInfo {
    *
    * @return Protobuf HddsProtos.DatanodeUsageInfo
    */
-  public HddsProtos.DatanodeUsageInfoProto toProto() {
-    return toProtoBuilder().build();
+  public DatanodeUsageInfoProto toProto(int clientVersion) {
+    return toProtoBuilder(clientVersion).build();
   }
 
-  private HddsProtos.DatanodeUsageInfoProto.Builder toProtoBuilder() {
-    HddsProtos.DatanodeUsageInfoProto.Builder builder =
-        HddsProtos.DatanodeUsageInfoProto.newBuilder();
+  private DatanodeUsageInfoProto.Builder toProtoBuilder(int clientVersion) {
+    DatanodeUsageInfoProto.Builder builder =
+        DatanodeUsageInfoProto.newBuilder();
 
     if (datanodeDetails != null) {
-      builder.setNode(
-          datanodeDetails.toProto(datanodeDetails.getCurrentVersion()));
+      builder.setNode(datanodeDetails.toProto(clientVersion));
     }
     if (scmNodeStat != null) {
       builder.setCapacity(scmNodeStat.getCapacity().get());
       builder.setUsed(scmNodeStat.getScmUsed().get());
       builder.setRemaining(scmNodeStat.getRemaining().get());
     }
+
+    builder.setContainerCount(containerCount);
     return builder;
   }
 }
