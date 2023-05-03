@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.utils.db;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -453,6 +454,15 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     @Override
     public VALUE getValue() throws IOException {
       return codecRegistry.asObject(rawKeyValue.getValue(), valueType);
+    }
+
+    @Override
+    public String toString() {
+      try {
+        return String.valueOf(getValue());
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
   }
 

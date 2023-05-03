@@ -844,4 +844,9 @@ public final class OmKeyInfo extends WithParentObjectId implements Cloneable {
     }
     return getParentObjectID() + OzoneConsts.OM_KEY_PREFIX + getFileName();
   }
+
+  @Override
+  public String toString() {
+    return volumeName + "/" + bucketName + "/" + keyName;
+  }
 }
