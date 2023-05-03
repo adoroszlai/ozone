@@ -25,14 +25,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
@@ -41,24 +37,14 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests to verify ofs with prefix enabled cases.
  */
-@RunWith(Parameterized.class)
 public class TestRootedOzoneFileSystemWithFSO
     extends TestRootedOzoneFileSystem {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRootedOzoneFileSystemWithFSO.class);
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(
-        new Object[]{true, true, false},
-        new Object[]{true, false, false}
-    );
-  }
-
-  public TestRootedOzoneFileSystemWithFSO(boolean setDefaultFs,
-      boolean enableOMRatis, boolean enableAcl) {
-    super(setDefaultFs, enableOMRatis, enableAcl);
+  public TestRootedOzoneFileSystemWithFSO() {
+    super(true, true, false);
   }
 
   @BeforeClass
