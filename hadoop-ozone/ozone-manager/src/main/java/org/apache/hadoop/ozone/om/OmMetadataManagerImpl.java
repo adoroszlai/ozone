@@ -1008,6 +1008,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
   private <T> boolean isKeyPresentInTable(String keyPrefix,
                                       Table<String, T> table)
       throws IOException {
+    LOG.debug("Seeking keys with prefix {} in table {}",
+        keyPrefix, table.getName());
     try (TableIterator<String, ? extends KeyValue<String, T>>
              keyIter = table.iterator()) {
       KeyValue<String, T> kv = keyIter.seek(keyPrefix);
@@ -1023,12 +1025,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
         // Case 1: We found an entry, but no cache entry.
         if (cacheValue == null) {
           // we found at least one key with this prefix.
+          LOG.debug("Found {} in table missing from cache", kv.getKey());
           return true;
         }
 
         // Case 2a:
         // We found a cache entry and cache value is not null.
         if (cacheValue.getCacheValue() != null) {
+          LOG.debug("Found {} in table with cache value {}", kv.getKey(),
+              cacheValue.getCacheValue());
           return true;
         }
 
