@@ -138,7 +138,6 @@ import static org.junit.Assert.fail;
  * Ozone file system tests that are not covered by contract tests.
  * TODO: Refactor this and TestOzoneFileSystem to reduce duplication.
  */
-@RunWith(Parameterized.class)
 public class TestRootedOzoneFileSystem {
 
   private static final Logger LOG =
@@ -159,15 +158,7 @@ public class TestRootedOzoneFileSystem {
   }
 
   public TestRootedOzoneFileSystem(boolean setDefaultFs,
-      boolean enableOMRatis, boolean isAclEnabled) {
-    // Ignored. Actual init done in initParam().
-    // This empty constructor is still required to avoid argument exception.
-  }
-
-  @Parameterized.BeforeParam
-  public static void initParam(boolean setDefaultFs,
-                               boolean enableOMRatis, boolean isAclEnabled)
-      throws IOException, InterruptedException, TimeoutException {
+      boolean enableOMRatis, boolean isAclEnabled) throws IOException, InterruptedException, TimeoutException {
     // Initialize the cluster before EACH set of parameters
     enabledFileSystemPaths = setDefaultFs;
     omRatisEnabled = enableOMRatis;

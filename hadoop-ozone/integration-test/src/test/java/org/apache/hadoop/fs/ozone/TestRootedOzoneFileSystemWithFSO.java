@@ -43,7 +43,7 @@ public class TestRootedOzoneFileSystemWithFSO
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRootedOzoneFileSystemWithFSO.class);
 
-  public TestRootedOzoneFileSystemWithFSO() {
+  public TestRootedOzoneFileSystemWithFSO() throws IOException, InterruptedException, TimeoutException {
     super(true, true, false);
   }
 
