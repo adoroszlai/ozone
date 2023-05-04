@@ -230,10 +230,10 @@ public final class ContainerCache extends LRUMap {
    * @param containerDBPath - DB path of the container.
    * @param db - DB handler
    */
-  public void addDB(String containerDBPath, ReferenceCountedDB db) {
+  public boolean addDB(String containerDBPath, ReferenceCountedDB db) {
     lock.lock();
     try {
-      this.putIfAbsent(containerDBPath, db);
+      return putIfAbsent(containerDBPath, db) == null;
     } finally {
       lock.unlock();
     }

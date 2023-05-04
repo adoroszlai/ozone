@@ -181,16 +181,21 @@ public final class BlockUtils {
    * @param conf configuration.
    * @param schemaVersion schemaVersion.
    */
-  public static void addDB(DatanodeStore store, String containerDBPath,
-      ConfigurationSource conf, String schemaVersion) {
+  public static boolean addDB(DatanodeStore store, String containerDBPath,
+      ConfigurationSource conf, String schemaVersion) throws IOException {
     if (schemaVersion.equals(OzoneConsts.SCHEMA_V3)) {
       DatanodeStoreCache cache = DatanodeStoreCache.getInstance();
       Preconditions.checkNotNull(cache);
-      cache.addDB(containerDBPath, new RawDB(store, containerDBPath));
+      RawDB db = new RawDB(store, containerDBPath);
+      boolean added = cache.addDB(containerDBPath, db);
+      if (!added) {
+        db.close();
+      }
+      return added;
     } else {
       ContainerCache cache = ContainerCache.getInstance(conf);
       Preconditions.checkNotNull(cache);
-      cache.addDB(containerDBPath,
+      return cache.addDB(containerDBPath,
           new ReferenceCountedDB(store, containerDBPath));
     }
   }
