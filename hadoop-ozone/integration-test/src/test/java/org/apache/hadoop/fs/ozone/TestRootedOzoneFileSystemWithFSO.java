@@ -44,7 +44,7 @@ public class TestRootedOzoneFileSystemWithFSO
       LoggerFactory.getLogger(TestRootedOzoneFileSystemWithFSO.class);
 
   public TestRootedOzoneFileSystemWithFSO() throws IOException, InterruptedException, TimeoutException {
-    super(true, true, false);
+    super(true, false, false);
   }
 
   @BeforeClass
