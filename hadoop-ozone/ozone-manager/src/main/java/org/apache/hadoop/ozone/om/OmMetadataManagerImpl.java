@@ -873,6 +873,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
   public boolean isVolumeEmpty(String volume) throws IOException {
     String volumePrefix = getVolumeKey(volume + OM_KEY_PREFIX);
 
+    LOG.debug("Seeking keys with prefix {} in table {}",
+        volumePrefix, bucketTable.getName());
+
       // First check in bucket table cache.
     Iterator<Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>>> iterator =
         ((TypedTable< String, OmBucketInfo>) bucketTable).cacheIterator();
@@ -883,6 +886,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
       OmBucketInfo omBucketInfo = entry.getValue().getCacheValue();
       // Making sure that entry is not for delete bucket request.
       if (key.startsWith(volumePrefix) && omBucketInfo != null) {
+        LOG.debug("Found {} in cache with value {}", key, omBucketInfo);
         return false;
       }
     }
@@ -899,11 +903,14 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
         if (cacheValue != null) {
           if (kv.getKey().startsWith(volumePrefix)
               && cacheValue.getCacheValue() != null) {
+            LOG.debug("Found {} in table with cache value {}", kv.getKey(),
+                cacheValue.getCacheValue());
             return false; // we found at least one bucket with this volume
             // prefix.
           }
         } else {
           if (kv.getKey().startsWith(volumePrefix)) {
+            LOG.debug("Found {} in table missing from cache", kv.getKey());
             return false; // we found at least one bucket with this volume
             // prefix.
           }
@@ -991,6 +998,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
 
       // Making sure that entry is not for delete key request.
       if (key.startsWith(keyPrefix) && value != null) {
+        LOG.debug("Found {} in cache with value {}", key, value);
         return true;
       }
     }
