@@ -282,7 +282,8 @@ public class TestDeleteWithSlowFollower {
     KeyValueContainerData containerData =
         ((KeyValueContainerData) container.getContainerData());
     long delTrxId = containerData.getDeleteTransactionId();
-    long numPendingDeletionBlocks = containerData.getNumPendingDeletionBlocks();
+    long pendingBefore
+         = containerData.getNumPendingDeletionBlocks();
     BlockData blockData =
         keyValueHandler.getBlockManager().getBlock(container, blockID);
     //cluster.getOzoneManager().deleteKey(keyArgs);
@@ -302,8 +303,9 @@ public class TestDeleteWithSlowFollower {
       }
     }, 500, 100000);
     Assert.assertTrue(containerData.getDeleteTransactionId() > delTrxId);
-    Assert.assertTrue(
-        containerData.getNumPendingDeletionBlocks() > numPendingDeletionBlocks);
+    long pendingAfter = containerData.getNumPendingDeletionBlocks();
+    Assert.assertTrue("Expected " + pendingAfter + " > " + pendingBefore,
+        pendingAfter > pendingBefore);
     // make sure the chunk was never deleted on the leader even though
     // deleteBlock handler is invoked
     try {
