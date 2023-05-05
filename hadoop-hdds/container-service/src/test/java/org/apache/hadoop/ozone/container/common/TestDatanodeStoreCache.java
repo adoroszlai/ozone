@@ -22,16 +22,12 @@ import org.apache.hadoop.ozone.container.common.utils.DatanodeStoreCache;
 import org.apache.hadoop.ozone.container.common.utils.RawDB;
 import org.apache.hadoop.ozone.container.metadata.DatanodeStore;
 import org.apache.hadoop.ozone.container.metadata.DatanodeStoreSchemaThreeImpl;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test DatanodeStoreCache.
@@ -53,29 +49,30 @@ public class TestDatanodeStoreCache {
         false);
 
     // test normal add
-    RawDB db1 = new RawDB(store1, dbPath1);
-    assertTrue(cache.addDB(dbPath1, db1));
-    assertTrue(cache.addDB(dbPath2, new RawDB(store2, dbPath2)));
-    assertEquals(2, cache.size());
+    cache.addDB(dbPath1, new RawDB(store1, dbPath1));
+    cache.addDB(dbPath2, new RawDB(store2, dbPath2));
+    Assert.assertEquals(2, cache.size());
 
     // test duplicate add
-    assertFalse(cache.addDB(dbPath1, new RawDB(store1, dbPath1)));
-    assertEquals(2, cache.size());
+    cache.addDB(dbPath1, new RawDB(store1, dbPath1));
+    Assert.assertEquals(2, cache.size());
 
     // test get, test reference the same object using ==
-    RawDB db = cache.getDB(dbPath1, conf);
-    assertSame(db1, db);
-    assertSame(store1, db.getStore());
+    Assert.assertTrue(store1 == cache.getDB(dbPath1, conf).getStore());
 
     // test remove
     cache.removeDB(dbPath1);
-    assertEquals(1, cache.size());
+    Assert.assertEquals(1, cache.size());
 
-    // test remove non-exist should not throw
-    cache.removeDB(dbPath1);
+    // test remove non-exist
+    try {
+      cache.removeDB(dbPath1);
+    } catch (Exception e) {
+      Assert.fail("Should not throw " + e);
+    }
 
     // test shutdown
     cache.shutdownCache();
-    assertEquals(0, cache.size());
+    Assert.assertEquals(0, cache.size());
   }
 }

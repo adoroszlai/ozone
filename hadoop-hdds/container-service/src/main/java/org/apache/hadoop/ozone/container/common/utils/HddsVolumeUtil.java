@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.utils;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.volume.DbVolume;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
@@ -32,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.hadoop.ozone.OzoneConsts.SCHEMA_V3;
 import static org.apache.hadoop.ozone.container.common.utils.StorageVolumeUtil.onFailure;
 
 /**
@@ -70,10 +70,8 @@ public final class HddsVolumeUtil {
   public static void initPerDiskDBStore(String containerDBPath,
       ConfigurationSource conf, boolean readOnly) throws IOException {
     DatanodeStore store = BlockUtils.getUncachedDatanodeStore(containerDBPath,
-        SCHEMA_V3, conf, readOnly);
-    if (!BlockUtils.addDB(store, containerDBPath, conf, SCHEMA_V3)) {
-      store.close();
-    }
+        OzoneConsts.SCHEMA_V3, conf, readOnly);
+    BlockUtils.addDB(store, containerDBPath, conf, OzoneConsts.SCHEMA_V3);
   }
 
   /**

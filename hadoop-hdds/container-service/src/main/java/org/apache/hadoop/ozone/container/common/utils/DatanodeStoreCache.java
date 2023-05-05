@@ -24,10 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Cache for all per-disk DB handles under schema v3.
@@ -45,7 +43,7 @@ public final class DatanodeStoreCache {
   private static DatanodeStoreCache cache;
 
   private DatanodeStoreCache() {
-    datanodeStoreMap = Collections.synchronizedMap(new HashMap<>());
+    datanodeStoreMap = new ConcurrentHashMap<>();
   }
 
   public static synchronized DatanodeStoreCache getInstance() {
@@ -55,53 +53,36 @@ public final class DatanodeStoreCache {
     return cache;
   }
 
-  public boolean addDB(String containerDBPath, RawDB db) {
-    final RawDB previous;
-    synchronized (datanodeStoreMap) {
-      previous = datanodeStoreMap.putIfAbsent(containerDBPath, db);
-    }
-
-    if (previous == null) {
-      LOG.info("Added db {} to cache", containerDBPath);
-    } else {
-      LOG.info("db {} already cached", containerDBPath);
-    }
-
-    return previous == null;
+  public void addDB(String containerDBPath, RawDB db) {
+    datanodeStoreMap.putIfAbsent(containerDBPath, db);
+    LOG.info("Added db {} to cache", containerDBPath);
   }
 
   public RawDB getDB(String containerDBPath, ConfigurationSource conf)
       throws IOException {
-    RawDB db;
-
-    synchronized (datanodeStoreMap) {
-      db = datanodeStoreMap.get(containerDBPath);
-      if (db != null) {
-        return db;
-      }
-
-      try {
-        DatanodeStore store = new DatanodeStoreSchemaThreeImpl(
-            conf, containerDBPath, false);
-        db = new RawDB(store, containerDBPath);
-        datanodeStoreMap.put(containerDBPath, db);
-      } catch (IOException e) {
-        LOG.error("Failed to get DB store {}", containerDBPath, e);
-        throw new IOException("Failed to get DB store " +
-            containerDBPath, e);
+    RawDB db = datanodeStoreMap.get(containerDBPath);
+    if (db == null) {
+      synchronized (this) {
+        db = datanodeStoreMap.get(containerDBPath);
+        if (db == null) {
+          try {
+            DatanodeStore store = new DatanodeStoreSchemaThreeImpl(
+                conf, containerDBPath, false);
+            db = new RawDB(store, containerDBPath);
+            datanodeStoreMap.put(containerDBPath, db);
+          } catch (IOException e) {
+            LOG.error("Failed to get DB store {}", containerDBPath, e);
+            throw new IOException("Failed to get DB store " +
+                containerDBPath, e);
+          }
+        }
       }
     }
-
-    LOG.info("Added db {} to cache", containerDBPath);
     return db;
   }
 
   public void removeDB(String containerDBPath) {
-    final RawDB db;
-    synchronized (datanodeStoreMap) {
-      db = datanodeStoreMap.remove(containerDBPath);
-    }
-
+    RawDB db = datanodeStoreMap.remove(containerDBPath);
     if (db == null) {
       LOG.debug("DB {} already removed", containerDBPath);
       return;
@@ -116,19 +97,14 @@ public final class DatanodeStoreCache {
   }
 
   public void shutdownCache() {
-    final Map<String, RawDB> copy;
-    synchronized (datanodeStoreMap) {
-      copy = new TreeMap<>(datanodeStoreMap);
-      datanodeStoreMap.clear();
-    }
-
-    for (Map.Entry<String, RawDB> entry : copy.entrySet()) {
+    for (Map.Entry<String, RawDB> entry : datanodeStoreMap.entrySet()) {
       try {
         entry.getValue().getStore().stop();
       } catch (Exception e) {
         LOG.warn("Stop DatanodeStore: {} failed", entry.getKey(), e);
       }
     }
+    datanodeStoreMap.clear();
   }
 
   public int size() {
