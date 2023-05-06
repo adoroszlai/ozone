@@ -419,7 +419,8 @@ public class TestDecommissionAndMaintenance {
     // There should now be 5-6 replicas of the container we are tracking
     Set<ContainerReplica> newReplicas =
         cm.getContainerReplicas(container.containerID());
-    assertTrue(newReplicas.size() >= 5);
+    assertTrue(newReplicas.size() >= 5,
+        String.valueOf(newReplicas.size()));
 
     scmClient.recommissionNodes(forMaintenance.stream()
         .map(d -> getDNHostAndPort(d))
@@ -447,7 +448,9 @@ public class TestDecommissionAndMaintenance {
     for (DatanodeDetails dn : ecMaintenance) {
       waitForDnToReachPersistedOpState(dn, IN_MAINTENANCE);
     }
-    assertTrue(cm.getContainerReplicas(ecContainer.containerID()).size() >= 6);
+    newReplicas = cm.getContainerReplicas(ecContainer.containerID());
+    assertTrue(newReplicas.size() >= 6,
+        String.valueOf(newReplicas.size()));
     scmClient.recommissionNodes(ecMaintenance.stream()
         .map(this::getDNHostAndPort)
         .collect(Collectors.toList()));
@@ -499,7 +502,8 @@ public class TestDecommissionAndMaintenance {
     // There should now be 5-6 replicas of the container we are tracking
     Set<ContainerReplica> newReplicas =
         cm.getContainerReplicas(container.containerID());
-    assertTrue(newReplicas.size() >= 5);
+    assertTrue(newReplicas.size() >= 5,
+        String.valueOf(newReplicas.size()));
   }
 
   @Test
@@ -572,7 +576,7 @@ public class TestDecommissionAndMaintenance {
         scm.getReplicationManager()
           .getContainerReplicaCount(newContainer.containerID());
     assertEquals(1, counts.getMaintenanceCount());
-    assertTrue(counts.isSufficientlyReplicated());
+    assertTrue(counts.isSufficientlyReplicated(), counts.toString());
 
     // The node should be added back to the decommission monitor to ensure
     // maintenance end time is correctly tracked.
@@ -601,7 +605,7 @@ public class TestDecommissionAndMaintenance {
     counts = scm.getReplicationManager()
       .getContainerReplicaCount(newContainer.containerID());
     assertEquals(0, counts.getMaintenanceCount());
-    assertTrue(counts.isSufficientlyReplicated());
+    assertTrue(counts.isSufficientlyReplicated(), counts.toString());
   }
 
   /**
