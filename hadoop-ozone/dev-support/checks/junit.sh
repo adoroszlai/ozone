@@ -41,7 +41,7 @@ else
   MAVEN_OPTIONS="${MAVEN_OPTIONS} --fail-at-end"
 fi
 
-if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
+if [[ "${CHECK}" == "integration" ]]; then
   mvn ${MAVEN_OPTIONS} -DskipTests clean install
 fi
 
@@ -73,6 +73,10 @@ for i in $(seq 1 ${ITERATIONS}); do
 
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
+  fi
+
+  if [[ "${FAIL_FAST:-}" == "true" ]] && [[ ${rc} != 0 ]]; then
+    break
   fi
 done
 
