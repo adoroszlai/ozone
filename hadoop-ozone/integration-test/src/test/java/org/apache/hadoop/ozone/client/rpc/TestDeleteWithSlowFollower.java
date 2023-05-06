@@ -327,7 +327,8 @@ public class TestDeleteWithSlowFollower {
                 null);
       }
     } catch (IOException ioe) {
-      Assert.fail("Exception should not be thrown.");
+      LOG.info("Unexpected", ioe);
+      Assert.fail("Exception should not be thrown: " + ioe);
     }
     long numReadStateMachineOps =
         stateMachine.getMetrics().getNumReadStateMachineOps();
