@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.DatanodeRatisServerConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.ratis.conf.RatisClientConfig;
 import org.apache.hadoop.hdds.scm.ScmConfig;
@@ -75,12 +76,17 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests delete key operation with a slow follower in the datanode
  * pipeline.
  */
 public class TestDeleteWithSlowFollower {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDeleteWithSlowFollower.class);
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -239,6 +245,7 @@ public class TestDeleteWithSlowFollower {
     Assume.assumeNotNull(follower, leader);
     //ensure that the chosen follower is still a follower
     Assume.assumeTrue(RatisTestHelper.isRatisFollower(follower, pipeline));
+    LOG.info("Shutting down {}", follower.getDatanodeDetails());
     // shutdown the  follower node
     cluster.shutdownHddsDatanode(follower.getDatanodeDetails());
     key.write(testData);
@@ -247,11 +254,13 @@ public class TestDeleteWithSlowFollower {
     // now move the container to the closed on the datanode.
     ContainerProtos.ContainerCommandRequestProto.Builder request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder();
-    request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
+    DatanodeDetails firstNode = pipeline.getFirstNode();
+    request.setDatanodeUuid(firstNode.getUuidString());
     request.setCmdType(ContainerProtos.Type.CloseContainer);
     request.setContainerID(containerID);
     request.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
+    LOG.info("Sending close container command to {}", firstNode);
     XceiverClientSpi xceiverClient =
         xceiverClientManager.acquireClient(pipeline);
     try {
@@ -304,6 +313,9 @@ public class TestDeleteWithSlowFollower {
     }, 500, 100000);
     Assert.assertTrue(containerData.getDeleteTransactionId() > delTrxId);
     long pendingAfter = containerData.getNumPendingDeletionBlocks();
+    GenericTestUtils.waitFor(
+        () -> containerData.getNumPendingDeletionBlocks() > pendingBefore,
+        500, 100_000);
     Assert.assertTrue("Expected " + pendingAfter + " > " + pendingBefore,
         pendingAfter > pendingBefore);
     // make sure the chunk was never deleted on the leader even though
