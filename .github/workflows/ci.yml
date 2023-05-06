@@ -354,7 +354,7 @@ jobs:
         if: always()
         with:
           name: integration
-          path: target/integration
+          path: target/unit
         continue-on-error: true
       - name: Delete temporary build artifacts before caching
         run: |
