@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ozone.test.TimedOutTestsListener.buildThreadDiagnosticString;
 
 /**
  * Class to create mini-clusters in the background. In general creating a mini
@@ -156,7 +157,9 @@ public class MiniOzoneClusterProvider {
     }
     MiniOzoneCluster cluster = clusters.poll(100, SECONDS);
     if (cluster == null) {
-      throw new IOException("Failed to obtain available cluster in time");
+      throw new IOException("Failed to obtain available cluster in time. " +
+          "Thread diagnostics:\n" +
+          buildThreadDiagnosticString());
     }
     createdClusters.add(cluster);
     consumedClusterCount++;
