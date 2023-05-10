@@ -218,19 +218,20 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     GenericTestUtils.waitFor(() -> {
       StorageContainerManager activeScm = getActiveSCM();
       final int healthy = activeScm.getNodeCount(HEALTHY);
-      final boolean isNodeReady = healthy == hddsDatanodes.size();
+      final int datanodeCount = hddsDatanodes.size();
+      final boolean isNodeReady = healthy == datanodeCount;
       final boolean exitSafeMode = !activeScm.isInSafeMode();
       final boolean checkScmLeader = activeScm.checkLeader();
+      final boolean result = isNodeReady && exitSafeMode && checkScmLeader;
 
-      LOG.info("{}. Got {} of {} DN Heartbeats.",
-          isNodeReady ? "Nodes are ready" : "Waiting for nodes to be ready",
-          healthy, hddsDatanodes.size());
-      LOG.info(exitSafeMode ? "Cluster exits safe mode" :
-              "Waiting for cluster to exit safe mode");
-      LOG.info(checkScmLeader ? "SCM became leader" :
-          "SCM has not become leader");
+      LOG.info("Cluster {}: {}/{} datanodes ready, SCM {} safe mode, leader {}",
+          result ? "ready" : "not yet ready",
+          healthy, datanodeCount,
+          exitSafeMode ? "out of" : "still in",
+          checkScmLeader ? "elected" : "pending"
+      );
 
-      return isNodeReady && exitSafeMode && checkScmLeader;
+      return result;
     }, 1000, waitForClusterToBeReadyTimeout);
   }
 
