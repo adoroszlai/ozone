@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.ozone.test.TimedOutTestsListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,7 +160,9 @@ public class MiniOzoneClusterProvider {
     }
     MiniOzoneCluster cluster = clusters.poll(100, SECONDS);
     if (cluster == null) {
-      throw new IOException("Failed to obtain available cluster in time");
+      throw new IOException("Failed to obtain available cluster in time. " +
+          "Thread diagnostics:\n" +
+          TimedOutTestsListener.buildThreadDiagnosticString());
     }
     createdClusters.add(cluster);
     consumedClusterCount++;
