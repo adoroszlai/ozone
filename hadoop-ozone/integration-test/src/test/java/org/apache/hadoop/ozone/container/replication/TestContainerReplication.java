@@ -24,11 +24,16 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERV
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.apache.hadoop.hdds.scm.pipeline.MockPipeline.createPipeline;
 import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls.createContainer;
+import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls.toValidatorList;
 import static org.apache.ozone.test.GenericTestUtils.waitFor;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -166,14 +171,64 @@ class TestContainerReplication {
         ReplicationSupervisor::getReplicationFailureCount);
   }
 
+  @Test
+  void pushToDifferentTargets() throws Exception {
+    DatanodeDetails source = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
+
+    List<ReplicateContainerCommand> cmds = new LinkedList<>();
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+      DatanodeDetails target = datanodeService.getDatanodeDetails();
+      if (Objects.equals(source, target)) {
+        continue;
+      }
+      long containerID = createNewClosedContainer(source);
+      cmds.add(ReplicateContainerCommand.toTarget(containerID, target));
+    }
+
+    queueAndWaitForCompletion(source,
+        ReplicationSupervisor::getReplicationSuccessCount,
+        cmds
+    );
+  }
+
+  @Test
+  void pushMultipleContainersToSameTarget() throws Exception {
+    DatanodeDetails source = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
+    DatanodeDetails target = selectOtherNode(source);
+
+    List<ReplicateContainerCommand> cmds = new LinkedList<>();
+    for (int i = 0; i < 20; i++) {
+      long containerID = createNewClosedContainer(source);
+      ReplicateContainerCommand cmd =
+          ReplicateContainerCommand.toTarget(containerID, target);
+      cmds.add(cmd);
+    }
+
+    queueAndWaitForCompletion(source,
+        ReplicationSupervisor::getReplicationSuccessCount,
+        cmds
+    );
+  }
+
   /**
    * Queues {@code cmd} in {@code dn}'s state machine, and waits until the
    * command is completed, as indicated by {@code counter} having been
    * incremented.
+   *
    * @param counter ReplicationSupervisor's counter expected to be incremented
    */
-  private static void queueAndWaitForCompletion(ReplicateContainerCommand cmd,
-      DatanodeDetails dn, ToLongFunction<ReplicationSupervisor> counter)
+  private static void queueAndWaitForCompletion(
+      ReplicateContainerCommand cmd, DatanodeDetails dn,
+      ToLongFunction<ReplicationSupervisor> counter)
+      throws IOException, InterruptedException, TimeoutException {
+    queueAndWaitForCompletion(dn, counter, singleton(cmd));
+  }
+
+  private static void queueAndWaitForCompletion(DatanodeDetails dn,
+      ToLongFunction<ReplicationSupervisor> counter,
+      Collection<ReplicateContainerCommand> cmds)
       throws IOException, InterruptedException, TimeoutException {
 
     DatanodeStateMachine datanodeStateMachine =
@@ -182,10 +237,11 @@ class TestContainerReplication {
         datanodeStateMachine.getSupervisor();
     final long previousCount = counter.applyAsLong(supervisor);
     StateContext context = datanodeStateMachine.getContext();
-    context.getTermOfLeaderSCM().ifPresent(cmd::setTerm);
-    context.addCommand(cmd);
+    OptionalLong term = context.getTermOfLeaderSCM();
+    cmds.forEach(cmd -> term.ifPresent(cmd::setTerm));
+    cmds.forEach(context::addCommand);
     waitFor(
-        () -> counter.applyAsLong(supervisor) == previousCount + 1,
+        () -> counter.applyAsLong(supervisor) == previousCount + cmds.size(),
         100, 30000);
   }
 
