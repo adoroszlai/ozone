@@ -576,6 +576,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.isS3MultiTenancyEnabled =
         OMMultiTenantManager.checkAndEnableMultiTenancy(this, conf);
 
+    metrics = OMMetrics.create();
+    perfMetrics = OMPerformanceMetrics.register();
+
     // Get admin list
     Collection<String> omAdminUsernames =
         OzoneConfigUtil.getOzoneAdminsFromConfig(configuration);
@@ -604,7 +607,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     initializeRatisDirs(conf);
     initializeRatisServer(isBootstrapping || isForcedBootstrapping);
 
-    metrics = OMMetrics.create();
     omClientProtocolMetrics = ProtocolMessageMetrics
         .create("OmClientProtocol", "Ozone Manager RPC endpoint",
             OzoneManagerProtocolProtos.Type.values());
@@ -723,7 +725,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     prefixManager = new PrefixManagerImpl(metadataManager, isRatisEnabled);
-    perfMetrics = OMPerformanceMetrics.register();
     keyManager = new KeyManagerImpl(this, scmClient, configuration,
             perfMetrics);
 
