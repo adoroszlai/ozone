@@ -24,16 +24,15 @@ import org.apache.hadoop.hdds.conf.Config;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.ConfigTag;
 import org.apache.hadoop.hdds.conf.ConfigType;
-import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.PipelineChoosePolicy;
 import org.apache.hadoop.hdds.scm.PipelineRequestInformation;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +43,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdds.conf.StorageUnit.BYTES;
-
 /**
  * Writable Container provider to obtain a writable container for EC pipelines.
  */
@@ -55,23 +52,25 @@ public class WritableECContainerProvider
   private static final Logger LOG = LoggerFactory
       .getLogger(WritableECContainerProvider.class);
 
-  private final ConfigurationSource conf;
+  private final NodeManager nodeManager;
   private final PipelineManager pipelineManager;
   private final PipelineChoosePolicy pipelineChoosePolicy;
   private final ContainerManager containerManager;
   private final long containerSize;
   private final WritableECContainerProviderConfig providerConfig;
 
-  public WritableECContainerProvider(ConfigurationSource conf,
-      PipelineManager pipelineManager, ContainerManager containerManager,
+  public WritableECContainerProvider(WritableECContainerProviderConfig config,
+      long containerSize,
+      NodeManager nodeManager,
+      PipelineManager pipelineManager,
+      ContainerManager containerManager,
       PipelineChoosePolicy pipelineChoosePolicy) {
-    this.conf = conf;
-    this.providerConfig =
-        conf.getObject(WritableECContainerProviderConfig.class);
+    this.providerConfig = config;
+    this.nodeManager = nodeManager;
     this.pipelineManager = pipelineManager;
     this.containerManager = containerManager;
     this.pipelineChoosePolicy = pipelineChoosePolicy;
-    this.containerSize = getConfiguredContainerSize();
+    this.containerSize = containerSize;
   }
 
   /**
@@ -96,7 +95,7 @@ public class WritableECContainerProvider
     synchronized (this) {
       int openPipelineCount = pipelineManager.getPipelineCount(repConfig,
           Pipeline.PipelineState.OPEN);
-      if (openPipelineCount < providerConfig.getMinimumPipelines()) {
+      if (openPipelineCount < getMinimumPipelines(repConfig)) {
         try {
           return allocateContainer(
               repConfig, size, owner, excludeList);
@@ -159,6 +158,12 @@ public class WritableECContainerProvider
     }
   }
 
+  private int getMinimumPipelines(ECReplicationConfig repConfig) {
+    int healthyVolumeCount = nodeManager.totalHealthyVolumeCount();
+    return Math.max(healthyVolumeCount / repConfig.getRequiredNodes(),
+        providerConfig.getMinimumPipelines());
+  }
+
   private ContainerInfo allocateContainer(ReplicationConfig repConfig,
       long size, String owner, ExcludeList excludeList)
       throws IOException, TimeoutException {
@@ -203,12 +208,6 @@ public class WritableECContainerProvider
     // just check if the container has enough free space to accommodate another
     // full block.
     return container.getUsedBytes() + size <= containerSize;
-  }
-
-  private long getConfiguredContainerSize() {
-    return (long) conf.getStorageSize(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT, BYTES);
   }
 
   /**
