@@ -304,13 +304,8 @@ public class TestWritableECContainerProvider {
   @Test
   public void testNewContainerAllocatedAndPipelinesClosedIfNoSpaceInExisting()
       throws IOException, TimeoutException {
-    Set<ContainerInfo> allocatedContainers = new HashSet<>();
-    for (int i = 0; i < providerConf.getMinimumPipelines(); i++) {
-      ContainerInfo container =
-          provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-      assertFalse(allocatedContainers.contains(container));
-      allocatedContainers.add(container);
-    }
+    Set<ContainerInfo> allocatedContainers =
+        assertDistinctContainers(providerConf.getMinimumPipelines());
     // Update all the containers to make them nearly full, but with enough space
     // for an EC block to be striped across them.
     for (ContainerInfo c : allocatedContainers) {
@@ -354,13 +349,9 @@ public class TestWritableECContainerProvider {
     };
     provider = createSubject();
 
-    Set<ContainerInfo> allocatedContainers = new HashSet<>();
-    for (int i = 0; i < providerConf.getMinimumPipelines(); i++) {
-      ContainerInfo container =
-          provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-      assertFalse(allocatedContainers.contains(container));
-      allocatedContainers.add(container);
-    }
+    Set<ContainerInfo> allocatedContainers =
+        assertDistinctContainers(providerConf.getMinimumPipelines());
+
     // Now attempt to get a container - any attempt to use an existing with
     // throw PNF and then we must allocate a new one
     ContainerInfo newContainer =
@@ -372,13 +363,8 @@ public class TestWritableECContainerProvider {
   @Test
   public void testContainerNotFoundWhenAttemptingToUseExisting()
       throws IOException, TimeoutException {
-    Set<ContainerInfo> allocatedContainers = new HashSet<>();
-    for (int i = 0; i < providerConf.getMinimumPipelines(); i++) {
-      ContainerInfo container =
-          provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-      assertFalse(allocatedContainers.contains(container));
-      allocatedContainers.add(container);
-    }
+    Set<ContainerInfo> allocatedContainers =
+        assertDistinctContainers(providerConf.getMinimumPipelines());
 
     // Ensure ContainerManager always throws when a container is requested so
     // existing pipelines cannot be used
