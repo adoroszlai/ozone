@@ -86,7 +86,6 @@ public class WritableECContainerProvider
    *                    not be considered.
    * @return A containerInfo representing a block group with with space for the
    *         write, or null if no container can be allocated.
-   * @throws IOException
    */
   @Override
   public ContainerInfo getContainer(final long size,
