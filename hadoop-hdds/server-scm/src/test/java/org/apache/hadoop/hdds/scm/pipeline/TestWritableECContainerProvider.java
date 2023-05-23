@@ -43,7 +43,6 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -118,12 +117,12 @@ public class TestWritableECContainerProvider {
           pipeline.getId(), container.containerID());
       containers.put(container.containerID(), container);
       return container;
-    }).when(containerManager).getMatchingContainer(Matchers.anyLong(),
-        Matchers.anyString(), Matchers.any(Pipeline.class));
+    }).when(containerManager).getMatchingContainer(Mockito.anyLong(),
+        Mockito.anyString(), Mockito.any(Pipeline.class));
 
     Mockito.doAnswer(call ->
         containers.get((ContainerID)call.getArguments()[0]))
-        .when(containerManager).getContainer(Matchers.any(ContainerID.class));
+        .when(containerManager).getContainer(Mockito.any(ContainerID.class));
 
   }
 
@@ -385,7 +384,7 @@ public class TestWritableECContainerProvider {
     // existing pipelines cannot be used
     Mockito.doAnswer(call -> {
       throw new ContainerNotFoundException();
-    }).when(containerManager).getContainer(Matchers.any(ContainerID.class));
+    }).when(containerManager).getContainer(Mockito.any(ContainerID.class));
 
     ContainerInfo newContainer =
         provider.getContainer(1, repConfig, OWNER, new ExcludeList());
