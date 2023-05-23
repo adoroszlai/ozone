@@ -96,8 +96,6 @@ public class TestWritableECContainerProvider {
     conf = new OzoneConfiguration();
 
     providerConf = conf.getObject(WritableECContainerProviderConfig.class);
-    providerConf.setMinimumPipelines(5);
-    conf.setFromObject(providerConf);
 
     containers = new HashMap<>();
     File testDir = GenericTestUtils.getTestDir(
