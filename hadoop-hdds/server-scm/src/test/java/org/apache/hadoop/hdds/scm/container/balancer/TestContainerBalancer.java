@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NODE_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -69,6 +70,8 @@ public class TestContainerBalancer {
   public void setup() throws IOException, NodeNotFoundException,
       TimeoutException {
     conf = new OzoneConfiguration();
+    conf.setTimeDuration(HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
+        5, TimeUnit.SECONDS);
     conf.setTimeDuration(HDDS_NODE_REPORT_INTERVAL, 2, TimeUnit.SECONDS);
     scm = Mockito.mock(StorageContainerManager.class);
     serviceStateManager = Mockito.mock(StatefulServiceStateManagerImpl.class);
@@ -234,9 +237,8 @@ public class TestContainerBalancer {
       throws IllegalContainerBalancerStateException, IOException,
       InvalidContainerBalancerConfigurationException, TimeoutException,
       InterruptedException {
-    long delayDuration = 10;
-    conf.setTimeDuration("hdds.scm.wait.time.after.safemode.exit",
-        delayDuration, TimeUnit.SECONDS);
+    long delayDuration = conf.getTimeDuration(
+        HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT, 10, TimeUnit.SECONDS);
     balancerConfiguration =
         conf.getObject(ContainerBalancerConfiguration.class);
 
