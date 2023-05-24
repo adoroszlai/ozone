@@ -37,17 +37,20 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NODE_REPORT_INTERVAL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link ContainerBalancer}.
  */
+@Timeout(10)
 public class TestContainerBalancer {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestContainerBalancer.class);
@@ -66,6 +69,7 @@ public class TestContainerBalancer {
   public void setup() throws IOException, NodeNotFoundException,
       TimeoutException {
     conf = new OzoneConfiguration();
+    conf.setTimeDuration(HDDS_NODE_REPORT_INTERVAL, 2, TimeUnit.SECONDS);
     scm = Mockito.mock(StorageContainerManager.class);
     serviceStateManager = Mockito.mock(StatefulServiceStateManagerImpl.class);
     balancerConfiguration =
@@ -250,7 +254,7 @@ public class TestContainerBalancer {
 
     GenericTestUtils.LogCapturer logCapturer =
         GenericTestUtils.LogCapturer.captureLogs(ContainerBalancerTask.LOG);
-    String expectedLog = "ContainerBalancer will sleep for " + delayDuration +
+    String expectedLog = "ContainerBalancer will wait " + delayDuration +
         " seconds before starting balancing.";
     /*
      Send a status change notification again and check whether balancer

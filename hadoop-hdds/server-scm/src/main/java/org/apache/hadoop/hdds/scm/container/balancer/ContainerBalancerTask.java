@@ -38,6 +38,8 @@ import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.ratis.util.AwaitForSignal;
+import org.apache.ratis.util.JavaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,6 +122,9 @@ public class ContainerBalancerTask implements Runnable {
   private int nextIterationIndex;
   private boolean delayStart;
 
+  private final AwaitForSignal awaitForSignal =
+      new AwaitForSignal(JavaUtils.getClassSimpleName(getClass()));
+
   /**
    * Constructs ContainerBalancerTask with the specified arguments.
    *
@@ -172,9 +177,12 @@ public class ContainerBalancerTask implements Runnable {
             HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
             HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT_DEFAULT,
             TimeUnit.SECONDS);
-        LOG.info("ContainerBalancer will sleep for {} seconds before starting" +
+        LOG.info("ContainerBalancer will wait {} seconds before starting" +
             " balancing.", delayDuration);
-        Thread.sleep(Duration.ofSeconds(delayDuration).toMillis());
+        if (awaitForSignal.await(delayDuration, TimeUnit.SECONDS)) {
+          LOG.info("Container Balancer stop requested");
+          return;
+        }
       }
       balance();
     } catch (Exception e) {
@@ -192,6 +200,7 @@ public class ContainerBalancerTask implements Runnable {
   public void stop() {
     synchronized (this) {
       if (taskStatus == Status.RUNNING) {
+        awaitForSignal.signal();
         taskStatus = Status.STOPPING;
       }
     }
@@ -221,14 +230,19 @@ public class ContainerBalancerTask implements Runnable {
         try {
           long nodeReportInterval =
               ozoneConfiguration.getTimeDuration(HDDS_NODE_REPORT_INTERVAL,
-                  HDDS_NODE_REPORT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+                  HDDS_NODE_REPORT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
           // one for sending command , one for running du, and one for
           // reporting back make it like this for now, a more suitable
           // value. can be set in the future if needed
-          long sleepTime = 3 * nodeReportInterval;
-          LOG.info("ContainerBalancer will sleep for {} ms while waiting " +
-              "for updated usage information from Datanodes.", sleepTime);
-          Thread.sleep(nodeReportInterval);
+          long waitTime = 3 * nodeReportInterval;
+          LOG.info("ContainerBalancer will wait {} seconds " +
+              "for updated usage information from Datanodes.", waitTime);
+
+          if (!isBalancerRunning() ||
+              awaitForSignal.await(waitTime, TimeUnit.SECONDS)) {
+            LOG.info("Container Balancer stop requested");
+            return;
+          }
         } catch (InterruptedException e) {
           LOG.info("Container Balancer was interrupted while waiting for" +
               "datanodes refreshing volume usage info");
