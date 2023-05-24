@@ -347,9 +347,9 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :hdds-server-scm -Dtest=TestContainerBalancer
+        run: bash hadoop-ozone/dev-support/checks/junit.sh -pl :hdds-server-scm -Dtest=TestContainerBalancer
         env:
-          ITERATIONS: 1
+          ITERATIONS: 100
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: always()
