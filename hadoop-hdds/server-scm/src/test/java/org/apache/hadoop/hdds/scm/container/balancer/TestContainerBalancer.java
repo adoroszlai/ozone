@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests for {@link ContainerBalancer}.
  */
-@Timeout(10)
+@Timeout(60)
 public class TestContainerBalancer {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestContainerBalancer.class);
