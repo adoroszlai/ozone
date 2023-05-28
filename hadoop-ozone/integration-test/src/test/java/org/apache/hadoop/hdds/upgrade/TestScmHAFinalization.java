@@ -64,9 +64,6 @@ public class TestScmHAFinalization {
   private static final String CLIENT_ID = UUID.randomUUID().toString();
   private static final Logger LOG =
       LoggerFactory.getLogger(TestScmHAFinalization.class);
-  private static final String METHOD_SOURCE =
-      "org.apache.hadoop.hdds.upgrade" +
-          ".TestScmHAFinalization#injectionPointsToTest";
 
   private StorageContainerLocationProtocol scmClient;
   private MiniOzoneHAClusterImpl cluster;
@@ -121,7 +118,7 @@ public class TestScmHAFinalization {
   /**
    * Argument supplier for parameterized tests.
    */
-  public static Stream<Arguments> injectionPointsToTest() {
+  static Stream<Arguments> injectionPointsToTest() {
     // Do not test from BEFORE_PRE_FINALIZE_UPGRADE injection point.
     // Finalization will not have started so there will be no persisted state
     // to resume from.
@@ -133,7 +130,7 @@ public class TestScmHAFinalization {
   }
 
   @ParameterizedTest
-  @MethodSource(METHOD_SOURCE)
+  @MethodSource("injectionPointsToTest")
   public void testFinalizationWithLeaderChange(
       UpgradeTestInjectionPoints haltingPoint) throws Exception {
 
@@ -186,7 +183,7 @@ public class TestScmHAFinalization {
   }
 
   @ParameterizedTest
-  @MethodSource(METHOD_SOURCE)
+  @MethodSource("injectionPointsToTest")
   public void testFinalizationWithRestart(
       UpgradeTestInjectionPoints haltingPoint) throws Exception {
     CountDownLatch terminateLatch = new CountDownLatch(1);
