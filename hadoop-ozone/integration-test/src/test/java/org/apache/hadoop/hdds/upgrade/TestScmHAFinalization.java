@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.server.upgrade.FinalizationCheckpoint;
 import org.apache.hadoop.hdds.scm.server.upgrade.FinalizationStateManagerImpl;
 import org.apache.hadoop.hdds.scm.server.upgrade.SCMUpgradeFinalizationContext;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.upgrade.DefaultUpgradeFinalizationExecutor;
@@ -45,15 +46,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
+import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerDataProto.State.CLOSED;
 
 /**
@@ -70,6 +74,7 @@ public class TestScmHAFinalization {
   private static final int NUM_DATANODES = 3;
   private static final int NUM_SCMS = 3;
   private Future<?> finalizationFuture;
+  private ExecutorService clientExecutor;
 
   public void init(OzoneConfiguration conf,
       UpgradeFinalizationExecutor<SCMUpgradeFinalizationContext> executor,
@@ -97,7 +102,8 @@ public class TestScmHAFinalization {
     // this call will block until finalization completes. If the test
     // involves restarts or leader changes the client may be disconnected,
     // but finalization should still proceed.
-    finalizationFuture = Executors.newSingleThreadExecutor().submit(
+    clientExecutor = Executors.newSingleThreadExecutor();
+    finalizationFuture = clientExecutor.submit(
         () -> {
           try {
             scmClient.finalizeScmUpgrade(CLIENT_ID);
@@ -110,6 +116,9 @@ public class TestScmHAFinalization {
 
   @AfterEach
   public void shutdown() {
+    IOUtils.closeQuietly(scmClient);
+    //noinspection UnstableApiUsage
+    shutdownAndAwaitTermination(clientExecutor, Duration.ofSeconds(5));
     if (cluster != null) {
       cluster.shutdown();
     }
