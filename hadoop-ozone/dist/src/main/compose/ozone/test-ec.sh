@@ -15,42 +15,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#suite:HA-secure
+#suite:EC
 
 COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export COMPOSE_DIR
 
-export SECURITY_ENABLED=true
-export OM_SERVICE_ID="omservice"
-export SCM=scm1.org
-
-: ${OZONE_BUCKET_KEY_NAME:=key1}
+export SECURITY_ENABLED=false
+export OZONE_REPLICATION_FACTOR=3
 
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
-start_docker_env
-
-execute_command_in_container kms hadoop key create ${OZONE_BUCKET_KEY_NAME}
-
-execute_robot_test s3g kinit.robot
-
-execute_robot_test s3g freon
-
-execute_robot_test s3g -v SCHEME:o3fs -v BUCKET_TYPE:link -N ozonefs-o3fs-link ozonefs/ozonefs.robot
-
-execute_robot_test s3g basic/links.robot
+start_docker_env 5
 
 exclude=""
-for bucket in encrypted link; do
-  execute_robot_test s3g -v BUCKET:${bucket} -N s3-${bucket} ${exclude} s3
+for bucket in erasure; do
+  execute_robot_test scm -v BUCKET:${bucket} -N s3-${bucket} ${exclude} s3
   # some tests are independent of the bucket type, only need to be run once
   exclude="--exclude no-bucket-type"
 done
 
-execute_robot_test s3g admincli
-
-execute_robot_test s3g httpfs
+prefix=${RANDOM}
+execute_robot_test scm -v PREFIX:${prefix} ec/basic.robot
+docker-compose up -d --no-recreate --scale datanode=4
+execute_robot_test scm -v PREFIX:${prefix} ec/read.robot
+docker-compose up -d --no-recreate --scale datanode=3
+execute_robot_test scm -v PREFIX:${prefix} ec/read.robot
 
 stop_docker_env
 

@@ -33,8 +33,6 @@ execute_command_in_container kms hadoop key create ${OZONE_BUCKET_KEY_NAME}
 
 execute_robot_test scm kinit.robot
 
-execute_robot_test scm basic
-
 execute_robot_test scm security
 
 execute_robot_test scm -v SCHEME:ofs -v BUCKET_TYPE:bucket -N ozonefs-ofs-bucket ozonefs/ozonefs.robot
@@ -46,8 +44,6 @@ execute_robot_test scm recon
 execute_robot_test scm admincli
 execute_robot_test scm spnego
 execute_robot_test scm snapshot/snapshot-acls.robot
-
-execute_robot_test scm httpfs
 
 # test replication
 docker-compose up -d --scale datanode=2

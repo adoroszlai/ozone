@@ -251,13 +251,15 @@ jobs:
     strategy:
       matrix:
         suite:
-          - secure
-          - unsecure
           - compat
+          - EC
           - HA-secure
           - HA-unsecure
-          - MR
           - misc
+          - MR
+          - secure
+          - SCM
+          - unsecure
       fail-fast: false
     steps:
       - name: Checkout project
