@@ -74,15 +74,7 @@ for i in $(seq 1 ${ITERATIONS}); do
   if [[ ${rc} == 0 ]]; then
     rc=${irc}
   fi
-
-  if [[ ${rc} != 0 ]] && [[ "${FAIL_FAST:-}" == "true" ]]; then
-    break
-  fi
 done
-
-if [[ ${ITERATIONS} -gt 1 ]]; then
-  grep -c "exit code: [^0]" "${REPORT_DIR}/summary.txt" > "${REPORT_DIR}/failures"
-fi
 
 if [[ "${OZONE_WITH_COVERAGE}" == "true" ]]; then
   #Archive combined jacoco records
