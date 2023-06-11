@@ -40,7 +40,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLU
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
- * Implementation for {@link BucketManager}
+ * Implementation for {@link BucketManager}.
  *
  * BucketManager uses MetadataDB to store bucket level information.
  * Keys used in BucketManager for storing data into MetadataDB
