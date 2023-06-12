@@ -196,16 +196,13 @@
                 <artifactItem>
                   <groupId>org.apache.ozone</groupId>
                   <artifactId>hdds-server-framework</artifactId>
-                  <outputDirectory>${project.build.outputDirectory}
-                  </outputDirectory>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                   <includes>webapps/static/**/*.*</includes>
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.apache.ozone</groupId>
                   <artifactId>hdds-docs</artifactId>
-                  <outputDirectory>
-                    ${project.build.outputDirectory}/webapps/static
-                  </outputDirectory>
+                  <outputDirectory>${project.build.outputDirectory}/webapps/static</outputDirectory>
                   <includes>docs/**/*.*</includes>
                 </artifactItem>
               </artifactItems>
@@ -218,8 +215,7 @@
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
-          </excludeFilterFile>
+          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
         </configuration>
       </plugin>
     </plugins>
