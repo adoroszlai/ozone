@@ -37,12 +37,15 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdds.conf.ConfigTag.SCM;
 
@@ -61,6 +64,7 @@ public class WritableECContainerProvider
   private final ContainerManager containerManager;
   private final long containerSize;
   private final WritableECContainerProviderConfig providerConfig;
+  private final AtomicInteger pendingAllocations = new AtomicInteger();
 
   public WritableECContainerProvider(WritableECContainerProviderConfig config,
       long containerSize,
@@ -77,37 +81,41 @@ public class WritableECContainerProvider
   }
 
   /**
-   *
-   * @param size The max size of block in bytes which will be written. This
-   *             comes from Ozone Manager and will be the block size configured
-   *             for the cluster. The client cannot pass any arbitrary value
-   *             from this setting.
-   * @param repConfig The replication Config indicating the EC data and partiy
-   *                  block counts.
-   * @param owner The owner of the container
-   * @param excludeList A set of datanodes, container and pipelines which should
-   *                    not be considered.
-   * @return A containerInfo representing a block group with space for the
-   *         write, or null if no container can be allocated.
+   * Find an existing container suitable for the request.  Possibly allocate
+   * a new one, too.  Return one of them randomly.
    */
   @Override
   public ContainerInfo getContainer(final long size,
       ECReplicationConfig repConfig, String owner, ExcludeList excludeList)
       throws IOException, TimeoutException {
-    int maximumPipelines = getMaximumPipelines(repConfig);
-    int openPipelineCount = 0;
-    synchronized (this) {
-      openPipelineCount = pipelineManager.getPipelineCount(repConfig,
-          Pipeline.PipelineState.OPEN);
-      if (openPipelineCount < maximumPipelines) {
-        try {
-          return allocateContainer(repConfig, size, owner, excludeList);
-        } catch (IOException e) {
-          LOG.warn("Unable to allocate a container for {} with {} existing "
-              + "containers", repConfig, openPipelineCount, e);
-        }
-      }
+
+    ContainerInfo existing = selectExisting(size, repConfig, excludeList);
+    ContainerInfo newContainer = mayAllocate(getMaximumPipelines(repConfig),
+        repConfig, size, owner, excludeList);
+    return choose(existing, newContainer);
+  }
+
+  @Nullable
+  private ContainerInfo choose(
+      @Nullable ContainerInfo existing,
+      @Nullable ContainerInfo newOne
+  ) {
+    if (existing == null) {
+      return newOne;
     }
+    if (newOne == null) {
+      return existing;
+    }
+    // TODO tweak %
+    return ThreadLocalRandom.current().nextInt(0, 100) < 33
+        ? newOne : existing;
+  }
+
+  @Nullable
+  private ContainerInfo selectExisting(final long size,
+      ECReplicationConfig repConfig, ExcludeList excludeList)
+      throws IOException, TimeoutException {
+
     List<Pipeline> existingPipelines = pipelineManager.getPipelines(
         repConfig, Pipeline.PipelineState.OPEN,
         excludeList.getDatanodes(), excludeList.getPipelineIds());
@@ -132,7 +140,6 @@ public class WritableECContainerProvider
               || !containerHasSpace(containerInfo, size)) {
             existingPipelines.remove(pipelineIndex);
             pipelineManager.closePipeline(pipeline, true);
-            openPipelineCount--;
           } else {
             if (containerIsExcluded(containerInfo, excludeList)) {
               existingPipelines.remove(pipelineIndex);
@@ -146,25 +153,37 @@ public class WritableECContainerProvider
               + "container", e);
           existingPipelines.remove(pipelineIndex);
           pipelineManager.closePipeline(pipeline, true);
-          openPipelineCount--;
         }
       }
     }
-    // If we get here, all the pipelines we tried were no good. So try to
-    // allocate a new one.
+    return null;
+  }
+
+  @Nullable
+  private ContainerInfo mayAllocate(int max,
+      ECReplicationConfig repConfig, long size,
+      String owner, ExcludeList excludeList) {
+
+    int current = pipelineManager.getPipelineCount(repConfig,
+        Pipeline.PipelineState.OPEN);
+
+    final int pending = pendingAllocations.getAndIncrement();
     try {
-      synchronized (this) {
-        if (openPipelineCount < maximumPipelines) {
-          return allocateContainer(repConfig, size, owner, excludeList);
+      if (current + pending < max) {
+        return allocateContainer(repConfig, size, owner, excludeList);
+      } else {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Unable to allocate a container for {} as {} existing "
+              + "containers and {} pending allocations have reached the limit "
+              + "of {}", repConfig, current, pending, max);
         }
-        throw new IOException("Unable to allocate a pipeline for "
-            + repConfig + " after trying all existing pipelines as the max "
-            + "limit has been reached and no pipelines where closed");
+        return null;
       }
-    } catch (IOException e) {
-      LOG.error("Unable to allocate a container for {} after trying all "
-          + "existing containers", repConfig, e);
-      throw e;
+    } catch (Exception e) {
+      LOG.warn("Error trying to allocate a container for {}", repConfig, e);
+      return null;
+    } finally {
+      pendingAllocations.decrementAndGet();
     }
   }
 
@@ -200,6 +219,7 @@ public class WritableECContainerProvider
     return excludeList.getContainerIds().contains(container.containerID());
   }
 
+  @Nullable
   private ContainerInfo getContainerFromPipeline(Pipeline pipeline)
       throws IOException {
     // Assume the container is still open if the below method returns it. On

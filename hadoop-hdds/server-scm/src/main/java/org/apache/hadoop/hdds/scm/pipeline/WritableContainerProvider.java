@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
@@ -50,9 +51,8 @@ public interface WritableContainerProvider<T extends ReplicationConfig> {
    *                    not be considered.
    * @return A ContainerInfo which is open and has the capacity to store the
    *         desired block size.
-   * @throws IOException
    */
-  ContainerInfo getContainer(long size, T repConfig,
+  @Nullable ContainerInfo getContainer(long size, T repConfig,
       String owner, ExcludeList excludeList)
       throws IOException, TimeoutException;
 
