@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.om.KeyManager;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmTestManagers;
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.om.ScmBlockLocationTestingClient;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.ratis.util.ExitUtils;
 import org.junit.BeforeClass;
@@ -141,8 +143,8 @@ public class TestKeyDeletingService {
         () -> keyDeletingService.getDeletedKeyCount().get() >= keyCount,
         1000, 10000);
     Assert.assertTrue(keyDeletingService.getRunCount().get() > 1);
-    Assert.assertEquals(0,
-        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size());
+    Assert.assertEquals(0, keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+        .getKeyBlocksList().size());
   }
 
   @Test(timeout = 40000)
@@ -167,7 +169,8 @@ public class TestKeyDeletingService {
         () -> {
           try {
             int numPendingDeletionKeys =
-                keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size();
+                keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+                    .getKeyBlocksList().size();
             if (numPendingDeletionKeys != keyCount) {
               LOG.info("Expected {} keys to be pending deletion, but got {}",
                   keyCount, numPendingDeletionKeys);
@@ -185,8 +188,8 @@ public class TestKeyDeletingService {
         100, 1000);
     // Since SCM calls are failing, deletedKeyCount should be zero.
     Assert.assertEquals(0, keyDeletingService.getDeletedKeyCount().get());
-    Assert.assertEquals(keyCount,
-        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size());
+    Assert.assertEquals(keyCount, keyManager
+        .getPendingDeletionKeys(Integer.MAX_VALUE).getKeyBlocksList().size());
   }
 
   @Test(timeout = 30000)
@@ -213,7 +216,8 @@ public class TestKeyDeletingService {
         () -> {
           try {
             int numPendingDeletionKeys =
-                keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size();
+                keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+                    .getKeyBlocksList().size();
             if (numPendingDeletionKeys != keyCount) {
               LOG.info("Expected {} keys to be pending deletion, but got {}",
                   keyCount, numPendingDeletionKeys);
@@ -267,6 +271,7 @@ public class TestKeyDeletingService {
         () -> {
           try {
             return keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+                .getKeyBlocksList()
                 .stream()
                 .map(BlockGroup::getBlockIDList)
                 .flatMap(Collection::stream)
@@ -289,6 +294,7 @@ public class TestKeyDeletingService {
         () -> {
           try {
             return keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+                .getKeyBlocksList()
                 .stream()
                 .map(BlockGroup::getBlockIDList)
                 .flatMap(Collection::stream)
@@ -339,8 +345,8 @@ public class TestKeyDeletingService {
         () -> keyDeletingService.getDeletedKeyCount().get() >= 1,
         1000, 10000);
     Assert.assertTrue(keyDeletingService.getRunCount().get() > 1);
-    Assert.assertEquals(0,
-        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size());
+    Assert.assertEquals(0, keyManager.getPendingDeletionKeys(Integer.MAX_VALUE)
+            .getKeyBlocksList().size());
 
     // The 1st version of the key has 1 block and the 2nd version has 2
     // blocks. Hence, the ScmBlockClient should have received atleast 3
@@ -417,8 +423,8 @@ public class TestKeyDeletingService {
         () -> keyDeletingService.getDeletedKeyCount().get() >= 1,
         1000, 10000);
     Assert.assertTrue(keyDeletingService.getRunCount().get() > 1);
-    Assert.assertEquals(0,
-        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size());
+    Assert.assertEquals(0, keyManager
+        .getPendingDeletionKeys(Integer.MAX_VALUE).getKeyBlocksList().size());
 
     // deletedTable should have deleted key of the snapshot bucket
     Assert.assertFalse(metadataManager.getDeletedTable().isEmpty());
@@ -430,8 +436,14 @@ public class TestKeyDeletingService {
     // key1 belongs to snapshot, so it should not be deleted when
     // KeyDeletingService runs. But key2 can be reclaimed as it doesn't
     // belong to any snapshot scope.
-    Assert.assertTrue(metadataManager.getDeletedTable().isExist(ozoneKey1));
-    Assert.assertFalse(metadataManager.getDeletedTable().isExist(ozoneKey2));
+    List<? extends Table.KeyValue<String, RepeatedOmKeyInfo>> rangeKVs
+        = metadataManager.getDeletedTable().getRangeKVs(
+        null, 100, ozoneKey1);
+    Assert.assertTrue(rangeKVs.size() > 0);
+    rangeKVs
+        = metadataManager.getDeletedTable().getRangeKVs(
+        null, 100, ozoneKey2);
+    Assert.assertTrue(rangeKVs.size() == 0);
   }
 
   private void createVolumeAndBucket(KeyManager keyManager, String volumeName,
