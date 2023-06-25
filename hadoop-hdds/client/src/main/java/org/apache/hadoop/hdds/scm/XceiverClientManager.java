@@ -252,15 +252,16 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
   }
 
   private String getPipelineCacheKey(Pipeline pipeline, boolean forRead) {
-    if (!forRead) {
+    boolean isRatis = pipeline.getReplicationConfig()
+        .getReplicationType() == HddsProtos.ReplicationType.RATIS;
+
+    if (isRatis && !forRead) {
       return pipeline.getId().getId().toString() + pipeline.getType();
     }
 
     try {
       DatanodeDetails node = topologyAwareRead
           ? pipeline.getClosestNode() : pipeline.getFirstNode();
-      boolean isRatis = pipeline.getReplicationConfig()
-          .getReplicationType() == HddsProtos.ReplicationType.RATIS;
       DatanodeDetails.Port.Name port = isRatis
           ? DatanodeDetails.Port.Name.RATIS
           : DatanodeDetails.Port.Name.STANDALONE; // EC uses STANDALONE for read
