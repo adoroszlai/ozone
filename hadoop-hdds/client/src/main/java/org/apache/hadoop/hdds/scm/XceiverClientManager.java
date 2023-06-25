@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -251,23 +252,23 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
   }
 
   private String getPipelineCacheKey(Pipeline pipeline, boolean forRead) {
-    String key = pipeline.getId().getId().toString() + pipeline.getType();
-    boolean isEC = pipeline.getReplicationConfig()
-        .getReplicationType() == HddsProtos.ReplicationType.EC;
-    if (topologyAwareRead && forRead || isEC) {
-      try {
-        key += pipeline.getClosestNode().getHostName();
-        if (isEC) {
-          // Currently EC uses standalone client.
-          key += pipeline.getClosestNode()
-              .getPort(DatanodeDetails.Port.Name.STANDALONE);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed to get closest node to create pipeline cache key:" +
-            e.getMessage());
-      }
+    if (!forRead) {
+      return pipeline.getId().getId().toString() + pipeline.getType();
     }
-    return key;
+
+    try {
+      DatanodeDetails node = topologyAwareRead
+          ? pipeline.getClosestNode() : pipeline.getFirstNode();
+      boolean isRatis = pipeline.getReplicationConfig()
+          .getReplicationType() == HddsProtos.ReplicationType.RATIS;
+      DatanodeDetails.Port.Name port = isRatis
+          ? DatanodeDetails.Port.Name.RATIS
+          : DatanodeDetails.Port.Name.STANDALONE; // EC uses STANDALONE for read
+      return node.getUuidString() + ":" + node.getPort(port);
+    } catch (IOException e) {
+      // can only happen if pipeline is empty
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
