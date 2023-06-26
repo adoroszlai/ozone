@@ -26,11 +26,13 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,12 +66,12 @@ public class InterSCMGrpcProtocolService {
     if (securityConfig.isSecurityEnabled()
         && securityConfig.isGrpcTlsEnabled()) {
       try {
-        SslContextBuilder sslServerContextBuilder =
-            SslContextBuilder.forServer(
-                scm.getScmCertificateClient().getPrivateKey(),
-            scm.getScmCertificateClient().getCertificate());
+        CertificateClient certClient = scm.getScmCertificateClient();
+        SslContextBuilder sslServerContextBuilder = SslContextBuilder
+            .forServer(certClient.getPrivateKey(), certClient.getCertificate());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslServerContextBuilder, securityConfig.getGrpcSslProvider());
+        sslContextBuilder.clientAuth(ClientAuth.REQUIRE);
         nettyServerBuilder.sslContext(sslContextBuilder.build());
       } catch (Exception ex) {
         LOG.error("Unable to setup TLS for secure " +
