@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -25,19 +24,9 @@ import org.apache.hadoop.hdds.utils.DBCheckpointMetrics;
 import org.apache.hadoop.hdds.utils.FaultInjector;
 import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
-import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
-import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.ObjectStore;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -51,9 +40,7 @@ import org.apache.ozone.test.tag.Flaky;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.assertj.core.api.Fail;
 import org.junit.Ignore;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -73,7 +60,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,21 +81,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * Tests the Ratis snapshots feature in OM.
  */
-@Timeout(5000)
+@Timeout(1200)
 @Flaky("HDDS-8876")
-@Disabled("HDDS-8880")
-public class TestOMRatisSnapshots {
-
-  private MiniOzoneHAClusterImpl cluster = null;
-  private ObjectStore objectStore;
-  private OzoneConfiguration conf;
-  private String clusterId;
-  private String scmId;
-  private String omServiceId;
-  private int numOfOMs = 3;
-  private OzoneBucket ozoneBucket;
-  private String volumeName;
-  private String bucketName;
+class TestOMRatisSnapshots extends TestTwoActiveOMsWithDefaultConfig {
 
   private static final long SNAPSHOT_THRESHOLD = 50;
   private static final int LOG_PURGE_GAP = 50;
@@ -117,21 +91,10 @@ public class TestOMRatisSnapshots {
   // buckets.
   private static final BucketLayout TEST_BUCKET_LAYOUT =
       BucketLayout.OBJECT_STORE;
-  private OzoneClient client;
 
-  /**
-   * Create a MiniOzoneCluster for testing. The cluster initially has one
-   * inactive OM. So at the start of the cluster, there will be 2 active and 1
-   * inactive OM.
-   *
-   * @throws IOException
-   */
-  @BeforeEach
-  public void init() throws Exception {
-    conf = new OzoneConfiguration();
-    clusterId = UUID.randomUUID().toString();
-    scmId = UUID.randomUUID().toString();
-    omServiceId = "om-service-test1";
+  @Override
+  protected OzoneConfiguration createConfig() {
+    OzoneConfiguration conf = super.createConfig();
     conf.setInt(OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP, LOG_PURGE_GAP);
     conf.setStorageSize(OMConfigKeys.OZONE_OM_RATIS_SEGMENT_SIZE_KEY, 16,
         StorageUnit.KB);
@@ -140,44 +103,10 @@ public class TestOMRatisSnapshots {
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
         SNAPSHOT_THRESHOLD);
-    cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newOMHABuilder(conf)
-        .setClusterId(clusterId)
-        .setScmId(scmId)
-        .setOMServiceId("om-service-test1")
-        .setNumOfOzoneManagers(numOfOMs)
-        .setNumOfActiveOMs(2)
-        .build();
-    cluster.waitForClusterToBeReady();
-    client = OzoneClientFactory.getRpcClient(omServiceId, conf);
-    objectStore = client.getObjectStore();
-
-    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-
-    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
-        .setOwner("user" + RandomStringUtils.randomNumeric(5))
-        .setAdmin("admin" + RandomStringUtils.randomNumeric(5))
-        .build();
-
-    objectStore.createVolume(volumeName, createVolumeArgs);
-    OzoneVolume retVolumeinfo = objectStore.getVolume(volumeName);
-
-    retVolumeinfo.createBucket(bucketName,
-        BucketArgs.newBuilder().setBucketLayout(TEST_BUCKET_LAYOUT).build());
-    ozoneBucket = retVolumeinfo.getBucket(bucketName);
+    return conf;
   }
 
-  /**
-   * Shutdown MiniDFSCluster.
-   */
-  @AfterEach
-  public void shutdown() {
-    IOUtils.closeQuietly(client);
-    if (cluster != null) {
-      cluster.shutdown();
-    }
-  }
-
+  @Disabled
   @ParameterizedTest
   @ValueSource(ints = {100})
   // tried up to 1000 snapshots and this test works, but some of the
@@ -185,17 +114,17 @@ public class TestOMRatisSnapshots {
   public void testInstallSnapshot(int numSnapshotsToCreate) throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Create some snapshots, each with new keys
     int keyIncrement = 10;
@@ -221,7 +150,7 @@ public class TestOMRatisSnapshots {
     long leaderOMSnapshotTermIndex = leaderOMTermIndex.getTerm();
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
     GenericTestUtils.LogCapturer logCapture =
         GenericTestUtils.LogCapturer.captureLogs(OzoneManager.LOG);
 
@@ -255,13 +184,12 @@ public class TestOMRatisSnapshots {
     // made while it was inactive.
     OMMetadataManager followerOMMetaMngr = followerOM.getMetadataManager();
     assertNotNull(followerOMMetaMngr.getVolumeTable().get(
-        followerOMMetaMngr.getVolumeKey(volumeName)));
+        followerOMMetaMngr.getVolumeKey(volumeName())));
     assertNotNull(followerOMMetaMngr.getBucketTable().get(
-        followerOMMetaMngr.getBucketKey(volumeName, bucketName)));
+        followerOMMetaMngr.getBucketKey(volumeName(), bucketName())));
     for (String key : keys) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(
-          TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
 
     // Verify RPC server is running
@@ -279,7 +207,7 @@ public class TestOMRatisSnapshots {
     /*
     Assert.assertNotNull(followerOMMetaMngr.getKeyTable(
         TEST_BUCKET_LAYOUT).get(followerOMMetaMngr.getOzoneKey(
-        volumeName, bucketName, newKeys.get(0))));
+        getVolume().getName(), getBucket().getName(), newKeys.get(0))));
      */
 
     checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo);
@@ -291,8 +219,8 @@ public class TestOMRatisSnapshots {
       throws IOException {
     // Read back data from snapshot.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
+        .setVolumeName(volumeName())
+        .setBucketName(bucketName())
         .setKeyName(".snapshot/" + snapshotName + "/" +
             keys.get(keys.size() - 1)).build();
     OmKeyInfo omKeyInfo;
@@ -343,24 +271,24 @@ public class TestOMRatisSnapshots {
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
   }
 
+  @Disabled
   @Test
-  @Timeout(300)
   public void testInstallIncrementalSnapshot(@TempDir Path tempDir)
       throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
     OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Set fault injector to pause before install
     FaultInjector faultInjector = new SnapshotPauseInjector();
@@ -373,7 +301,7 @@ public class TestOMRatisSnapshots {
     SnapshotInfo snapshotInfo2 = createOzoneSnapshot(leaderOM, "snap80");
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
 
     // Wait the follower download the snapshot,but get stuck by injector
     GenericTestUtils.waitFor(() -> {
@@ -411,22 +339,22 @@ public class TestOMRatisSnapshots {
     // made while it was inactive.
     OMMetadataManager followerOMMetaMngr = followerOM.getMetadataManager();
     assertNotNull(followerOMMetaMngr.getVolumeTable().get(
-        followerOMMetaMngr.getVolumeKey(volumeName)));
+        followerOMMetaMngr.getVolumeKey(volumeName())));
     assertNotNull(followerOMMetaMngr.getBucketTable().get(
-        followerOMMetaMngr.getBucketKey(volumeName, bucketName)));
+        followerOMMetaMngr.getBucketKey(volumeName(), bucketName())));
 
     for (String key : firstKeys) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
     for (String key : firstIncrement.getKeys()) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
 
     for (String key : secondIncrement.getKeys()) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
 
     // Verify the metrics recording the incremental checkpoint at leader side
@@ -446,7 +374,7 @@ public class TestOMRatisSnapshots {
     readKeys(newKeys);
     assertNotNull(followerOMMetaMngr.getKeyTable(
         TEST_BUCKET_LAYOUT).get(followerOMMetaMngr.getOzoneKey(
-        volumeName, bucketName, newKeys.get(0))));
+        volumeName(), bucketName(), newKeys.get(0))));
 
     // Verify follower candidate directory get cleaned
     String[] filesInCandidate = followerOM.getOmSnapshotProvider().
@@ -548,23 +476,23 @@ public class TestOMRatisSnapshots {
     return id;
   }
 
+  @Disabled
   @Test
-  @Timeout(300)
   public void testInstallIncrementalSnapshotWithFailure() throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
     OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Set fault injector to pause before install
     FaultInjector faultInjector = new SnapshotPauseInjector();
@@ -575,7 +503,7 @@ public class TestOMRatisSnapshots {
         80);
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
 
     // Wait the follower download the snapshot,but get stuck by injector
     GenericTestUtils.waitFor(() -> {
@@ -634,19 +562,19 @@ public class TestOMRatisSnapshots {
     // made while it was inactive.
     OMMetadataManager followerOMMetaMngr = followerOM.getMetadataManager();
     assertNotNull(followerOMMetaMngr.getVolumeTable().get(
-        followerOMMetaMngr.getVolumeKey(volumeName)));
+        followerOMMetaMngr.getVolumeKey(volumeName())));
     assertNotNull(followerOMMetaMngr.getBucketTable().get(
-        followerOMMetaMngr.getBucketKey(volumeName, bucketName)));
+        followerOMMetaMngr.getBucketKey(volumeName(), bucketName())));
 
     // Verify that the follower OM's DB contains the transactions which were
     // made while it was inactive.
     for (String key : firstKeys) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
     for (String key : secondKeys) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
 
     // Verify the metrics
@@ -666,7 +594,7 @@ public class TestOMRatisSnapshots {
     readKeys(newKeys);
     assertNotNull(followerOMMetaMngr.getKeyTable(
         TEST_BUCKET_LAYOUT).get(followerOMMetaMngr.getOzoneKey(
-        volumeName, bucketName, newKeys.get(0))));
+        volumeName(), bucketName(), newKeys.get(0))));
 
     // Verify follower candidate directory get cleaned
     String[] filesInCandidate = followerOM.getOmSnapshotProvider().
@@ -679,18 +607,18 @@ public class TestOMRatisSnapshots {
   public void testInstallSnapshotWithClientWrite() throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
     OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Do some transactions so that the log index increases
     List<String> keys = writeKeysToIncreaseLogIndex(leaderRatisServer, 200);
@@ -705,7 +633,7 @@ public class TestOMRatisSnapshots {
     long leaderOMSnapshotTermIndex = leaderOMTermIndex.getTerm();
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
     GenericTestUtils.LogCapturer logCapture =
         GenericTestUtils.LogCapturer.captureLogs(OzoneManager.LOG);
 
@@ -750,48 +678,49 @@ public class TestOMRatisSnapshots {
     // made while it was inactive.
     OMMetadataManager followerOMMetaMgr = followerOM.getMetadataManager();
     assertNotNull(followerOMMetaMgr.getVolumeTable().get(
-        followerOMMetaMgr.getVolumeKey(volumeName)));
+        followerOMMetaMgr.getVolumeKey(volumeName())));
     assertNotNull(followerOMMetaMgr.getBucketTable().get(
-        followerOMMetaMgr.getBucketKey(volumeName, bucketName)));
+        followerOMMetaMgr.getBucketKey(volumeName(), bucketName())));
     for (String key : keys) {
       assertNotNull(followerOMMetaMgr.getKeyTable(
           TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMgr.getOzoneKey(volumeName, bucketName, key)));
+          .get(followerOMMetaMgr.getOzoneKey(volumeName(), bucketName(), key)));
     }
     OMMetadataManager leaderOmMetaMgr = leaderOM.getMetadataManager();
     for (String key : newKeys) {
       assertNotNull(leaderOmMetaMgr.getKeyTable(
           TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMgr.getOzoneKey(volumeName, bucketName, key)));
+          .get(followerOMMetaMgr.getOzoneKey(volumeName(), bucketName(), key)));
     }
     Thread.sleep(5000);
     followerOMMetaMgr = followerOM.getMetadataManager();
     for (String key : newKeys) {
       assertNotNull(followerOMMetaMgr.getKeyTable(
           TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMgr.getOzoneKey(volumeName, bucketName, key)));
+          .get(followerOMMetaMgr.getOzoneKey(volumeName(), bucketName(), key)));
     }
     // Read newly created keys
     readKeys(newKeys);
     System.out.println("All data are replicated");
   }
 
+  @Disabled
   @Test
   public void testInstallSnapshotWithClientRead() throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
     OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Do some transactions so that the log index increases
     List<String> keys = writeKeysToIncreaseLogIndex(leaderRatisServer, 200);
@@ -806,7 +735,7 @@ public class TestOMRatisSnapshots {
     long leaderOMSnapshotTermIndex = leaderOMTermIndex.getTerm();
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
     GenericTestUtils.LogCapturer logCapture =
         GenericTestUtils.LogCapturer.captureLogs(OzoneManager.LOG);
 
@@ -849,13 +778,12 @@ public class TestOMRatisSnapshots {
     // made while it was inactive.
     OMMetadataManager followerOMMetaMngr = followerOM.getMetadataManager();
     assertNotNull(followerOMMetaMngr.getVolumeTable().get(
-        followerOMMetaMngr.getVolumeKey(volumeName)));
+        followerOMMetaMngr.getVolumeKey(volumeName())));
     assertNotNull(followerOMMetaMngr.getBucketTable().get(
-        followerOMMetaMngr.getBucketKey(volumeName, bucketName)));
+        followerOMMetaMngr.getBucketKey(volumeName(), bucketName())));
     for (String key : keys) {
-      assertNotNull(followerOMMetaMngr.getKeyTable(
-          TEST_BUCKET_LAYOUT)
-          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT).get(
+          followerOMMetaMngr.getOzoneKey(volumeName(), bucketName(), key)));
     }
 
     // Wait installation finish
@@ -865,26 +793,27 @@ public class TestOMRatisSnapshots {
     assertLogCapture(logCapture, "Install Checkpoint is finished");
   }
 
+  @Disabled
   @Test
   public void testInstallOldCheckpointFailure() throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
 
     // Find the inactive OM and start it
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    cluster.startInactiveOM(followerNodeId);
+    getCluster().startInactiveOM(followerNodeId);
     GenericTestUtils.setLogLevel(OzoneManager.LOG, Level.INFO);
     GenericTestUtils.LogCapturer logCapture =
         GenericTestUtils.LogCapturer.captureLogs(OzoneManager.LOG);
 
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
     OzoneManagerRatisServer followerRatisServer = followerOM.getOmRatisServer();
 
     // Do some transactions so that the log index increases on follower OM
@@ -923,22 +852,23 @@ public class TestOMRatisSnapshots {
     assertLogCapture(logCapture, msg);
   }
 
+  @Disabled
   @Test
   public void testInstallCorruptedCheckpointFailure() throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
-        .getFailoverProxyProvider(objectStore.getClientProxy())
+        .getFailoverProxyProvider(getObjectStore().getClientProxy())
         .getCurrentProxyOMNodeId();
 
-    OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
+    OzoneManager leaderOM = getCluster().getOzoneManager(leaderOMNodeId);
     OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
-    if (cluster.isOMActive(followerNodeId)) {
+    if (getCluster().isOMActive(followerNodeId)) {
       followerNodeId = leaderOM.getPeerNodes().get(1).getNodeId();
     }
-    OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
+    OzoneManager followerOM = getCluster().getOzoneManager(followerNodeId);
 
     // Do some transactions so that the log index increases
     writeKeysToIncreaseLogIndex(leaderRatisServer, 100);
@@ -947,7 +877,8 @@ public class TestOMRatisSnapshots {
         .getCheckpoint(false);
     Path leaderCheckpointLocation = leaderDbCheckpoint.getCheckpointLocation();
     TransactionInfo leaderCheckpointTrxnInfo = OzoneManagerRatisUtils
-        .getTrxnInfoFromCheckpoint(conf, leaderCheckpointLocation);
+        .getTrxnInfoFromCheckpoint(
+            getCluster().getConf(), leaderCheckpointLocation);
 
     // Corrupt the leader checkpoint and install that on the OM. The
     // operation should fail and OM should shutdown.
@@ -981,10 +912,11 @@ public class TestOMRatisSnapshots {
 
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM, String name)
       throws IOException {
-    objectStore.createSnapshot(volumeName, bucketName, name);
+    getObjectStore()
+        .createSnapshot(volumeName(), bucketName(), name);
 
-    String tableKey = SnapshotInfo.getTableKey(volumeName,
-                                               bucketName,
+    String tableKey = SnapshotInfo.getTableKey(volumeName(),
+        bucketName(),
                                                name);
     SnapshotInfo snapshotInfo = leaderOM.getMetadataManager()
         .getSnapshotInfoTable()
@@ -1006,7 +938,7 @@ public class TestOMRatisSnapshots {
     List<String> keys = new ArrayList<>();
     long logIndex = omRatisServer.getLastAppliedTermIndex().getIndex();
     while (logIndex < targetLogIndex) {
-      keys.add(createKey(ozoneBucket));
+      keys.add(createKey(getBucket()));
       Thread.sleep(100);
       logIndex = omRatisServer.getLastAppliedTermIndex().getIndex();
     }
@@ -1017,7 +949,7 @@ public class TestOMRatisSnapshots {
     List<String> keys = new ArrayList<>();
     long index = 0;
     while (index < keyCount) {
-      keys.add(createKey(ozoneBucket));
+      keys.add(createKey(getBucket()));
       index++;
     }
     return keys;
@@ -1026,7 +958,7 @@ public class TestOMRatisSnapshots {
   private void getKeys(List<String> keys, int round) throws IOException {
     while (round > 0) {
       for (String keyName : keys) {
-        OzoneKeyDetails key = ozoneBucket.getKey(keyName);
+        OzoneKeyDetails key = getBucket().getKey(keyName);
         assertEquals(keyName, key.getName());
       }
       round--;
@@ -1035,7 +967,7 @@ public class TestOMRatisSnapshots {
 
   private void readKeys(List<String> keys) throws IOException {
     for (String keyName : keys) {
-      OzoneInputStream inputStream = ozoneBucket.readKey(keyName);
+      OzoneInputStream inputStream = getBucket().readKey(keyName);
       byte[] data = new byte[100];
       inputStream.read(data, 0, 100);
       inputStream.close();
@@ -1059,6 +991,14 @@ public class TestOMRatisSnapshots {
         filter(s -> s.toLowerCase().endsWith(".tar")).
         reduce("", (s1, s2) -> s1.compareToIgnoreCase(s2) > 0 ? s1 : s2);
     FileUtil.unTar(new File(snapshotDir, tarBall), tempDir.toFile());
+  }
+
+  private String bucketName() {
+    return getBucket().getName();
+  }
+
+  private String volumeName() {
+    return getVolume().getName();
   }
 
   private static class DummyExitManager extends ExitManager {
