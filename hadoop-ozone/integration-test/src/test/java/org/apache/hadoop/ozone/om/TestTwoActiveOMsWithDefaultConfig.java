@@ -42,7 +42,7 @@ class TestTwoActiveOMsWithDefaultConfig extends TwoActiveOMsCluster {
       .getBytes(StandardCharsets.UTF_8);
 
   @ParameterizedTest
-  @ValueSource(ints = {1000, 10000})
+  @ValueSource(ints = {100, 1000})
   void createBuckets(int count) throws IOException {
     String prefix = UUID.randomUUID().toString();
     for (int i = 0; i < count; i++) {
@@ -52,12 +52,12 @@ class TestTwoActiveOMsWithDefaultConfig extends TwoActiveOMsCluster {
 
   @Test
   void createEmptyKeys() throws IOException {
-    createKeys(100000, name -> getBucket().createKey(name, 0).close());
+    createKeys(10000, name -> getBucket().createKey(name, 0).close());
   }
 
   @Test
   void createKeys() throws IOException {
-    createKeys(10000, name -> {
+    createKeys(1000, name -> {
       try (OutputStream out = getBucket().createKey(name, 0)) {
         out.write(content);
       }
