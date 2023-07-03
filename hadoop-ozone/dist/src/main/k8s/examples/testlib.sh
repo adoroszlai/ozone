@@ -77,7 +77,10 @@ start_k8s_env() {
 
    print_phase "Applying k8s resources from $(basename $(pwd))"
    kubectl apply -f .
-   wait_for_startup
+
+   if ! wait_for_startup; then
+     return 1
+   fi
 }
 
 get_logs() {
