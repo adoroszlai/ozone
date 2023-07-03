@@ -86,12 +86,14 @@ get_logs() {
     for initContainer in $(kubectl get pod -o jsonpath='{.spec.initContainers[*].name}' "${pod}"); do
       kubectl logs "${pod}" "${initContainer}" > logs/"pod-${pod}-${initContainer}.log"
     done
-    kubectl logs "${pod}" > logs/"pod-${pod}.log"
+    for container in $(kubectl get pod -o jsonpath='{.spec.containers[*].name}' "${pod}"); do
+      kubectl logs "${pod}" "${container}" > logs/"pod-${pod}-${container}.log"
+    done
   done
 }
 
 stop_k8s_env() {
-   if [ ! "$KEEP_RUNNING" ]; then
+   if [ "${KEEP_RUNNING:-false}" != "true" ]; then
      kubectl delete -f .
    fi
 }
