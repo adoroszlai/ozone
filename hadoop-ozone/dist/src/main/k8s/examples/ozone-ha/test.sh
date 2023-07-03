@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -eu -o pipefail
+
 export K8S_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 cd "$K8S_DIR"
@@ -26,11 +28,10 @@ rm -rf result
 
 regenerate_resources
 
-start_k8s_env
-
-execute_robot_test scm-0 smoketest/basic/basic.robot
-
-combine_reports
+if start_k8s_env; then
+  execute_robot_test scm-0 smoketest/basic/basic.robot
+  combine_reports
+fi
 
 get_logs
 
