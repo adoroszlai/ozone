@@ -19,17 +19,20 @@ package org.apache.hadoop.ozone;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.LambdaTestUtils.VoidCallable;
 
 import org.apache.ratis.util.function.CheckedConsumer;
@@ -122,7 +125,7 @@ public final class OzoneTestUtils {
    */
   public static void performOperationOnKeyContainers(
       CheckedConsumer<BlockID, Exception> consumer,
-      List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws Exception{
+      List<OmKeyLocationInfoGroup> omKeyLocationInfoGroups) throws Exception {
 
     for (OmKeyLocationInfoGroup omKeyLocationInfoGroup :
         omKeyLocationInfoGroups) {
@@ -145,5 +148,19 @@ public final class OzoneTestUtils {
     } catch (OMException ex) {
       Assert.assertEquals(code, ex.getResult());
     }
+  }
+
+  /**
+    * Close container & Wait till container state becomes CLOSED.
+   */
+  public static void closeContainer(StorageContainerManager scm,
+      ContainerInfo container)
+      throws IOException, TimeoutException, InterruptedException {
+    Pipeline pipeline = scm.getPipelineManager()
+        .getPipeline(container.getPipelineID());
+    scm.getPipelineManager().closePipeline(pipeline, false);
+    GenericTestUtils.waitFor(() ->
+            container.getState() == HddsProtos.LifeCycleState.CLOSED,
+        200, 30000);
   }
 }

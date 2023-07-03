@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.hdds.DatanodeVersions;
+import org.apache.hadoop.hdds.DatanodeVersion;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
@@ -37,11 +37,18 @@ import org.apache.hadoop.hdds.scm.net.NodeImpl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.upgrade.BelongsToHDDSLayoutVersion;
+import org.apache.hadoop.hdds.utils.db.Codec;
+import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
+import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.ClientVersions.CURRENT_VERSION;
-import static org.apache.hadoop.ozone.ClientVersions.VERSION_HANDLES_UNKNOWN_DN_PORTS;
+import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.HADOOP_PRC_PORTS_IN_DATANODEDETAILS;
+import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.WEBUI_PORTS_IN_DATANODEDETAILS;
+import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.RATIS_DATASTREAM_PORT_IN_DATANODEDETAILS;
+import static org.apache.hadoop.ozone.ClientVersion.VERSION_HANDLES_UNKNOWN_DN_PORTS;
 
 /**
  * DatanodeDetails class contains details about DataNode like:
@@ -59,6 +66,15 @@ public class DatanodeDetails extends NodeImpl implements
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DatanodeDetails.class);
+
+  private static final Codec<DatanodeDetails> CODEC = new DelegatedCodec<>(
+      Proto2Codec.get(HddsProtos.ExtendedDatanodeDetailsProto.class),
+      DatanodeDetails::getFromProtoBuf,
+      DatanodeDetails::getExtendedProtoBufMessage);
+
+  public static Codec<DatanodeDetails> getCodec() {
+    return CODEC;
+  }
 
   /**
    * DataNode's unique identifier in the cluster.
@@ -235,6 +251,30 @@ public class DatanodeDetails extends NodeImpl implements
   }
 
   /**
+   * @return true if the node is or being decommissioned
+   */
+  public boolean isDecommissioned() {
+    return isDecommission(getPersistedOpState());
+  }
+
+  public static boolean isDecommission(HddsProtos.NodeOperationalState state) {
+    return state == HddsProtos.NodeOperationalState.DECOMMISSIONED ||
+        state == HddsProtos.NodeOperationalState.DECOMMISSIONING;
+  }
+
+  /**
+   * @return true if node is in or entering maintenance
+   */
+  public boolean isMaintenance() {
+    return isMaintenance(getPersistedOpState());
+  }
+
+  public static boolean isMaintenance(HddsProtos.NodeOperationalState state) {
+    return state == HddsProtos.NodeOperationalState.IN_MAINTENANCE ||
+        state == HddsProtos.NodeOperationalState.ENTERING_MAINTENANCE;
+  }
+
+  /**
    * Set the persistedOpState for this instance.
    *
    * @param state The new operational state.
@@ -273,8 +313,10 @@ public class DatanodeDetails extends NodeImpl implements
         return port;
       }
     }
-    // if no separate admin/server port, return single Ratis one for compat
-    if (name == Name.RATIS_ADMIN || name == Name.RATIS_SERVER) {
+    // if no separate admin/server/datastream port, return single Ratis one for
+    // compat
+    if (name == Name.RATIS_ADMIN || name == Name.RATIS_SERVER ||
+        name == Name.RATIS_DATASTREAM) {
       return getPort(Name.RATIS);
     }
     return null;
@@ -373,7 +415,7 @@ public class DatanodeDetails extends NodeImpl implements
    */
   @JsonIgnore
   public HddsProtos.DatanodeDetailsProto getProtoBufMessage() {
-    return toProto(CURRENT_VERSION);
+    return toProto(ClientVersion.CURRENT_VERSION);
   }
 
   public HddsProtos.DatanodeDetailsProto toProto(int clientVersion) {
@@ -415,7 +457,8 @@ public class DatanodeDetails extends NodeImpl implements
     builder.setPersistedOpStateExpiry(persistedOpStateExpiryEpochSec);
 
     final boolean handlesUnknownPorts =
-        clientVersion >= VERSION_HANDLES_UNKNOWN_DN_PORTS;
+        ClientVersion.fromProtoValue(clientVersion)
+        .compareTo(VERSION_HANDLES_UNKNOWN_DN_PORTS) >= 0;
     for (Port port : ports) {
       if (handlesUnknownPorts || Name.V0_PORTS.contains(port.getName())) {
         builder.addPorts(port.toProto());
@@ -480,6 +523,10 @@ public class DatanodeDetails extends NodeImpl implements
 
   @Override
   public String toString() {
+    return uuidString + "(" + hostName + "/" + ipAddress + ")";
+  }
+
+  public String toDebugString() {
     return uuid.toString() + "{" +
         "ip: " +
         ipAddress +
@@ -545,7 +592,7 @@ public class DatanodeDetails extends NodeImpl implements
     private HddsProtos.NodeOperationalState persistedOpState;
     private long persistedOpStateExpiryEpochSec = 0;
     private int initialVersion;
-    private int currentVersion = DatanodeVersions.CURRENT_VERSION;
+    private int currentVersion = DatanodeVersion.CURRENT_VERSION;
 
     /**
      * Default private constructor. To create Builder instance use
@@ -713,7 +760,7 @@ public class DatanodeDetails extends NodeImpl implements
      *
      * @return DatanodeDetails.Builder
      */
-    public Builder setPersistedOpState(HddsProtos.NodeOperationalState state){
+    public Builder setPersistedOpState(HddsProtos.NodeOperationalState state) {
       this.persistedOpState = state;
       return this;
     }
@@ -726,7 +773,7 @@ public class DatanodeDetails extends NodeImpl implements
      *
      * @return DatanodeDetails.Builder
      */
-    public Builder setPersistedOpStateExpiry(long expiry){
+    public Builder setPersistedOpStateExpiry(long expiry) {
       this.persistedOpStateExpiryEpochSec = expiry;
       return this;
     }
@@ -783,7 +830,15 @@ public class DatanodeDetails extends NodeImpl implements
      * Ports that are supported in DataNode.
      */
     public enum Name {
-      STANDALONE, RATIS, REST, REPLICATION, RATIS_ADMIN, RATIS_SERVER;
+      STANDALONE, RATIS, REST, REPLICATION, RATIS_ADMIN, RATIS_SERVER,
+      @BelongsToHDDSLayoutVersion(RATIS_DATASTREAM_PORT_IN_DATANODEDETAILS)
+      RATIS_DATASTREAM,
+      @BelongsToHDDSLayoutVersion(WEBUI_PORTS_IN_DATANODEDETAILS)
+      HTTP,
+      @BelongsToHDDSLayoutVersion(WEBUI_PORTS_IN_DATANODEDETAILS)
+      HTTPS,
+      @BelongsToHDDSLayoutVersion(HADOOP_PRC_PORTS_IN_DATANODEDETAILS)
+      CLIENT_RPC;
 
       public static final Set<Name> ALL_PORTS = ImmutableSet.copyOf(
           Name.values());

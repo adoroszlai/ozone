@@ -36,10 +36,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.ReplicationManager.ReplicationManagerConfiguration;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -101,18 +102,11 @@ public class TestContainerReplication {
         Level.DEBUG);
     GenericTestUtils.setLogLevel(SCMContainerPlacementRackAware.LOG,
         Level.DEBUG);
-    OzoneConfiguration conf = createConfiguration();
-    conf.set(OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY, placementPolicyClass);
-
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
-    cluster.waitForClusterToBeReady();
-
-    client = OzoneClientFactory.getRpcClient(conf);
-    createTestData();
   }
 
   @After
   public void tearDown() {
+    IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -120,6 +114,13 @@ public class TestContainerReplication {
 
   @Test
   public void testContainerReplication() throws Exception {
+    OzoneConfiguration conf = createConfiguration();
+    conf.set(OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY, placementPolicyClass);
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
+    cluster.waitForClusterToBeReady();
+    client = OzoneClientFactory.getRpcClient(conf);
+    createTestData();
+
     List<OmKeyLocationInfo> keyLocations = lookupKey(cluster);
     assertFalse(keyLocations.isEmpty());
 
@@ -128,6 +129,41 @@ public class TestContainerReplication {
     waitForContainerClose(cluster, containerID);
 
     cluster.shutdownHddsDatanode(keyLocation.getPipeline().getFirstNode());
+    waitForReplicaCount(containerID, 2, cluster);
+
+    waitForReplicaCount(containerID, 3, cluster);
+  }
+
+  @Test
+  public void testContainerReplicationWithLegacyReplicationManagerDisabled()
+      throws Exception {
+    OzoneConfiguration conf = createConfiguration();
+
+    /*
+    Disable LegacyReplicationManager so that ReplicationManager handles Ratis
+     containers.
+     */
+    ReplicationManagerConfiguration repConf =
+        conf.getObject(ReplicationManagerConfiguration.class);
+    repConf.setEnableLegacy(false);
+    repConf.setUnderReplicatedInterval(Duration.ofSeconds(1));
+    conf.setFromObject(repConf);
+
+    conf.set(OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY, placementPolicyClass);
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
+    cluster.waitForClusterToBeReady();
+    client = OzoneClientFactory.getRpcClient(conf);
+    createTestData();
+
+    List<OmKeyLocationInfo> keyLocations = lookupKey(cluster);
+    assertFalse(keyLocations.isEmpty());
+
+    OmKeyLocationInfo keyLocation = keyLocations.get(0);
+    long containerID = keyLocation.getContainerID();
+    waitForContainerClose(cluster, containerID);
+
+    cluster.shutdownHddsDatanode(keyLocation.getPipeline().getFirstNode());
+    waitForReplicaCount(containerID, 2, cluster);
 
     waitForReplicaCount(containerID, 3, cluster);
   }
@@ -162,7 +198,7 @@ public class TestContainerReplication {
         .setVolumeName(VOLUME)
         .setBucketName(BUCKET)
         .setKeyName(KEY)
-        .setReplicationConfig(new RatisReplicationConfig(THREE))
+        .setReplicationConfig(RatisReplicationConfig.getInstance(THREE))
         .build();
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     OmKeyLocationInfoGroup locations = keyInfo.getLatestVersionLocations();

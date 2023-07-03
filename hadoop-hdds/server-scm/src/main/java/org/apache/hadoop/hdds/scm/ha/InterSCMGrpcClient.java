@@ -23,8 +23,9 @@ import org.apache.hadoop.hdds.protocol.scm.proto.InterSCMProtocolProtos;
 import org.apache.hadoop.hdds.protocol.scm.proto.InterSCMProtocolProtos.CopyDBCheckpointResponseProto;
 import org.apache.hadoop.hdds.protocol.scm.proto.InterSCMProtocolServiceGrpc;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
-import org.apache.hadoop.hdds.security.x509.certificate.client.SCMCertificateClient;
+import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.ssl.KeyStoresFactory;
+import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
@@ -59,7 +60,7 @@ public class InterSCMGrpcClient implements SCMSnapshotDownloader {
 
   public InterSCMGrpcClient(final String host,
       int port, final ConfigurationSource conf,
-      SCMCertificateClient scmCertificateClient) throws IOException {
+      CertificateClient scmCertificateClient) throws IOException {
     Preconditions.checkNotNull(conf);
     timeout = conf.getTimeDuration(
             ScmConfigKeys.OZONE_SCM_HA_GRPC_DEADLINE_INTERVAL,
@@ -72,10 +73,11 @@ public class InterSCMGrpcClient implements SCMSnapshotDownloader {
     if (securityConfig.isSecurityEnabled()
         && securityConfig.isGrpcTlsEnabled()) {
       SslContextBuilder sslClientContextBuilder = SslContextBuilder.forClient();
-      sslClientContextBuilder.keyManager(scmCertificateClient.getPrivateKey(),
-          scmCertificateClient.getCertificate());
+      KeyStoresFactory keyStoreFactory =
+          scmCertificateClient.getClientKeyStoresFactory();
+      sslClientContextBuilder.keyManager(keyStoreFactory.getKeyManagers()[0]);
       sslClientContextBuilder.trustManager(
-          scmCertificateClient.getCACertificate());
+          keyStoreFactory.getTrustManagers()[0]);
       SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
           sslClientContextBuilder, securityConfig.getGrpcSslProvider());
       channelBuilder.sslContext(sslContextBuilder.build())

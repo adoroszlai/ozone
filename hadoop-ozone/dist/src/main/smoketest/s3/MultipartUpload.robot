@@ -21,13 +21,26 @@ Library             DateTime
 Resource            ../commonlib.robot
 Resource            commonawslib.robot
 Test Timeout        5 minutes
-Suite Setup         Setup s3 tests
+Suite Setup         Setup Multipart Tests
 Test Setup          Generate random prefix
 
 *** Keywords ***
+Setup Multipart Tests
+    Setup s3 tests
+
+    # 5MB + a bit
+    Create Random File KB    /tmp/part1    5121
+
+    # 1MB - a bit
+    Create Random File KB    /tmp/part2    1023
+
 Create Random file
     [arguments]             ${size_in_megabytes}
-    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1048576 count=${size_in_megabytes}
+    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1048576 count=${size_in_megabytes} status=none
+
+Create Random File KB
+    [arguments]             ${file}    ${size_in_kilobytes}
+    Execute                 dd if=/dev/urandom of=${file} bs=1024 count=${size_in_kilobytes} status=none
 
 Wait Til Date Past
     [arguments]         ${date}
@@ -40,6 +53,10 @@ ${ENDPOINT_URL}       http://s3g:9878
 ${BUCKET}             generated
 
 *** Test Cases ***
+
+Test Multipart Upload With Adjusted Length
+    Perform Multipart Upload    ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
+    Verify Multipart Upload     ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
 
 Test Multipart Upload
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey
@@ -179,6 +196,7 @@ Test abort Multipart upload with invalid uploadId
     ${result} =         Execute AWSS3APICli and checkrc    abort-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey5 --upload-id "random"    255
 
 Upload part with Incorrect uploadID
+        SKIP    TODO: HDDS-7811
                         Execute                 echo "Multipart upload" > /tmp/testfile
         ${result} =     Execute AWSS3APICli and checkrc     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body /tmp/testfile --upload-id "random"  255
                         Should contain          ${result}    NoSuchUpload

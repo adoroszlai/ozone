@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.om;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.ratis.util.TimeDuration;
 
@@ -26,15 +28,34 @@ import org.apache.ratis.util.TimeDuration;
  * Ozone Manager Constants.
  */
 public final class OMConfigKeys {
+  public static final String
+      OZONE_OM_SNAPSHOT_SST_DUMPTOOL_EXECUTOR_POOL_SIZE =
+      "ozone.om.snapshot.sst_dumptool.pool.size";
+  public static final int
+      OZONE_OM_SNAPSHOT_SST_DUMPTOOL_EXECUTOR_POOL_SIZE_DEFAULT = 1;
+  public static final String
+      OZONE_OM_SNAPSHOT_SST_DUMPTOOL_EXECUTOR_BUFFER_SIZE =
+      "ozone.om.snapshot.sst_dumptool.buffer.size";
+  public static final String
+      OZONE_OM_SNAPSHOT_SST_DUMPTOOL_EXECUTOR_BUFFER_SIZE_DEFAULT = "8KB";
+
   /**
    * Never constructed.
    */
   private OMConfigKeys() {
   }
 
+  public static final String OZONE_FILESYSTEM_SNAPSHOT_ENABLED_KEY =
+      "ozone.filesystem.snapshot.enabled";
+  public static final boolean OZONE_FILESYSTEM_SNAPSHOT_ENABLED_DEFAULT = true;
+
   // Location where the OM stores its DB files. In the future we may support
   // multiple entries for performance (sharding)..
   public static final String OZONE_OM_DB_DIRS = "ozone.om.db.dirs";
+
+  // SCM DB directory permission
+  public static final String OZONE_OM_DB_DIRS_PERMISSIONS =
+      "ozone.om.db.dirs.permissions";
 
   public static final String OZONE_OM_HANDLER_COUNT_KEY =
       "ozone.om.handler.count.key";
@@ -57,6 +78,20 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_BIND_HOST_DEFAULT =
       "0.0.0.0";
   public static final int OZONE_OM_PORT_DEFAULT = 9862;
+  public static final String OZONE_OM_GRPC_PORT_KEY =
+      "ozone.om.grpc.port";
+
+  public static final String OZONE_OM_GRPC_BOSSGROUP_SIZE_KEY =
+      "ozone.om.grpc.bossgroup.size";
+  public static final int OZONE_OM_GRPC_BOSSGROUP_SIZE_DEFAULT = 8;
+
+  public static final String OZONE_OM_GRPC_WORKERGROUP_SIZE_KEY =
+      "ozone.om.grpc.workergroup.size";
+  public static final int OZONE_OM_GRPC_WORKERGROUP_SIZE_DEFAULT = 32;
+
+  public static final String OZONE_OM_GRPC_READ_THREAD_NUM_KEY =
+      "ozone.om.grpc.read.thread.num";
+  public static final int OZONE_OM_GRPC_READ_THREAD_NUM_DEFAULT = 32;
 
   public static final String OZONE_OM_HTTP_ENABLED_KEY =
       "ozone.om.http.enabled";
@@ -82,6 +117,30 @@ public final class OMConfigKeys {
   public static final String OZONE_KEY_DELETING_LIMIT_PER_TASK =
       "ozone.key.deleting.limit.per.task";
   public static final int OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT = 20000;
+  public static final String OZONE_SNAPSHOT_KEY_DELETING_LIMIT_PER_TASK =
+      "ozone.snapshot.key.deleting.limit.per.task";
+  public static final int OZONE_SNAPSHOT_KEY_DELETING_LIMIT_PER_TASK_DEFAULT
+      = 20000;
+
+  public static final String OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL =
+      "ozone.om.open.key.cleanup.service.interval";
+  public static final String
+      OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_DEFAULT = "24h";
+
+  public static final String OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_TIMEOUT =
+      "ozone.om.open.key.cleanup.service.timeout";
+  public static final String OZONE_OM_OPEN_KEY_CLEANUP_SERVICE_TIMEOUT_DEFAULT
+      = "300s";
+
+  public static final String OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD =
+      "ozone.om.open.key.expire.threshold";
+  public static final String OZONE_OM_OPEN_KEY_EXPIRE_THRESHOLD_DEFAULT =
+      "7d";
+
+  public static final String OZONE_OM_OPEN_KEY_CLEANUP_LIMIT_PER_TASK =
+      "ozone.om.open.key.cleanup.limit.per.task";
+  public static final int OZONE_OM_OPEN_KEY_CLEANUP_LIMIT_PER_TASK_DEFAULT =
+      1000;
 
   public static final String OZONE_OM_METRICS_SAVE_INTERVAL =
       "ozone.om.save.metrics.interval";
@@ -128,6 +187,15 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_RATIS_LOG_PURGE_GAP =
       "ozone.om.ratis.log.purge.gap";
   public static final int OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT = 1000000;
+  public static final String OZONE_OM_RATIS_LOG_PURGE_UPTO_SNAPSHOT_INDEX
+      = "ozone.om.ratis.log.purge.upto.snapshot.index";
+  public static final boolean
+      OZONE_OM_RATIS_LOG_PURGE_UPTO_SNAPSHOT_INDEX_DEFAULT = true;
+  public static final String
+      OZONE_OM_RATIS_LOG_PURGE_PRESERVATION_LOG_NUM
+      = "ozone.om.ratis.log.purge.preservation.log.num";
+  public static final long
+      OZONE_OM_RATIS_LOG_PURGE_PRESERVATION_LOG_NUM_DEFAULT = 0L;
 
   public static final String OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY
       = "ozone.om.ratis.snapshot.auto.trigger.threshold";
@@ -160,7 +228,7 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_RATIS_SERVER_ELECTION_PRE_VOTE =
       "ozone.om.ratis.server.leaderelection.pre-vote";
   public static final boolean
-      OZONE_OM_RATIS_SERVER_ELECTION_PRE_VOTE_DEFAULT = false;
+      OZONE_OM_RATIS_SERVER_ELECTION_PRE_VOTE_DEFAULT = true;
 
 
   // OM SnapshotProvider configurations
@@ -182,7 +250,11 @@ public final class OMConfigKeys {
       "ozone.om.snapshot.provider.request.timeout";
   public static final TimeDuration
       OZONE_OM_SNAPSHOT_PROVIDER_REQUEST_TIMEOUT_DEFAULT =
-      TimeDuration.valueOf(5000, TimeUnit.MILLISECONDS);
+      TimeDuration.valueOf(300000, TimeUnit.MILLISECONDS);
+
+  public static final String OZONE_OM_FS_SNAPSHOT_MAX_LIMIT =
+      "ozone.om.fs.snapshot.max.limit";
+  public static final int OZONE_OM_FS_SNAPSHOT_MAX_LIMIT_DEFAULT = 1000;
 
   public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
       + "kerberos.keytab.file";
@@ -201,15 +273,15 @@ public final class OMConfigKeys {
   public static final String  DELEGATION_REMOVER_SCAN_INTERVAL_KEY =
       "ozone.manager.delegation.remover.scan.interval";
   public static final long    DELEGATION_REMOVER_SCAN_INTERVAL_DEFAULT =
-      60*60*1000;
+      60 * 60 * 1000;
   public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
       "ozone.manager.delegation.token.renew-interval";
   public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
-      24*60*60*1000;  // 1 day = 86400000 ms
+      24 * 60 * 60 * 1000;  // 1 day = 86400000 ms
   public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY =
       "ozone.manager.delegation.token.max-lifetime";
   public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
-      7*24*60*60*1000; // 7 days
+      7 * 24 * 60 * 60 * 1000; // 7 days
 
   public static final String OZONE_DB_CHECKPOINT_TRANSFER_RATE_KEY =
       "ozone.manager.db.checkpoint.transfer.bandwidthPerSec";
@@ -242,6 +314,16 @@ public final class OMConfigKeys {
   public static final boolean OZONE_OM_ENABLE_FILESYSTEM_PATHS_DEFAULT =
       false;
 
+  public static final String OZONE_SERVER_DEFAULT_REPLICATION_KEY =
+      "ozone.server.default.replication";
+  public static final String OZONE_SERVER_DEFAULT_REPLICATION_DEFAULT =
+      ReplicationFactor.THREE.toString();
+
+  public static final String OZONE_SERVER_DEFAULT_REPLICATION_TYPE_KEY =
+      "ozone.server.default.replication.type";
+  public static final String OZONE_SERVER_DEFAULT_REPLICATION_TYPE_DEFAULT =
+      ReplicationType.RATIS.toString();
+
   public static final String OZONE_OM_HA_PREFIX = "ozone.om.ha";
 
   public static final String OZONE_FS_TRASH_INTERVAL_KEY =
@@ -265,9 +347,11 @@ public final class OMConfigKeys {
   public static final String OZONE_DEFAULT_BUCKET_LAYOUT =
       "ozone.default.bucket.layout";
   public static final String OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT =
-      BucketLayout.OBJECT_STORE.name();
+      BucketLayout.FILE_SYSTEM_OPTIMIZED.name();
   public static final String OZONE_BUCKET_LAYOUT_FILE_SYSTEM_OPTIMIZED =
       BucketLayout.FILE_SYSTEM_OPTIMIZED.name();
+  public static final String OZONE_BUCKET_LAYOUT_OBJECT_STORE =
+      BucketLayout.OBJECT_STORE.name();
 
   /**
    * Configuration properties for Directory Deleting Service.
@@ -281,6 +365,36 @@ public final class OMConfigKeys {
       "ozone.path.deleting.limit.per.task";
   public static final int OZONE_PATH_DELETING_LIMIT_PER_TASK_DEFAULT = 10000;
 
+  public static final String SNAPSHOT_SST_DELETING_LIMIT_PER_TASK =
+      "ozone.snapshot.filtering.limit.per.task";
+  public static final int SNAPSHOT_SST_DELETING_LIMIT_PER_TASK_DEFAULT = 2;
+
+  public static final String SNAPSHOT_DELETING_LIMIT_PER_TASK =
+      "ozone.snapshot.deleting.limit.per.task";
+  public static final int SNAPSHOT_DELETING_LIMIT_PER_TASK_DEFAULT = 10;
+
+  public static final String OZONE_SNAPSHOT_SST_FILTERING_SERVICE_INTERVAL =
+      "ozone.snapshot.filtering.service.interval";
+  public static final String
+      OZONE_SNAPSHOT_SST_FILTERING_SERVICE_INTERVAL_DEFAULT = "60s";
+
+
+  public static final String OZONE_OM_GRPC_MAXIMUM_RESPONSE_LENGTH =
+      "ozone.om.grpc.maximum.response.length";
+  /** Default value for GRPC_MAXIMUM_RESPONSE_LENGTH. */
+  public static final int OZONE_OM_GRPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT =
+      128 * 1024 * 1024;
+
+  public static final String OZONE_OM_S3_GPRC_SERVER_ENABLED =
+      "ozone.om.s3.grpc.server_enabled";
+  public static final boolean OZONE_OM_S3_GRPC_SERVER_ENABLED_DEFAULT =
+      true;
+
+  public static final String OZONE_OM_NAMESPACE_STRICT_S3 =
+      "ozone.om.namespace.s3.strict";
+  public static final boolean OZONE_OM_NAMESPACE_STRICT_S3_DEFAULT =
+      true;
+
   /**
    * Configuration properties for OMAdminProtcol service.
    */
@@ -291,5 +405,143 @@ public final class OMConfigKeys {
       "ozone.om.admin.protocol.wait.between.retries";
   public static final long OZONE_OM_ADMIN_PROTOCOL_WAIT_BETWEEN_RETRIES_DEFAULT
       = 1000;
+  public static final String OZONE_OM_TRANSPORT_CLASS =
+      "ozone.om.transport.class";
+  public static final String OZONE_OM_TRANSPORT_CLASS_DEFAULT =
+      "org.apache.hadoop.ozone.om.protocolPB"
+          + ".Hadoop3OmTransportFactory";
+  public static final String OZONE_OM_UNFLUSHED_TRANSACTION_MAX_COUNT =
+      "ozone.om.unflushed.transaction.max.count";
+  public static final int OZONE_OM_UNFLUSHED_TRANSACTION_MAX_COUNT_DEFAULT
+      = 10000;
 
+  /**
+   * This configuration shall be enabled to utilize the functionality of the
+   * fine-grained KEY_PATH_LOCK.
+   */
+  public static final String OZONE_OM_KEY_PATH_LOCK_ENABLED =
+      "ozone.om.key.path.lock.enabled";
+  public static final boolean OZONE_OM_KEY_PATH_LOCK_ENABLED_DEFAULT = false;
+
+  public static final String OZONE_OM_MULTITENANCY_ENABLED =
+      "ozone.om.multitenancy.enabled";
+  public static final boolean OZONE_OM_MULTITENANCY_ENABLED_DEFAULT = false;
+
+  /**
+   * Temporary configuration properties for Ranger REST use in multitenancy.
+   */
+  public static final String OZONE_RANGER_OM_IGNORE_SERVER_CERT =
+      "ozone.om.ranger.ignore.cert";
+  public static final boolean OZONE_RANGER_OM_IGNORE_SERVER_CERT_DEFAULT =
+      true;
+  public static final String OZONE_RANGER_OM_CONNECTION_TIMEOUT =
+      "ozone.om.ranger.connection.timeout";
+  public static final String OZONE_RANGER_OM_CONNECTION_TIMEOUT_DEFAULT = "5s";
+  public static final String OZONE_RANGER_OM_CONNECTION_REQUEST_TIMEOUT =
+      "ozone.om.ranger.connection.request.timeout";
+  public static final String
+      OZONE_RANGER_OM_CONNECTION_REQUEST_TIMEOUT_DEFAULT = "5s";
+  public static final String OZONE_OM_RANGER_HTTPS_ADMIN_API_USER =
+      "ozone.om.ranger.https.admin.api.user";
+  // TODO: Note this should be removed once Ranger Java Client is in place.
+  //  And Ranger SPNEGO auth (ranger.spnego.kerberos.principal ?) should be used
+  //  instead. Or keep this solely for dev testing. See HDDS-5836.
+  public static final String OZONE_OM_RANGER_HTTPS_ADMIN_API_PASSWD =
+      "ozone.om.ranger.https.admin.api.passwd";
+  public static final String OZONE_RANGER_HTTPS_ADDRESS_KEY =
+      "ozone.om.ranger.https-address";
+  public static final String OZONE_RANGER_SERVICE =
+      "ozone.om.ranger.service";
+
+  public static final String OZONE_OM_MULTITENANCY_RANGER_SYNC_INTERVAL
+      = "ozone.om.multitenancy.ranger.sync.interval";
+  public static final TimeDuration
+      OZONE_OM_MULTITENANCY_RANGER_SYNC_INTERVAL_DEFAULT
+      = TimeDuration.valueOf(600, TimeUnit.SECONDS);
+  public static final String OZONE_OM_MULTITENANCY_RANGER_SYNC_TIMEOUT
+      = "ozone.om.multitenancy.ranger.sync.timeout";
+  public static final TimeDuration
+      OZONE_OM_MULTITENANCY_RANGER_SYNC_TIMEOUT_DEFAULT
+      = TimeDuration.valueOf(10, TimeUnit.SECONDS);
+
+  public static final String OZONE_OM_CONTAINER_LOCATION_CACHE_SIZE
+      = "ozone.om.container.location.cache.size";
+  public static final int OZONE_OM_CONTAINER_LOCATION_CACHE_SIZE_DEFAULT
+      = 100_000;
+
+  public static final String OZONE_OM_CONTAINER_LOCATION_CACHE_TTL
+      = "ozone.om.container.location.cache.ttl";
+
+  public static final TimeDuration OZONE_OM_CONTAINER_LOCATION_CACHE_TTL_DEFAULT
+      = TimeDuration.valueOf(360, TimeUnit.MINUTES);
+
+  public static final String OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR
+      = "ozone.om.enable.ofs.shared.tmp.dir";
+  public static final boolean OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR_DEFAULT
+      = false;
+
+  public static final String OZONE_OM_SNAPSHOT_CACHE_MAX_SIZE =
+      "ozone.om.snapshot.cache.max.size";
+  public static final int OZONE_OM_SNAPSHOT_CACHE_MAX_SIZE_DEFAULT = 10;
+
+  public static final String OZONE_OM_SNAPSHOT_FORCE_FULL_DIFF =
+      "ozone.om.snapshot.force.full.diff";
+
+  public static final boolean OZONE_OM_SNAPSHOT_FORCE_FULL_DIFF_DEFAULT = false;
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_DB_DIR
+      = "ozone.om.snapshot.diff.db.dir";
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_REPORT_MAX_PAGE_SIZE
+      = "ozone.om.snapshot.diff.max.page.size";
+
+  public static final String OZONE_OM_SNAPSHOT_DB_MAX_OPEN_FILES
+      = "ozone.om.snapshot.db.max.open.files";
+  public static final int OZONE_OM_SNAPSHOT_DB_MAX_OPEN_FILES_DEFAULT
+      = 100;
+  public static final int OZONE_OM_SNAPSHOT_DIFF_REPORT_MAX_PAGE_SIZE_DEFAULT
+      = 1000;
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_THREAD_POOL_SIZE
+      = "ozone.om.snapshot.diff.thread.pool.size";
+  public static final int OZONE_OM_SNAPSHOT_DIFF_THREAD_POOL_SIZE_DEFAULT
+      = 10;
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_JOB_DEFAULT_WAIT_TIME
+      = "ozone.om.snapshot.diff.job.default.wait.time";
+  public static final long OZONE_OM_SNAPSHOT_DIFF_JOB_DEFAULT_WAIT_TIME_DEFAULT
+      = TimeUnit.MINUTES.toMillis(1);
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_MAX_JOBS_PURGE_PER_TASK
+      = "ozone.om.snapshot.diff.max.jobs.purge.per.task";
+  public static final int OZONE_OM_SNAPSHOT_DIFF_MAX_JOBS_PURGE_PER_TASK_DEFAULT
+      = 100;
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_JOB_REPORT_PERSISTENT_TIME
+      = "ozone.om.snapshot.diff.job.report.persistent.time";
+  public static final long
+      OZONE_OM_SNAPSHOT_DIFF_JOB_REPORT_PERSISTENT_TIME_DEFAULT
+      = TimeUnit.DAYS.toMillis(7);
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_CLEANUP_SERVICE_RUN_INTERVAL
+      = "ozone.om.snapshot.diff.cleanup.service.run.internal";
+  public static final long
+      OZONE_OM_SNAPSHOT_DIFF_CLEANUP_SERVICE_RUN_INTERVAL_DEFAULT
+      = TimeUnit.MINUTES.toMillis(1);
+
+  public static final String OZONE_OM_SNAPSHOT_DIFF_CLEANUP_SERVICE_TIMEOUT
+      = "ozone.om.snapshot.diff.cleanup.service.timeout";
+  public static final long
+      OZONE_OM_SNAPSHOT_DIFF_CLEANUP_SERVICE_TIMEOUT_DEFAULT
+      = TimeUnit.MINUTES.toMillis(5);
+
+  public static final String
+      OZONE_OM_SNAPSHOT_DIFF_MAX_ALLOWED_KEYS_CHANGED_PER_DIFF_JOB
+      = "ozone.om.snapshot.diff.max.allowed.keys.changed.per.job";
+  public static final long
+      OZONE_OM_SNAPSHOT_DIFF_MAX_ALLOWED_KEYS_CHANGED_PER_DIFF_JOB_DEFAULT
+      = 10_000_000;
+
+  public static final String OZONE_OM_UPGRADE_QUOTA_RECALCULATE_ENABLE
+      = "ozone.om.upgrade.quota.recalculate.enabled";
 }

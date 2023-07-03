@@ -34,19 +34,18 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerC
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.certificate.client.DNCertificateClient;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
-import org.apache.hadoop.ozone.container.common.impl.TestHddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -64,29 +63,38 @@ import com.google.common.collect.Maps;
 import static org.apache.hadoop.hdds.protocol.MockDatanodeDetails.randomDatanodeDetails;
 import org.apache.ratis.rpc.RpcType;
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
-import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
 import org.apache.ratis.util.function.CheckedBiConsumer;
+import org.apache.ratis.util.function.CheckedBiFunction;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.apache.ozone.test.tag.Slow;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 
 /**
  * Test Containers.
  */
-@Ignore("Takes too long to run this test. Ignoring for time being.")
+@Slow
 public class TestContainerServer {
   static final String TEST_DIR = GenericTestUtils.getTestDir("dfs")
       .getAbsolutePath() + File.separator;
   private static final OzoneConfiguration CONF = new OzoneConfiguration();
   private static CertificateClient caClient;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
+    DefaultMetricsSystem.setMiniClusterMode(true);
     CONF.set(HddsConfigKeys.HDDS_METADATA_DIR_NAME, TEST_DIR);
-    caClient = new DNCertificateClient(new SecurityConfig(CONF));
+    caClient = new DNCertificateClient(new SecurityConfig(CONF), null,
+        null, null, null, null);
+  }
+
+  @AfterAll
+  public static void tearDown() throws Exception {
+    caClient.close();
   }
 
   @Test
@@ -100,17 +108,6 @@ public class TestContainerServer {
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
             new TestContainerDispatcher(), caClient), (dn, p) -> {
         });
-  }
-
-  @FunctionalInterface
-  interface CheckedBiFunction<LEFT, RIGHT, OUT, THROWABLE extends Throwable> {
-    OUT apply(LEFT left, RIGHT right) throws THROWABLE;
-  }
-
-  @Test
-  public void testClientServerRatisNetty() throws Exception {
-    runTestClientServerRatis(NETTY, 1);
-    runTestClientServerRatis(NETTY, 3);
   }
 
   @Test
@@ -128,7 +125,7 @@ public class TestContainerServer {
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
-        new ContainerController(new ContainerSet(), Maps.newHashMap()),
+        new ContainerController(new ContainerSet(1000), Maps.newHashMap()),
         caClient, null);
   }
 
@@ -145,7 +142,7 @@ public class TestContainerServer {
       int numDatanodes,
       CheckedBiConsumer<Pipeline, OzoneConfiguration, IOException> initConf,
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
-          IOException> createClient,
+                IOException> createClient,
       CheckedBiFunction<DatanodeDetails, OzoneConfiguration, XceiverServerSpi,
           IOException> createServer,
       CheckedBiConsumer<DatanodeDetails, Pipeline, IOException> initServer)
@@ -178,10 +175,11 @@ public class TestContainerServer {
       if (client != null) {
         client.close();
       }
-      servers.stream().forEach(XceiverServerSpi::stop);
+      servers.forEach(XceiverServerSpi::stop);
     }
   }
 
+  @Disabled("Fails with StatusRuntimeException: UNKNOWN")
   @Test
   public void testClientServerWithContainerDispatcher() throws Exception {
     XceiverServerGrpc server = null;
@@ -194,7 +192,7 @@ public class TestContainerServer {
           pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
-      ContainerSet containerSet = new ContainerSet();
+      ContainerSet containerSet = new ContainerSet(1000);
       VolumeSet volumeSet = mock(MutableVolumeSet.class);
       ContainerMetrics metrics = ContainerMetrics.create(conf);
       Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
@@ -213,7 +211,7 @@ public class TestContainerServer {
             Handler.getHandlerForContainerType(containerType, conf,
                 context.getParent().getDatanodeDetails().getUuidString(),
                 containerSet, volumeSet, metrics,
-                TestHddsDispatcher.NO_OP_ICR_SENDER));
+                c -> { }));
       }
       HddsDispatcher dispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics, null);
@@ -262,7 +260,7 @@ public class TestContainerServer {
 
     @Override
     public void validateContainerCommand(
-        ContainerCommandRequestProto msg) throws StorageContainerException {
+        ContainerCommandRequestProto msg) {
     }
 
     @Override

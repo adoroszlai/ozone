@@ -37,21 +37,31 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
   private final ContainerReplicaProto.State state;
   private final DatanodeDetails datanodeDetails;
   private final UUID placeOfBirth;
+  private final int replicaIndex;
 
   private Long sequenceId;
   private final long keyCount;
   private final long bytesUsed;
+  private final boolean isEmpty;
 
-
-  private ContainerReplica(final ContainerID containerID,
-      final ContainerReplicaProto.State state, final DatanodeDetails datanode,
-      final UUID originNodeId, long keyNum, long dataSize) {
+  @SuppressWarnings("parameternumber")
+  private ContainerReplica(
+      final ContainerID containerID,
+      final ContainerReplicaProto.State state,
+      final int replicaIndex,
+      final DatanodeDetails datanode,
+      final UUID originNodeId,
+      long keyNum,
+      long dataSize,
+      boolean isEmpty) {
     this.containerID = containerID;
     this.state = state;
     this.datanodeDetails = datanode;
     this.placeOfBirth = originNodeId;
     this.keyCount = keyNum;
     this.bytesUsed = dataSize;
+    this.replicaIndex = replicaIndex;
+    this.isEmpty = isEmpty;
   }
 
   private void setSequenceId(Long seqId) {
@@ -112,6 +122,10 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     return bytesUsed;
   }
 
+  public boolean isEmpty() {
+    return isEmpty;
+  }
+
   @Override
   public int hashCode() {
     return new HashCodeBuilder(61, 71)
@@ -156,6 +170,19 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     return new ContainerReplicaBuilder();
   }
 
+  public ContainerReplicaBuilder toBuilder() {
+    return newBuilder()
+        .setBytesUsed(bytesUsed)
+        .setContainerID(containerID)
+        .setContainerState(state)
+        .setDatanodeDetails(datanodeDetails)
+        .setKeyCount(keyCount)
+        .setOriginNodeId(placeOfBirth)
+        .setReplicaIndex(replicaIndex)
+        .setSequenceId(sequenceId)
+        .setEmpty(isEmpty);
+  }
+
   @Override
   public String toString() {
     return "ContainerReplica{" +
@@ -165,7 +192,10 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
         ", placeOfBirth=" + placeOfBirth +
         ", sequenceId=" + sequenceId +
         ", keyCount=" + keyCount +
-        ", bytesUsed=" + bytesUsed +
+        ", bytesUsed=" + bytesUsed + ((replicaIndex > 0) ?
+        ",replicaIndex=" + replicaIndex :
+        "") +
+        ", isEmpty=" + isEmpty +
         '}';
   }
 
@@ -181,6 +211,8 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     private Long sequenceId;
     private long bytesUsed;
     private long keyCount;
+    private int replicaIndex;
+    private boolean isEmpty;
 
     /**
      * Set Container Id.
@@ -209,6 +241,12 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     public ContainerReplicaBuilder setDatanodeDetails(
         DatanodeDetails datanodeDetails) {
       datanode = datanodeDetails;
+      return this;
+    }
+
+    public ContainerReplicaBuilder setReplicaIndex(
+        int index) {
+      this.replicaIndex = index;
       return this;
     }
 
@@ -244,6 +282,11 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
       return this;
     }
 
+    public ContainerReplicaBuilder setEmpty(boolean empty) {
+      isEmpty = empty;
+      return this;
+    }
+
     /**
      * Constructs new ContainerReplicaBuilder.
      *
@@ -257,11 +300,15 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
       Preconditions.checkNotNull(datanode,
           "DatanodeDetails can't be null");
       ContainerReplica replica = new ContainerReplica(
-          containerID, state, datanode,
+          containerID, state, replicaIndex, datanode,
           Optional.ofNullable(placeOfBirth).orElse(datanode.getUuid()),
-          keyCount, bytesUsed);
+          keyCount, bytesUsed, isEmpty);
       Optional.ofNullable(sequenceId).ifPresent(replica::setSequenceId);
       return replica;
     }
+  }
+
+  public int getReplicaIndex() {
+    return replicaIndex;
   }
 }

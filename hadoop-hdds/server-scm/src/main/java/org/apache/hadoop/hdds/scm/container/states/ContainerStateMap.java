@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.container.states;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.Collections;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
@@ -119,7 +121,7 @@ public class ContainerStateMap {
       ownerMap.insert(info.getOwner(), id);
       repConfigMap.insert(info.getReplicationConfig(), id);
       typeMap.insert(info.getReplicationType(), id);
-      replicaMap.put(id, ConcurrentHashMap.newKeySet());
+      replicaMap.put(id, Collections.emptySet());
 
       // Flush the cache of this container type, will be added later when
       // get container queries are executed.
@@ -147,6 +149,7 @@ public class ContainerStateMap {
       ownerMap.remove(info.getOwner(), id);
       repConfigMap.remove(info.getReplicationConfig(), id);
       typeMap.remove(info.getReplicationType(), id);
+      replicaMap.remove(id);
       // Flush the cache of this container type.
       flushCache(info);
       LOG.trace("Container {} removed from ContainerStateMap.", id);
@@ -166,49 +169,51 @@ public class ContainerStateMap {
   /**
    * Returns the latest list of DataNodes where replica for given containerId
    * exist.
-   *
-   * @param containerID
-   * @return Set<DatanodeDetails>
    */
   public Set<ContainerReplica> getContainerReplicas(
       final ContainerID containerID) {
     Preconditions.checkNotNull(containerID);
-    final Set<ContainerReplica> replicas = replicaMap.get(containerID);
-    return replicas == null ? null : Collections.unmodifiableSet(replicas);
+    return replicaMap.get(containerID);
   }
 
   /**
    * Adds given datanodes as nodes where replica for given containerId exist.
    * Logs a debug entry if a datanode is already added as replica for given
    * ContainerId.
-   *
-   * @param containerID
-   * @param replica
    */
   public void updateContainerReplica(final ContainerID containerID,
       final ContainerReplica replica) {
     Preconditions.checkNotNull(containerID);
     if (contains(containerID)) {
-      final Set<ContainerReplica> replicas = replicaMap.get(containerID);
-      replicas.remove(replica);
-      replicas.add(replica);
+      final Set<ContainerReplica> newSet = createNewReplicaSet(containerID);
+      newSet.remove(replica);
+      newSet.add(replica);
+      replaceReplicaSet(containerID, newSet);
     }
   }
 
   /**
    * Remove a container Replica for given DataNode.
-   *
-   * @param containerID
-   * @param replica
-   * @return True of dataNode is removed successfully else false.
    */
   public void removeContainerReplica(final ContainerID containerID,
       final ContainerReplica replica) {
     Preconditions.checkNotNull(containerID);
     Preconditions.checkNotNull(replica);
     if (contains(containerID)) {
-      replicaMap.get(containerID).remove(replica);
+      final Set<ContainerReplica> newSet = createNewReplicaSet(containerID);
+      newSet.remove(replica);
+      replaceReplicaSet(containerID, newSet);
     }
+  }
+
+  private Set<ContainerReplica> createNewReplicaSet(ContainerID containerID) {
+    Set<ContainerReplica> existingSet = replicaMap.get(containerID);
+    return existingSet == null ? new HashSet<>() : new HashSet<>(existingSet);
+  }
+
+  private void replaceReplicaSet(ContainerID containerID,
+      Set<ContainerReplica> newSet) {
+    replicaMap.put(containerID, Collections.unmodifiableSet(newSet));
   }
 
   /**
@@ -277,7 +282,7 @@ public class ContainerStateMap {
               "old state. Old = {}, Attempted state = {}", currentState,
           newState);
 
-      currentInfo.setState(currentState);
+      currentInfo.revertState();
 
       // if this line throws, the state map can be in an inconsistent
       // state, since we will have modified the attribute by the
@@ -291,7 +296,7 @@ public class ContainerStateMap {
   }
 
   public Set<ContainerID> getAllContainerIDs() {
-    return Collections.unmodifiableSet(containerMap.keySet());
+    return ImmutableSet.copyOf(containerMap.keySet());
   }
 
   /**
@@ -358,7 +363,7 @@ public class ContainerStateMap {
 
     final ContainerQueryKey queryKey =
         new ContainerQueryKey(state, owner, repConfig);
-    if(resultCache.containsKey(queryKey)){
+    if (resultCache.containsKey(queryKey)) {
       return resultCache.get(queryKey);
     }
 
@@ -430,16 +435,16 @@ public class ContainerStateMap {
    * Sorts a list of Sets based on Size. This is useful when we are
    * intersecting the sets.
    *
-   * @param sets - varagrs of sets
+   * @param sets - varargs of sets
    * @return Returns a sorted array of sets based on the size of the set.
    */
-  @SuppressWarnings("unchecked")
-  private NavigableSet<ContainerID>[] sortBySize(
+  @SafeVarargs
+  private final NavigableSet<ContainerID>[] sortBySize(
       final NavigableSet<ContainerID>... sets) {
     for (int x = 0; x < sets.length - 1; x++) {
       for (int y = 0; y < sets.length - x - 1; y++) {
         if (sets[y].size() > sets[y + 1].size()) {
-          final NavigableSet temp = sets[y];
+          final NavigableSet<ContainerID> temp = sets[y];
           sets[y] = sets[y + 1];
           sets[y + 1] = temp;
         }

@@ -20,13 +20,15 @@ package org.apache.hadoop.ozone.s3.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Function;
+
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static java.net.HttpURLConnection.HTTP_NOT_IMPLEMENTED;
-import static java.net.HttpURLConnection.HTTP_SERVER_ERROR;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.RANGE_NOT_SATISFIABLE;
 
 /**
@@ -56,8 +58,9 @@ public final class S3ErrorTable {
           " this request is not supported.", HTTP_BAD_REQUEST);
 
   public static final OS3Exception S3_AUTHINFO_CREATION_ERROR =
-      new OS3Exception("InvalidRequest", "Error creating s3 auth info.",
-          HTTP_BAD_REQUEST);
+      new OS3Exception("InvalidRequest", "Error creating s3 auth info. " +
+          "The request may not be signed using AWS V4 signing algorithm," +
+          " or might be invalid", HTTP_FORBIDDEN);
 
   public static final OS3Exception BUCKET_NOT_EMPTY = new OS3Exception(
       "BucketNotEmpty", "The bucket you tried to delete is not empty.",
@@ -65,7 +68,7 @@ public final class S3ErrorTable {
 
   public static final OS3Exception MALFORMED_HEADER = new OS3Exception(
       "AuthorizationHeaderMalformed", "The authorization header you provided " +
-      "is invalid.", HTTP_NOT_FOUND);
+      "is invalid.", HTTP_BAD_REQUEST);
 
   public static final OS3Exception NO_SUCH_KEY = new OS3Exception(
       "NoSuchKey", "The specified key does not exist", HTTP_NOT_FOUND);
@@ -106,7 +109,7 @@ public final class S3ErrorTable {
 
   public static final OS3Exception INTERNAL_ERROR = new OS3Exception(
       "InternalError", "We encountered an internal error. Please try again.",
-      HTTP_SERVER_ERROR);
+      HTTP_INTERNAL_ERROR);
 
   public static final OS3Exception ACCESS_DENIED = new OS3Exception(
       "AccessDenied", "User doesn't have the right to access this " +
@@ -120,17 +123,37 @@ public final class S3ErrorTable {
       "NotImplemented", "This part of feature is not implemented yet.",
       HTTP_NOT_IMPLEMENTED);
 
+  public static final OS3Exception NO_OVERWRITE = new OS3Exception(
+      "Conflict", "Cannot overwrite file with directory", HTTP_CONFLICT);
+
+  public static OS3Exception newError(OS3Exception e, String resource) {
+    return newError(e, resource, null);
+  }
+
   /**
    * Create a new instance of Error.
    * @param e Error Template
    * @param resource Resource associated with this exception
+   * @param ex the original exception, may be null
    * @return creates a new instance of error based on the template
    */
-  public static OS3Exception newError(OS3Exception e, String resource) {
+  public static OS3Exception newError(OS3Exception e, String resource,
+      Exception ex) {
     OS3Exception err =  new OS3Exception(e.getCode(), e.getErrorMessage(),
         e.getHttpCode());
     err.setResource(resource);
-    LOG.error(err.toXml(), e);
+    if (e.getHttpCode() == HTTP_INTERNAL_ERROR) {
+      LOG.error("Internal Error: {}", err.toXml(), ex);
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug(err.toXml(), ex);
+    }
     return err;
+  }
+
+  private static Function<Exception, OS3Exception> generateInternalError = e ->
+      new OS3Exception("InternalError", e.getMessage(), HTTP_INTERNAL_ERROR);
+
+  public static OS3Exception getInternalError(Exception e) {
+    return generateInternalError.apply(e);
   }
 }

@@ -77,6 +77,8 @@ public class TestCloseContainerHandler {
     conf.setBoolean(HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION, false);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(1).build();
+    cluster.waitForClusterToBeReady();
+    cluster.waitForPipelineTobeReady(ONE, 30000);
   }
 
   @After
@@ -91,23 +93,23 @@ public class TestCloseContainerHandler {
     cluster.waitForClusterToBeReady();
 
     //the easiest way to create an open container is creating a key
-    OzoneClient client = OzoneClientFactory.getRpcClient(conf);
-    ObjectStore objectStore = client.getObjectStore();
-    objectStore.createVolume("test");
-    objectStore.getVolume("test").createBucket("test");
-    OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
-        .createKey("test", 1024, ReplicationType.STAND_ALONE,
-            ReplicationFactor.ONE, new HashMap<>());
-    key.write("test".getBytes(UTF_8));
-    key.close();
+    try (OzoneClient client = OzoneClientFactory.getRpcClient(conf)) {
+      ObjectStore objectStore = client.getObjectStore();
+      objectStore.createVolume("test");
+      objectStore.getVolume("test").createBucket("test");
+      OzoneOutputStream key = objectStore.getVolume("test").getBucket("test")
+          .createKey("test", 1024, ReplicationType.RATIS,
+              ReplicationFactor.ONE, new HashMap<>());
+      key.write("test".getBytes(UTF_8));
+      key.close();
+    }
 
     //get the name of a valid container
     OmKeyArgs keyArgs =
         new OmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
-            .setReplicationConfig(new StandaloneReplicationConfig(ONE))
+            .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
             .setDataSize(1024)
             .setKeyName("test")
-            .setRefreshPipeline(true)
             .build();
 
     OmKeyLocationInfo omKeyLocationInfo =

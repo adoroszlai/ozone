@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
@@ -28,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.MetadataStorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
@@ -36,11 +37,11 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
 import org.apache.hadoop.ozone.container.upgrade.UpgradeUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
@@ -63,11 +64,11 @@ public class TestSCMContainerPlacementCapacity {
           NodeStatus.inServiceHealthy(),
           UpgradeUtils.defaultLayoutVersionProto());
 
-      StorageReportProto storage1 = TestUtils.createStorageReport(
+      StorageReportProto storage1 = HddsTestUtils.createStorageReport(
           datanodeInfo.getUuid(), "/data1-" + datanodeInfo.getUuidString(),
           100L, 0, 100L, null);
       MetadataStorageReportProto metaStorage1 =
-          TestUtils.createMetadataStorageReport(
+          HddsTestUtils.createMetadataStorageReport(
               "/metadata1-" + datanodeInfo.getUuidString(),
           100L, 0, 100L, null);
       datanodeInfo.updateStorageReports(
@@ -78,19 +79,19 @@ public class TestSCMContainerPlacementCapacity {
       datanodes.add(datanodeInfo);
     }
 
-    StorageReportProto storage2 = TestUtils.createStorageReport(
+    StorageReportProto storage2 = HddsTestUtils.createStorageReport(
         datanodes.get(2).getUuid(),
         "/data1-" + datanodes.get(2).getUuidString(),
         100L, 90L, 10L, null);
     datanodes.get(2).updateStorageReports(
         new ArrayList<>(Arrays.asList(storage2)));
-    StorageReportProto storage3 = TestUtils.createStorageReport(
+    StorageReportProto storage3 = HddsTestUtils.createStorageReport(
         datanodes.get(3).getUuid(),
         "/data1-" + datanodes.get(3).getUuidString(),
         100L, 80L, 20L, null);
     datanodes.get(3).updateStorageReports(
         new ArrayList<>(Arrays.asList(storage3)));
-    StorageReportProto storage4 = TestUtils.createStorageReport(
+    StorageReportProto storage4 = HddsTestUtils.createStorageReport(
         datanodes.get(4).getUuid(),
         "/data1-" + datanodes.get(4).getUuidString(),
         100L, 70L, 30L, null);
@@ -101,7 +102,7 @@ public class TestSCMContainerPlacementCapacity {
     when(mockNodeManager.getNodes(NodeStatus.inServiceHealthy()))
         .thenReturn(new ArrayList<>(datanodes));
 
-    when(mockNodeManager.getNodeStat(anyObject()))
+    when(mockNodeManager.getNodeStat(any()))
         .thenReturn(new SCMNodeMetric(100L, 0L, 100L));
     when(mockNodeManager.getNodeStat(datanodes.get(2)))
         .thenReturn(new SCMNodeMetric(100L, 90L, 10L));
@@ -109,6 +110,11 @@ public class TestSCMContainerPlacementCapacity {
         .thenReturn(new SCMNodeMetric(100L, 80L, 20L));
     when(mockNodeManager.getNodeStat(datanodes.get(4)))
         .thenReturn(new SCMNodeMetric(100L, 70L, 30L));
+    when(mockNodeManager.getNodeByUuid(any(UUID.class))).thenAnswer(
+            invocation -> datanodes.stream()
+                .filter(dn -> dn.getUuid().equals(invocation.getArgument(0)))
+                .findFirst()
+                .orElse(null));
 
     SCMContainerPlacementCapacity scmContainerPlacementRandom =
         new SCMContainerPlacementCapacity(mockNodeManager, conf, null, true,
@@ -130,18 +136,18 @@ public class TestSCMContainerPlacementCapacity {
           .chooseDatanodes(existingNodes, null, 1, 15, 15);
 
       //then
-      Assert.assertEquals(1, datanodeDetails.size());
+      Assertions.assertEquals(1, datanodeDetails.size());
       DatanodeDetails datanode0Details = datanodeDetails.get(0);
 
-      Assert.assertNotEquals(
-          "Datanode 0 should not been selected: excluded by parameter",
-          datanodes.get(0), datanode0Details);
-      Assert.assertNotEquals(
-          "Datanode 1 should not been selected: excluded by parameter",
-          datanodes.get(1), datanode0Details);
-      Assert.assertNotEquals(
-          "Datanode 2 should not been selected: not enough space there",
-          datanodes.get(2), datanode0Details);
+      Assertions.assertNotEquals(
+          datanodes.get(0), datanode0Details,
+          "Datanode 0 should not been selected: excluded by parameter");
+      Assertions.assertNotEquals(
+          datanodes.get(1), datanode0Details,
+          "Datanode 1 should not been selected: excluded by parameter");
+      Assertions.assertNotEquals(
+          datanodes.get(2), datanode0Details,
+          "Datanode 2 should not been selected: not enough space there");
 
       selectedCount
           .put(datanode0Details, selectedCount.get(datanode0Details) + 1);
@@ -149,9 +155,9 @@ public class TestSCMContainerPlacementCapacity {
     }
 
     //datanode 6 has more space than datanode 3 and datanode 4.
-    Assert.assertTrue(selectedCount.get(datanodes.get(3)) < selectedCount
+    Assertions.assertTrue(selectedCount.get(datanodes.get(3)) < selectedCount
         .get(datanodes.get(6)));
-    Assert.assertTrue(selectedCount.get(datanodes.get(4)) < selectedCount
+    Assertions.assertTrue(selectedCount.get(datanodes.get(4)) < selectedCount
         .get(datanodes.get(6)));
   }
 }

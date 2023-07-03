@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.s3;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
@@ -31,6 +32,11 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.s3.signature.AWSSignatureProcessor;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+
+import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.MALFORMED_HEADER;
+import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.S3_AUTHINFO_CREATION_ERROR;
 import static org.apache.hadoop.ozone.s3.signature.SignatureParser.AUTHORIZATION_HEADER;
 import static org.apache.hadoop.ozone.s3.signature.SignatureProcessor.CONTENT_MD5;
 import static org.apache.hadoop.ozone.s3.signature.SignatureProcessor.CONTENT_TYPE;
@@ -54,6 +60,7 @@ public class TestOzoneClientProducer {
   private OzoneClientProducer producer;
   private MultivaluedMap<String, String> headerMap;
   private MultivaluedMap<String, String> queryMap;
+  private MultivaluedMap<String, String> pathParamsMap;
   private String authHeader;
   private String contentMd5;
   private String host;
@@ -77,6 +84,7 @@ public class TestOzoneClientProducer {
     producer = new OzoneClientProducer();
     headerMap = new MultivaluedHashMap<>();
     queryMap = new MultivaluedHashMap<>();
+    pathParamsMap = new MultivaluedHashMap<>();
     uriInfo = Mockito.mock(UriInfo.class);
     context = Mockito.mock(ContainerRequestContext.class);
     OzoneConfiguration config = new OzoneConfiguration();
@@ -118,6 +126,18 @@ public class TestOzoneClientProducer {
         },
         {
             null, null, null, null, null, null
+        },
+        {
+            "", null, null, null, null, null
+        },
+        // AWS V2 signature
+        {
+            "AWS AKIDEXAMPLE:St7bHPOdkmsX/GITGe98rOQiUCg=",
+            "",
+            "s3g:9878",
+            "",
+            "Wed, 22 Mar 2023 17:00:06 +0000",
+            "application/octet-stream"
         }
     });
   }
@@ -129,6 +149,73 @@ public class TestOzoneClientProducer {
       fail("testGetClientFailure");
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof IOException);
+    }
+  }
+
+  @Test
+  public void testGetSignature() {
+    try {
+      System.err.println("Testing: " + authHeader);
+      OzoneConfiguration configuration = new OzoneConfiguration();
+      configuration.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, "ozone1");
+      configuration.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "ozone1addr:9399");
+      producer.setOzoneConfiguration(configuration);
+      producer.getSignature();
+      if ("".equals(authHeader)) {
+        fail("Empty AuthHeader must fail");
+      }
+    } catch (WebApplicationException ex) {
+      if (authHeader == null || authHeader.isEmpty() ||
+              authHeader.startsWith("AWS ")) {
+        // Empty auth header and unsupported AWS signature
+        // should fail with Invalid Request.
+        Assert.assertEquals(HTTP_FORBIDDEN, ex.getResponse().getStatus());
+        Assert.assertEquals(S3_AUTHINFO_CREATION_ERROR.getErrorMessage(),
+            ex.getMessage());
+      } else {
+        // Other requests have stale timestamp and
+        // should fail with Malformed Authorization Header.
+        Assert.assertEquals(HTTP_BAD_REQUEST, ex.getResponse().getStatus());
+        Assert.assertEquals(MALFORMED_HEADER.getErrorMessage(),
+            ex.getMessage());
+
+      }
+
+    } catch (Exception ex) {
+      fail("Unexpected exception: " + ex);
+    }
+  }
+
+  @Test
+  public void testGetClientFailureWithMultipleServiceIds() {
+    try {
+      OzoneConfiguration configuration = new OzoneConfiguration();
+      configuration.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, "ozone1,ozone2");
+      producer.setOzoneConfiguration(configuration);
+      producer.createClient();
+      fail("testGetClientFailureWithMultipleServiceIds");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof IOException);
+      Assert.assertTrue(ex.getMessage().contains(
+          "More than 1 OzoneManager ServiceID"));
+    }
+  }
+
+  @Test
+  public void testGetClientFailureWithMultipleServiceIdsAndInternalServiceId() {
+    try {
+      OzoneConfiguration configuration = new OzoneConfiguration();
+      configuration.set(OMConfigKeys.OZONE_OM_INTERNAL_SERVICE_ID, "ozone1");
+      configuration.set(OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY, "ozone1,ozone2");
+      producer.setOzoneConfiguration(configuration);
+      producer.createClient();
+      fail("testGetClientFailureWithMultipleServiceIdsAndInternalServiceId");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof IOException);
+      // Still test will fail, as config is not complete. But it should pass
+      // the service id check.
+      Assert.assertFalse(ex.getMessage().contains(
+          "More than 1 OzoneManager ServiceID"));
     }
   }
 
@@ -149,6 +236,8 @@ public class TestOzoneClientProducer {
         .thenReturn(authHeader);
     Mockito.when(context.getUriInfo().getQueryParameters())
         .thenReturn(queryMap);
+    Mockito.when(context.getUriInfo().getPathParameters())
+        .thenReturn(pathParamsMap);
 
     AWSSignatureProcessor awsSignatureProcessor = new AWSSignatureProcessor();
     awsSignatureProcessor.setContext(context);

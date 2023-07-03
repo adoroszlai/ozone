@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Utility class to facilitate network topology functions.
@@ -104,18 +103,15 @@ public final class NetUtils {
         continue;
       }
       // excludedScope is child of ancestor
-      List<String> duplicateList = mutableExcludedScopes.stream()
-          .filter(scope -> scope.startsWith(ancestor.getNetworkFullPath()))
-          .collect(Collectors.toList());
-      mutableExcludedScopes.removeAll(duplicateList);
+      mutableExcludedScopes.removeIf(ancestor::isAncestor);
 
       // ancestor is covered by excludedScope
-      mutableExcludedScopes.stream().forEach(scope -> {
-        if (ancestor.getNetworkFullPath().startsWith(scope)) {
+      for (String scope : mutableExcludedScopes) {
+        if (ancestor.isDescendant(scope)) {
           // remove exclude node if it's covered by excludedScope
           iterator.remove();
         }
-      });
+      }
     }
   }
 
@@ -148,5 +144,23 @@ public final class NetUtils {
       }
     }
     return ancestorList;
+  }
+
+  /**
+   * Ensure {@link NetConstants#PATH_SEPARATOR_STR} is added to the suffix of
+   * the path.
+   * @param path path to add suffix
+   * @return the normalised path
+   * If <i>path</i>is empty, then {@link NetConstants#PATH_SEPARATOR_STR} is
+   * returned
+   */
+  public static String addSuffix(String path) {
+    if (path == null) {
+      return null;
+    }
+    if (!path.endsWith(NetConstants.PATH_SEPARATOR_STR)) {
+      return path + NetConstants.PATH_SEPARATOR_STR;
+    }
+    return path;
   }
 }

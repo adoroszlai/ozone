@@ -21,14 +21,16 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandQueueReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.MetadataStorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.LayoutVersionProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -283,11 +285,11 @@ public class MockNodeManager implements NodeManager {
         long capacity = nodeMetricMap.get(dd).getCapacity().get();
         long used = nodeMetricMap.get(dd).getScmUsed().get();
         long remaining = nodeMetricMap.get(dd).getRemaining().get();
-        StorageReportProto storage1 = TestUtils.createStorageReport(
+        StorageReportProto storage1 = HddsTestUtils.createStorageReport(
             di.getUuid(), "/data1-" + di.getUuidString(),
             capacity, used, remaining, null);
         MetadataStorageReportProto metaStorage1 =
-            TestUtils.createMetadataStorageReport(
+            HddsTestUtils.createMetadataStorageReport(
                 "/metadata1-" + di.getUuidString(), capacity, used,
                 remaining, null);
         di.updateStorageReports(new ArrayList<>(Arrays.asList(storage1)));
@@ -531,8 +533,20 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
+  public void removeContainer(DatanodeDetails dd,
+      ContainerID containerId) {
+    try {
+      Set<ContainerID> set = node2ContainerMap.getContainers(dd.getUuid());
+      set.remove(containerId);
+      node2ContainerMap.setContainersForDatanode(dd.getUuid(), set);
+    } catch (SCMException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
   public void addDatanodeCommand(UUID dnId, SCMCommand command) {
-    if(commandMap.containsKey(dnId)) {
+    if (commandMap.containsKey(dnId)) {
       List<SCMCommand> commandList = commandMap.get(dnId);
       Preconditions.checkNotNull(commandList);
       commandList.add(command);
@@ -541,6 +555,15 @@ public class MockNodeManager implements NodeManager {
       commandList.add(command);
       commandMap.put(dnId, commandList);
     }
+  }
+
+  /**
+   * send refresh command to all the healthy datanodes to refresh
+   * volume usage info immediately.
+   */
+  @Override
+  public void refreshAllHealthyDnUsageInfo() {
+    //no op
   }
 
   /**
@@ -565,6 +588,55 @@ public class MockNodeManager implements NodeManager {
   public void processLayoutVersionReport(DatanodeDetails dnUuid,
                                          LayoutVersionProto layoutReport) {
     // do nothing
+  }
+
+  /**
+   * Get the number of commands of the given type queued on the datanode at the
+   * last heartbeat. If the Datanode has not reported information for the given
+   * command type, -1 will be returned.
+   * @param cmdType
+   * @return The queued count or -1 if no data has been received from the DN.
+   */
+  @Override
+  public int getNodeQueuedCommandCount(DatanodeDetails datanodeDetails,
+      SCMCommandProto.Type cmdType) {
+    return -1;
+  }
+
+  /**
+   * Get the number of commands of the given type queued in the SCM CommandQueue
+   * for the given datanode.
+   * @param dnID The UUID of the datanode.
+   * @param cmdType The Type of command to query the current count for.
+   * @return The count of commands queued, or zero if none.
+   */
+  @Override
+  public int getCommandQueueCount(UUID dnID, SCMCommandProto.Type cmdType) {
+    return 0;
+  }
+
+  /**
+   * Get the total number of pending commands of the given type on the given
+   * datanode. This includes both the number of commands queued in SCM which
+   * will be sent to the datanode on the next heartbeat, and the number of
+   * commands reported by the datanode in the last heartbeat.
+   * If the datanode has not reported any information for the given command,
+   * zero is assumed.
+   * @param datanodeDetails The datanode to query.
+   * @param cmdType The command Type To query.
+   * @return The number of commands of the given type pending on the datanode.
+   * @throws NodeNotFoundException
+   */
+  @Override
+  public int getTotalDatanodeCommandCount(DatanodeDetails datanodeDetails,
+      SCMCommandProto.Type cmdType) throws NodeNotFoundException {
+    return 0;
+  }
+
+  @Override
+  public Map<SCMCommandProto.Type, Integer> getTotalDatanodeCommandCounts(
+      DatanodeDetails datanodeDetails, SCMCommandProto.Type... cmdType) {
+    return Collections.emptyMap();
   }
 
   /**
@@ -601,7 +673,7 @@ public class MockNodeManager implements NodeManager {
   }
 
   public void clearCommandQueue(UUID dnId) {
-    if(commandMap.containsKey(dnId)) {
+    if (commandMap.containsKey(dnId)) {
       commandMap.put(dnId, new LinkedList<>());
     }
   }
@@ -697,11 +769,13 @@ public class MockNodeManager implements NodeManager {
    *
    * @param datanodeDetails - Datanode ID.
    * @param layoutInfo - DataNode Layout info
+   * @param commandQueueReportProto - Command Queue Report Proto
    * @return SCMheartbeat response list
    */
   @Override
   public List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails,
-                                           LayoutVersionProto layoutInfo) {
+      LayoutVersionProto layoutInfo,
+      CommandQueueReportProto commandQueueReportProto) {
     return null;
   }
 
@@ -738,6 +812,11 @@ public class MockNodeManager implements NodeManager {
     nodeInfo.put("Used", aggregateStat.getScmUsed().get());
     nodeInfo.put("Remaining", aggregateStat.getRemaining().get());
     return nodeInfo;
+  }
+
+  @Override
+  public Map<String, Map<String, String>> getNodeStatusInfo() {
+    return null;
   }
 
   /**
@@ -799,7 +878,7 @@ public class MockNodeManager implements NodeManager {
     if (uuids == null) {
       return results;
     }
-    for(String uuid : uuids) {
+    for (String uuid : uuids) {
       DatanodeDetails dn = getNodeByUuid(uuid);
       if (dn != null) {
         results.add(dn);
@@ -820,6 +899,11 @@ public class MockNodeManager implements NodeManager {
   @Override
   public int minHealthyVolumeNum(List<DatanodeDetails> dnList) {
     return numHealthyDisksPerDatanode;
+  }
+
+  @Override
+  public int totalHealthyVolumeCount() {
+    return healthyNodes.size() * numHealthyDisksPerDatanode;
   }
 
   @Override

@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
+import org.apache.hadoop.ozone.container.common.helpers.CommandHandlerMetrics;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -43,6 +44,7 @@ public final class CommandDispatcher {
   private final Map<Type, CommandHandler> handlerMap;
   private final OzoneContainer container;
   private final SCMConnectionManager connectionManager;
+  private final CommandHandlerMetrics commandHandlerMetrics;
 
   /**
    * Constructs a command Dispatcher.
@@ -68,7 +70,7 @@ public final class CommandDispatcher {
     this.connectionManager = connectionManager;
     handlerMap = new HashMap<>();
     for (CommandHandler h : handlers) {
-      if(handlerMap.containsKey(h.getCommandType())){
+      if (handlerMap.containsKey(h.getCommandType())) {
         LOG.error("Duplicate handler for the same command. Exiting. Handle " +
             "key : {}", h.getCommandType().getDescriptorForType().getName());
         throw new IllegalArgumentException("Duplicate handler for the same " +
@@ -76,6 +78,7 @@ public final class CommandDispatcher {
       }
       handlerMap.put(h.getCommandType(), h);
     }
+    commandHandlerMetrics = CommandHandlerMetrics.create(handlerMap);
   }
 
   public CommandHandler getCloseContainerHandler() {
@@ -96,6 +99,7 @@ public final class CommandDispatcher {
     Preconditions.checkNotNull(command);
     CommandHandler handler = handlerMap.get(command.getType());
     if (handler != null) {
+      commandHandlerMetrics.increaseCommandCount(command.getType());
       handler.handle(command, container, context, connectionManager);
     } else {
       LOG.error("Unknown SCM Command queued. There is no handler for this " +
@@ -108,6 +112,22 @@ public final class CommandDispatcher {
     for (CommandHandler c : handlerMap.values()) {
       c.stop();
     }
+    commandHandlerMetrics.unRegister();
+  }
+
+  /**
+   * For each registered handler, call its getQueuedCount method to retrieve the
+   * number of queued commands. The returned map will contain an entry for every
+   * registered command in the dispatcher, with a value of zero if there are no
+   * queued commands.
+   * @return A Map of CommandType where the value is the queued command count.
+   */
+  public Map<Type, Integer> getQueuedCommandCount() {
+    Map<Type, Integer> counts = new HashMap<>();
+    for (Map.Entry<Type, CommandHandler> entry : handlerMap.entrySet()) {
+      counts.put(entry.getKey(), entry.getValue().getQueuedCount());
+    }
+    return counts;
   }
 
   public static Builder newBuilder() {

@@ -20,17 +20,22 @@ package org.apache.hadoop.ozone.freon;
 
 import java.time.Duration;
 
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.DatanodeRatisServerConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.ratis.conf.RatisClientConfig;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.ozone.test.tag.Flaky;
 
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import picocli.CommandLine;
+
+import static org.apache.ozone.test.GenericTestUtils.waitFor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests Freon, with MiniOzoneCluster.
@@ -40,14 +45,8 @@ public class TestRandomKeyGenerator {
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
 
-  /**
-   * Create a MiniDFSCluster for testing.
-   * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true
-   *
-   */
-  @BeforeClass
-  public static void init() throws Exception {
+  @BeforeAll
+  static void init() throws Exception {
     conf = new OzoneConfiguration();
     DatanodeRatisServerConfig ratisServerConfig =
         conf.getObject(DatanodeRatisServerConfig.class);
@@ -65,78 +64,115 @@ public class TestRandomKeyGenerator {
     cluster.waitForClusterToBeReady();
   }
 
-  /**
-   * Shutdown MiniDFSCluster.
-   */
-  @AfterClass
-  public static void shutdown() {
+  @AfterAll
+  static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
   @Test
-  public void defaultTest() throws Exception {
+  @Timeout(5)
+  void singleFailedAttempt() {
+    BaseFreonGenerator subject = new BaseFreonGenerator();
+    subject.setThreadNo(2);
+    subject.setTestNo(1);
+    subject.init();
+
+    assertThrows(RuntimeException.class, () -> subject.runTests(
+        n -> {
+          waitFor(subject::isCompleted, 100, 3000);
+          throw new RuntimeException("fail");
+        }
+    ));
+    assertEquals(1, subject.getFailureCount());
+  }
+
+  @Test
+  void testDefault() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(2);
-    randomKeyGenerator.setNumOfBuckets(5);
-    randomKeyGenerator.setNumOfKeys(10);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "2",
+        "--num-of-buckets", "5",
+        "--num-of-keys", "10");
+
+    Assert.assertEquals(2, randomKeyGenerator.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
+    randomKeyGenerator.printStats(System.out);
+  }
+
+  @Test
+  void testECKey() {
+    RandomKeyGenerator randomKeyGenerator =
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "2",
+        "--num-of-buckets", "5",
+        "--num-of-keys", "10",
+        "--replication", "rs-3-2-1024k",
+        "--type", "EC"
+    );
+
     Assert.assertEquals(2, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
   }
 
   @Test
-  public void multiThread() throws Exception {
+  void testMultiThread() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(10);
-    randomKeyGenerator.setNumOfBuckets(1);
-    randomKeyGenerator.setNumOfKeys(10);
-    randomKeyGenerator.setNumOfThreads(10);
-    randomKeyGenerator.setKeySize(10240);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "10",
+        "--num-of-buckets", "1",
+        "--num-of-keys", "10",
+        "--num-of-threads", "10",
+        "--key-size", "10240",
+        "--factor", "THREE",
+        "--type", "RATIS"
+    );
+
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
   }
 
   @Test
-  public void ratisTest3() throws Exception {
+  void testRatisKey() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(10);
-    randomKeyGenerator.setNumOfBuckets(1);
-    randomKeyGenerator.setNumOfKeys(10);
-    randomKeyGenerator.setNumOfThreads(10);
-    randomKeyGenerator.setKeySize(10240);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "10",
+        "--num-of-buckets", "1",
+        "--num-of-keys", "10",
+        "--num-of-threads", "10",
+        "--key-size", "10240",
+        "--factor", "THREE",
+        "--type", "RATIS"
+    );
+
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
   }
 
   @Test
-  public void bigFileThan2GB() throws Exception {
+  void testKeyLargerThan2GB() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(1);
-    randomKeyGenerator.setNumOfBuckets(1);
-    randomKeyGenerator.setNumOfKeys(1);
-    randomKeyGenerator.setNumOfThreads(1);
-    randomKeyGenerator.setKeySize(10L + Integer.MAX_VALUE);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.setValidateWrites(true);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "1",
+        "--num-of-buckets", "1",
+        "--num-of-keys", "1",
+        "--num-of-threads", "1",
+        "--key-size", String.valueOf(10L + Integer.MAX_VALUE),
+        "--factor", "THREE",
+        "--type", "RATIS",
+        "--validate-writes"
+    );
+
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
@@ -144,18 +180,20 @@ public class TestRandomKeyGenerator {
   }
 
   @Test
-  public void fileWithSizeZero() throws Exception {
+  void testZeroSizeKey() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(1);
-    randomKeyGenerator.setNumOfBuckets(1);
-    randomKeyGenerator.setNumOfKeys(1);
-    randomKeyGenerator.setNumOfThreads(1);
-    randomKeyGenerator.setKeySize(0);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.setValidateWrites(true);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "1",
+        "--num-of-buckets", "1",
+        "--num-of-keys", "1",
+        "--num-of-threads", "1",
+        "--key-size", "0",
+        "--factor", "THREE",
+        "--type", "RATIS",
+        "--validate-writes"
+    );
+
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
@@ -163,32 +201,37 @@ public class TestRandomKeyGenerator {
   }
 
   @Test
-  public void testThreadPoolSize() throws Exception {
+  void testThreadPoolSize() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(1);
-    randomKeyGenerator.setNumOfBuckets(1);
-    randomKeyGenerator.setNumOfKeys(1);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.setNumOfThreads(10);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "1",
+        "--num-of-buckets", "1",
+        "--num-of-keys", "1",
+        "--num-of-threads", "10",
+        "--factor", "THREE",
+        "--type", "RATIS"
+    );
+
     Assert.assertEquals(10, randomKeyGenerator.getThreadPoolSize());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
   }
 
   @Test
-  public void cleanObjectsTest() throws Exception {
+  @Flaky("HDDS-5993")
+  void cleanObjectsTest() {
     RandomKeyGenerator randomKeyGenerator =
-        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
-    randomKeyGenerator.setNumOfVolumes(2);
-    randomKeyGenerator.setNumOfBuckets(5);
-    randomKeyGenerator.setNumOfKeys(10);
-    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setType(ReplicationType.RATIS);
-    randomKeyGenerator.setNumOfThreads(10);
-    randomKeyGenerator.setCleanObjects(true);
-    randomKeyGenerator.call();
+        new RandomKeyGenerator(cluster.getConf());
+    CommandLine cmd = new CommandLine(randomKeyGenerator);
+    cmd.execute("--num-of-volumes", "2",
+        "--num-of-buckets", "5",
+        "--num-of-keys", "10",
+        "--num-of-threads", "10",
+        "--factor", "THREE",
+        "--type", "RATIS",
+        "--clean-objects"
+    );
+
     Assert.assertEquals(2, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());

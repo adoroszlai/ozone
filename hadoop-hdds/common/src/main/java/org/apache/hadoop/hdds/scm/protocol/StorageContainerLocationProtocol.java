@@ -18,13 +18,18 @@
 package org.apache.hadoop.hdds.scm.protocol;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DeletedBlocksTransactionInfo;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.DecommissionScmResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartContainerBalancerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.Type;
 import org.apache.hadoop.hdds.scm.DatanodeAdminError;
 import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ReplicationManagerReport;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.upgrade.UpgradeFinalizer.StatusAndMessages;
@@ -95,6 +100,15 @@ public interface StorageContainerLocationProtocol extends Closeable {
       throws IOException;
 
   /**
+   * Gets the list of ReplicaInfo known by SCM for a given container.
+   * @param containerId ID of the container
+   * @return List of ReplicaInfo for the container or an empty list if none.
+   * @throws IOException
+   */
+  List<HddsProtos.SCMContainerReplicaProto> getContainerReplicas(
+      long containerId, int clientVersion) throws IOException;
+
+  /**
    * Ask SCM the location of a batch of containers. SCM responds with a group of
    * nodes where these containers and their replicas are located.
    *
@@ -104,7 +118,7 @@ public interface StorageContainerLocationProtocol extends Closeable {
    * @throws IOException
    */
   List<ContainerWithPipeline> getContainerWithPipelineBatch(
-      List<Long> containerIDs) throws IOException;
+      Iterable<? extends Long> containerIDs) throws IOException;
 
   /**
    * Ask SCM which containers of the given list exist.
@@ -173,6 +187,28 @@ public interface StorageContainerLocationProtocol extends Closeable {
       int count, HddsProtos.LifeCycleState state,
       HddsProtos.ReplicationFactor factor) throws IOException;
 
+
+  /**
+   * Ask SCM for a list of containers with a range of container ID, state
+   * and replication config, and the limit of count.
+   * The containers are returned from startID (exclusive), and
+   * filtered by state and replication config. The returned list is limited to
+   * count entries.
+   *
+   * @param startContainerID start container ID.
+   * @param count count, if count {@literal <} 0, the max size is unlimited.(
+   *              Usually the count will be replace with a very big
+   *              value instead of being unlimited in case the db is very big)
+   * @param state Container with this state will be returned.
+   * @param replicationConfig Replication config for the containers
+   * @return a list of container.
+   * @throws IOException
+   */
+  List<ContainerInfo> listContainer(long startContainerID,
+      int count, HddsProtos.LifeCycleState state,
+      HddsProtos.ReplicationType replicationType,
+      ReplicationConfig replicationConfig) throws IOException;
+
   /**
    * Deletes a container in SCM.
    *
@@ -188,8 +224,9 @@ public interface StorageContainerLocationProtocol extends Closeable {
    *  state acts like a wildcard returning all nodes in that state.
    * @param opState The node operational state
    * @param state The node health
-   * @param clientVersion
+   * @param clientVersion Client's version number
    * @return List of Datanodes.
+   * @see org.apache.hadoop.ozone.ClientVersion
    */
   List<HddsProtos.Node> queryNode(HddsProtos.NodeOperationalState opState,
       HddsProtos.NodeState state, HddsProtos.QueryScope queryScope,
@@ -274,6 +311,36 @@ public interface StorageContainerLocationProtocol extends Closeable {
   ScmInfo getScmInfo() throws IOException;
 
   /**
+   * Transfer the raft leadership.
+   *
+   * @param newLeaderId  the newLeaderId of the target expected leader
+   * @throws IOException
+   */
+  void transferLeadership(String newLeaderId) throws IOException;
+
+  /**
+   * Return the failed transactions of the Deleted blocks. A transaction is
+   * considered to be failed if it has been sent more than MAX_RETRY limit
+   * and its count is reset to -1.
+   *
+   * @param count Maximum num of returned transactions, if < 0. return all.
+   * @param startTxId The least transaction id to start with.
+   * @return a list of failed deleted block transactions.
+   * @throws IOException
+   */
+  List<DeletedBlocksTransactionInfo> getFailedDeletedBlockTxn(int count,
+      long startTxId) throws IOException;
+
+  /**
+   * Reset the failed deleted block retry count.
+   *
+   * @param txIDs transactionId list to be reset
+   * @return num of successful reset
+   * @throws IOException
+   */
+  int resetDeletedBlockRetryCount(List<Long> txIDs) throws IOException;
+
+  /**
    * Check if SCM is in safe mode.
    *
    * @return Returns true if SCM is in safe mode else returns false.
@@ -283,6 +350,7 @@ public interface StorageContainerLocationProtocol extends Closeable {
 
   Map<String, Pair<Boolean, String>> getSafeModeRuleStatuses()
       throws IOException;
+
   /**
    * Force SCM out of Safe mode.
    *
@@ -309,11 +377,22 @@ public interface StorageContainerLocationProtocol extends Closeable {
   boolean getReplicationManagerStatus() throws IOException;
 
   /**
-   * Start ContainerBalancer.
+   * Returns the latest container summary report generated by Replication
+   * Manager.
+   * @return The latest ReplicationManagerReport.
+   * @throws IOException
    */
-  boolean startContainerBalancer(Optional<Double> threshold,
-      Optional<Integer> idleiterations,
-      Optional<Double> maxDatanodesRatioToInvolvePerIteration,
+  ReplicationManagerReport getReplicationManagerReport() throws IOException;
+
+  /**
+   * Start ContainerBalancer.
+   * @return {@link StartContainerBalancerResponseProto} that contains the
+   * start status and an optional message.
+   */
+  StartContainerBalancerResponseProto startContainerBalancer(
+      Optional<Double> threshold,
+      Optional<Integer> iterations,
+      Optional<Integer> maxDatanodesPercentageToInvolvePerIteration,
       Optional<Long> maxSizeToMovePerIterationInGB,
       Optional<Long> maxSizeEnteringTargetInGB,
       Optional<Long> maxSizeLeavingSourceInGB) throws IOException;
@@ -335,24 +414,28 @@ public interface StorageContainerLocationProtocol extends Closeable {
    *
    * @param ipaddress datanode IP address String
    * @param uuid datanode UUID String
+   * @param clientVersion Client's version number
    * @return List of DatanodeUsageInfoProto. Each element contains info such as
    * capacity, SCMused, and remaining space.
    * @throws IOException
+   * @see org.apache.hadoop.ozone.ClientVersion
    */
   List<HddsProtos.DatanodeUsageInfoProto> getDatanodeUsageInfo(
-      String ipaddress, String uuid) throws IOException;
+      String ipaddress, String uuid, int clientVersion) throws IOException;
 
   /**
    * Get usage information of most or least used datanodes.
    *
    * @param mostUsed true if most used, false if least used
    * @param count Integer number of nodes to get info for
+   * @param clientVersion Client's version number
    * @return List of DatanodeUsageInfoProto. Each element contains info such as
    * capacity, SCMUsed, and remaining space.
    * @throws IOException
+   * @see org.apache.hadoop.ozone.ClientVersion
    */
   List<HddsProtos.DatanodeUsageInfoProto> getDatanodeUsageInfo(
-      boolean mostUsed, int count) throws IOException;
+      boolean mostUsed, int count, int clientVersion) throws IOException;
 
   StatusAndMessages finalizeScmUpgrade(String upgradeClientID)
       throws IOException;
@@ -360,9 +443,22 @@ public interface StorageContainerLocationProtocol extends Closeable {
   StatusAndMessages queryUpgradeFinalizationProgress(
       String upgradeClientID, boolean force, boolean readonly)
       throws IOException;
+
   /**
    * Obtain a token which can be used to let datanodes verify authentication of
    * commands operating on {@code containerID}.
    */
   Token<?> getContainerToken(ContainerID containerID) throws IOException;
+
+  long getContainerCount() throws IOException;
+
+  long getContainerCount(HddsProtos.LifeCycleState state)
+      throws IOException;
+
+  List<ContainerInfo> getListOfContainers(
+      long startContainerID, int count, HddsProtos.LifeCycleState state)
+      throws IOException;
+
+  DecommissionScmResponseProto decommissionScm(
+      String scmId) throws IOException;
 }

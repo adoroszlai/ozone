@@ -20,8 +20,8 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 
 /**
@@ -51,6 +52,7 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(SetNodeOperationalStateCommandHandler.class);
   private final ConfigurationSource conf;
+  private final Consumer<HddsProtos.NodeOperationalState> replicationSupervisor;
   private final AtomicInteger invocationCount = new AtomicInteger(0);
   private final AtomicLong totalTime = new AtomicLong(0);
 
@@ -59,8 +61,10 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
    *
    * @param conf - Configuration for the datanode.
    */
-  public SetNodeOperationalStateCommandHandler(ConfigurationSource conf) {
+  public SetNodeOperationalStateCommandHandler(ConfigurationSource conf,
+      Consumer<HddsProtos.NodeOperationalState> replicationSupervisor) {
     this.conf = conf;
+    this.replicationSupervisor = replicationSupervisor;
   }
 
   /**
@@ -89,7 +93,9 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
         (SetNodeOperationalStateCommand) command;
     setNodeCmdProto = setNodeCmd.getProto();
     DatanodeDetails dni = context.getParent().getDatanodeDetails();
-    dni.setPersistedOpState(setNodeCmdProto.getNodeOperationalState());
+    HddsProtos.NodeOperationalState state =
+        setNodeCmdProto.getNodeOperationalState();
+    dni.setPersistedOpState(state);
     dni.setPersistedOpStateExpiryEpochSec(
         setNodeCmd.getStateExpiryEpochSeconds());
     try {
@@ -99,6 +105,7 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
       // TODO - this should probably be raised, but it will break the command
       //      handler interface.
     }
+    replicationSupervisor.accept(state);
     totalTime.addAndGet(Time.monotonicNow() - startTime);
   }
 
@@ -107,19 +114,9 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
   private void persistDatanodeDetails(DatanodeDetails dnDetails)
       throws IOException {
     String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
-    if (idFilePath == null || idFilePath.isEmpty()) {
-      LOG.error("A valid path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
-      throw new IllegalArgumentException(
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR +
-              " must be defined. See" +
-              " https://wiki.apache.org/hadoop/Ozone#Configuration" +
-              " for details on configuring Ozone.");
-    }
-
     Preconditions.checkNotNull(idFilePath);
     File idFile = new File(idFilePath);
-    ContainerUtils.writeDatanodeDetailsTo(dnDetails, idFile);
+    ContainerUtils.writeDatanodeDetailsTo(dnDetails, idFile, conf);
   }
 
   /**
@@ -153,5 +150,15 @@ public class SetNodeOperationalStateCommandHandler implements CommandHandler {
     final int invocations = invocationCount.get();
     return invocations == 0 ?
         0 : totalTime.get() / invocations;
+  }
+
+  @Override
+  public long getTotalRunTime() {
+    return totalTime.get();
+  }
+
+  @Override
+  public int getQueuedCount() {
+    return 0;
   }
 }

@@ -112,7 +112,12 @@ public class ContainerController {
   public void markContainerUnhealthy(final long containerId)
           throws IOException {
     Container container = containerSet.getContainer(containerId);
-    getHandler(container).markContainerUnhealthy(container);
+    if (container != null) {
+      getHandler(container).markContainerUnhealthy(container);
+    } else {
+      LOG.warn("Container {} not found, may be deleted, skip mark UNHEALTHY",
+          containerId);
+    }
   }
 
   /**
@@ -151,8 +156,7 @@ public class ContainerController {
   public Container importContainer(
       final ContainerData containerData,
       final InputStream rawContainerStream,
-      final TarContainerPacker packer)
-      throws IOException {
+      final TarContainerPacker packer) throws IOException {
     return handlers.get(containerData.getContainerType())
         .importContainer(containerData, rawContainerStream, packer);
   }
@@ -188,8 +192,8 @@ public class ContainerController {
     return handlers.get(container.getContainerType());
   }
 
-  public Iterator<Container<?>> getContainers() {
-    return containerSet.getContainerIterator();
+  public Iterable<Container<?>> getContainers() {
+    return containerSet;
   }
 
   /**
@@ -206,7 +210,12 @@ public class ContainerController {
   void updateDataScanTimestamp(long containerId, Instant timestamp)
       throws IOException {
     Container container = containerSet.getContainer(containerId);
-    container.updateDataScanTimestamp(timestamp);
+    if (container != null) {
+      container.updateDataScanTimestamp(timestamp);
+    } else {
+      LOG.warn("Container {} not found, may be deleted, " +
+          "skip update DataScanTimestamp", containerId);
+    }
   }
 
 }

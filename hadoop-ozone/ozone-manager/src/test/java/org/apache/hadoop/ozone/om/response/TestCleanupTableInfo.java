@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.ozone.om.response;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ResolvedBucket;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.lock.OzoneLockProvider;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.file.OMFileCreateRequest;
@@ -135,6 +136,8 @@ public class TestCleanupTableInfo {
         );
     when(om.getAclsEnabled()).thenReturn(false);
     when(om.getAuditLogger()).thenReturn(mock(AuditLogger.class));
+    when(om.getDefaultReplicationConfig()).thenReturn(ReplicationConfig
+        .getDefault(new OzoneConfiguration()));
     addVolumeToMetaTable(aVolumeArgs());
     addBucketToMetaTable(aBucketInfo());
   }
@@ -186,6 +189,8 @@ public class TestCleanupTableInfo {
   public void testKeyCreateRequestSetsAllTouchedTableCachesForEviction() {
     OMKeyCreateRequest request = anOMKeyCreateRequest();
     when(om.getEnableFileSystemPaths()).thenReturn(true);
+    when(om.getOzoneLockProvider()).thenReturn(
+        new OzoneLockProvider(false, false));
 
     Map<String, Integer> cacheItemCount = recordCacheItemCounts();
 
@@ -217,7 +222,7 @@ public class TestCleanupTableInfo {
     for (String tableName : om.getMetadataManager().listTableNames()) {
       if (!cleanup.contains(tableName)) {
         assertEquals(
-            "Cache item count of table " +tableName,
+            "Cache item count of table " + tableName,
             cacheItemCount.get(tableName).intValue(),
             Iterators.size(
                 om.getMetadataManager().getTable(tableName).cacheIterator()
@@ -240,7 +245,7 @@ public class TestCleanupTableInfo {
     om.getMetadataManager().getVolumeTable().put(volumeKey, volumeArgs);
     om.getMetadataManager().getVolumeTable().addCacheEntry(
         new CacheKey<>(volumeKey),
-        new CacheValue<>(Optional.of(volumeArgs), 2)
+        CacheValue.get(2, volumeArgs)
     );
   }
 
@@ -258,7 +263,7 @@ public class TestCleanupTableInfo {
     om.getMetadataManager().getBucketTable().put(bucketKey, bucketInfo);
     om.getMetadataManager().getBucketTable().addCacheEntry(
         new CacheKey<>(bucketKey),
-        new CacheValue<>(Optional.of(bucketInfo), 1)
+        CacheValue.get(1, bucketInfo)
     );
   }
 
@@ -278,7 +283,7 @@ public class TestCleanupTableInfo {
       Assert.assertTrue(newFolder.mkdirs());
     }
     ServerUtils.setOzoneMetaDirPath(conf, newFolder.toString());
-    return spy(new OmMetadataManagerImpl(conf));
+    return spy(new OmMetadataManagerImpl(conf, null));
   }
 
   private OMFileCreateRequest anOMFileCreateRequest() {
@@ -286,15 +291,17 @@ public class TestCleanupTableInfo {
     when(protoRequest.getCreateFileRequest()).thenReturn(aCreateFileRequest());
     when(protoRequest.getCmdType()).thenReturn(Type.CreateFile);
     when(protoRequest.getTraceID()).thenReturn("");
-    return new OMFileCreateRequest(protoRequest);
+    return new OMFileCreateRequest(protoRequest,
+        aBucketInfo().getBucketLayout());
   }
 
-  private OMKeyCreateRequest anOMKeyCreateRequest(){
+  private OMKeyCreateRequest anOMKeyCreateRequest() {
     OMRequest protoRequest = mock(OMRequest.class);
     when(protoRequest.getCreateKeyRequest()).thenReturn(aKeyCreateRequest());
     when(protoRequest.getCmdType()).thenReturn(Type.CreateKey);
     when(protoRequest.getTraceID()).thenReturn("");
-    return new OMKeyCreateRequest(protoRequest);
+    return new OMKeyCreateRequest(protoRequest,
+        aBucketInfo().getBucketLayout());
   }
 
   private OmBucketInfo aBucketInfo() {

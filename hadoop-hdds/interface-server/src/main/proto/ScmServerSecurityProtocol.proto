@@ -55,7 +55,9 @@ message SCMSecurityRequest {
     optional SCMGetCrlsRequestProto getCrlsRequest = 10;
     optional SCMGetLatestCrlIdRequestProto getLatestCrlIdRequest = 11;
     optional SCMRevokeCertificatesRequestProto revokeCertificatesRequest = 12;
-
+    optional SCMGetCertRequestProto getCertRequest = 13;
+    optional SCMGetAllRootCaCertificatesRequestProto
+        getAllRootCaCertificatesRequestProto = 14;
 }
 
 message SCMSecurityResponse {
@@ -81,6 +83,7 @@ message SCMSecurityResponse {
 
     optional SCMRevokeCertificatesResponseProto revokeCertificatesResponseProto = 10;
 
+    optional SCMGetAllRootCaCertificatesResponseProto allRootCaCertificatesResponseProto = 11;
 }
 
 enum Type {
@@ -95,6 +98,8 @@ enum Type {
     GetCrls = 9;
     GetLatestCrlId = 10;
     RevokeCertificates = 11;
+    GetCert = 12;
+    GetAllRootCaCertificates = 13;
 }
 
 enum Status {
@@ -131,6 +136,11 @@ message SCMGetDataNodeCertRequestProto {
 */
 message SCMGetOMCertRequestProto {
     required OzoneManagerDetailsProto omDetails = 1;
+    required string CSR = 2;
+}
+
+message SCMGetCertRequestProto {
+    required NodeDetailsProto nodeDetails = 1;
     required string CSR = 2;
 }
 
@@ -190,6 +200,10 @@ message SCMListCertificateResponseProto {
     repeated string certificates = 2;
 }
 
+message SCMGetAllRootCaCertificatesResponseProto {
+    repeated string allX509RootCaCertificates = 1;
+}
+
 message SCMGetRootCACertificateRequestProto {
 }
 
@@ -234,6 +248,9 @@ message SCMRevokeCertificatesRequestProto {
     repeated string certIds = 1;
     optional Reason reason = 2 [default = unspecified];
     optional uint64 revokeTime = 3;
+}
+
+message SCMGetAllRootCaCertificatesRequestProto {
 }
 
 message SCMRevokeCertificatesResponseProto {

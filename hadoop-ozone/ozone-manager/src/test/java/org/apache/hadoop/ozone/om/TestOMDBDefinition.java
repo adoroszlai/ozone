@@ -48,9 +48,9 @@ public class TestOMDBDefinition {
     OMDBDefinition dbDef = new OMDBDefinition();
 
     // Get list of tables from DB Definitions
-    DBColumnFamilyDefinition[] columnFamilyDefinitions =
-        dbDef.getColumnFamilies();
-    int countOmDefTables = columnFamilyDefinitions.length;
+    final Collection<DBColumnFamilyDefinition<?, ?>> columnFamilyDefinitions
+        = dbDef.getColumnFamilies();
+    final int countOmDefTables = columnFamilyDefinitions.size();
     ArrayList<String> missingDBDefTables = new ArrayList<>();
 
     // Get list of tables from the RocksDB Store
@@ -59,7 +59,7 @@ public class TestOMDBDefinition {
     missingOmDBTables.remove("default");
     int countOmDBTables = missingOmDBTables.size();
     // Remove the file if it is found in both the datastructures
-    for(DBColumnFamilyDefinition definition : columnFamilyDefinitions) {
+    for (DBColumnFamilyDefinition definition : columnFamilyDefinitions) {
       if (!missingOmDBTables.remove(definition.getName())) {
         missingDBDefTables.add(definition.getName());
       }

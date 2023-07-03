@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om.request.s3.multipart;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.junit.After;
@@ -46,7 +47,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Part;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
-import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -78,11 +79,14 @@ public class TestS3MultipartRequest {
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
     ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
         folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
+    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration,
+        ozoneManager);
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     auditLogger = Mockito.mock(AuditLogger.class);
     when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
+    when(ozoneManager.getDefaultReplicationConfig()).thenReturn(
+        ReplicationConfig.getDefault(ozoneConfiguration));
     Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
     when(ozoneManager.resolveBucketLink(any(KeyArgs.class),
         any(OMClientRequest.class)))
@@ -112,7 +116,7 @@ public class TestS3MultipartRequest {
   protected OMRequest doPreExecuteInitiateMPU(
       String volumeName, String bucketName, String keyName) throws Exception {
     OMRequest omRequest =
-        TestOMRequestUtils.createInitiateMPURequest(volumeName, bucketName,
+        OMRequestTestUtils.createInitiateMPURequest(volumeName, bucketName,
             keyName);
 
     S3InitiateMultipartUploadRequest s3InitiateMultipartUploadRequest =
@@ -150,7 +154,7 @@ public class TestS3MultipartRequest {
     // Just set dummy size
     long dataSize = 100L;
     OMRequest omRequest =
-        TestOMRequestUtils.createCommitPartMPURequest(volumeName, bucketName,
+        OMRequestTestUtils.createCommitPartMPURequest(volumeName, bucketName,
             keyName, clientID, dataSize, multipartUploadID, partNumber);
     S3MultipartUploadCommitPartRequest s3MultipartUploadCommitPartRequest =
             getS3MultipartUploadCommitReq(omRequest);
@@ -179,7 +183,7 @@ public class TestS3MultipartRequest {
       String multipartUploadID) throws IOException {
 
     OMRequest omRequest =
-        TestOMRequestUtils.createAbortMPURequest(volumeName, bucketName,
+        OMRequestTestUtils.createAbortMPURequest(volumeName, bucketName,
             keyName, multipartUploadID);
 
 
@@ -201,7 +205,7 @@ public class TestS3MultipartRequest {
       List<Part> partList) throws IOException {
 
     OMRequest omRequest =
-        TestOMRequestUtils.createCompleteMPURequest(volumeName, bucketName,
+        OMRequestTestUtils.createCompleteMPURequest(volumeName, bucketName,
             keyName, multipartUploadID, partList);
 
     S3MultipartUploadCompleteRequest s3MultipartUploadCompleteRequest =
@@ -229,7 +233,7 @@ public class TestS3MultipartRequest {
   protected OMRequest doPreExecuteInitiateMPUWithFSO(
       String volumeName, String bucketName, String keyName) throws Exception {
     OMRequest omRequest =
-            TestOMRequestUtils.createInitiateMPURequest(volumeName, bucketName,
+            OMRequestTestUtils.createInitiateMPURequest(volumeName, bucketName,
                     keyName);
 
     S3InitiateMultipartUploadRequestWithFSO

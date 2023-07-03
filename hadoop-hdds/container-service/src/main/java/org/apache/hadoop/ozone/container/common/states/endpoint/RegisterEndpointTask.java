@@ -163,7 +163,9 @@ public final class RegisterEndpointTask implements
         Preconditions.checkState(!StringUtils.isBlank(response.getClusterID()),
             "Invalid cluster ID in the response.");
         Preconditions.checkState(response.getErrorCode() == success,
-            "DataNode has higher Software Layout Version than SCM.");
+            "DataNode has different Software Layout Version" +
+                " than SCM or RECON. EndPoint address is: " +
+                rpcEndPoint.getAddressString());
         if (response.hasHostname() && response.hasIpAddress()) {
           datanodeDetails.setHostName(response.getHostname());
           datanodeDetails.setIpAddress(response.getIpAddress());
@@ -176,7 +178,11 @@ public final class RegisterEndpointTask implements
             rpcEndPoint.getState().getNextState();
         rpcEndPoint.setState(nextState);
         rpcEndPoint.zeroMissedCount();
-        this.stateContext.configureHeartbeatFrequency();
+        if (rpcEndPoint.isPassive()) {
+          this.stateContext.configureReconHeartbeatFrequency();
+        } else {
+          this.stateContext.configureHeartbeatFrequency();
+        }
       }
     } catch (IOException ex) {
       rpcEndPoint.logIfNeeded(ex);

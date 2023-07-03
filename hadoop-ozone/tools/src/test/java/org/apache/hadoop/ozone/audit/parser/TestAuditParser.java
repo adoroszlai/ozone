@@ -127,7 +127,10 @@ public class TestAuditParser {
     cmd.parseWithHandlers(new CommandLine.RunLast(),
         exceptionHandler, args);
     try {
-      Assert.assertTrue(OUT.toString(DEFAULT_CODING).contains(msg));
+      String output = OUT.toString(DEFAULT_CODING);
+      Assert.assertTrue(
+          "Output:\n" + output + "\nshould contain:\n" + msg,
+          output.contains(msg));
     } catch (UnsupportedEncodingException ignored) {
     }
   }
@@ -186,7 +189,7 @@ public class TestAuditParser {
   @Test
   public void testLoadCommand() {
     String[] args1 = new String[]{dbName, "load", LOGS1};
-    try{
+    try {
       execute(args1, "");
       fail("No exception thrown.");
     } catch (Exception e) {

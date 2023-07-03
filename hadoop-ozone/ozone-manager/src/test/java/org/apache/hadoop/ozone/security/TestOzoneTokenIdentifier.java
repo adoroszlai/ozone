@@ -46,6 +46,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -218,7 +219,7 @@ public class TestOzoneTokenIdentifier {
     }
     long duration = Time.monotonicNowNanos() - startTime;
     LOG.info("Average token sign time with HmacSha256(RSA/1024 key) is {} ns",
-        duration/testTokenCount);
+        duration / testTokenCount);
 
     startTime = Time.monotonicNowNanos();
     for (int i = 0; i < testTokenCount; i++) {
@@ -226,7 +227,7 @@ public class TestOzoneTokenIdentifier {
     }
     duration = Time.monotonicNowNanos() - startTime;
     LOG.info("Average token verify time with HmacSha256(RSA/1024 key) "
-        + "is {} ns", duration/testTokenCount);
+        + "is {} ns", duration / testTokenCount);
   }
 
   @Test
@@ -273,7 +274,7 @@ public class TestOzoneTokenIdentifier {
     }
     long duration = Time.monotonicNowNanos() - startTime;
     LOG.info("Average token sign time with {}({} symmetric key) is {} ns",
-        hmacAlgorithm, keyLen, duration/testTokenCount);
+        hmacAlgorithm, keyLen, duration / testTokenCount);
   }
 
   /*
@@ -335,7 +336,7 @@ public class TestOzoneTokenIdentifier {
     idWrite.setOmServiceId("defaultServiceId");
 
     byte[] oldIdBytes = idWrite.getBytes();
-    TokenIdentifierCodec idCodec = new TokenIdentifierCodec();
+    Codec<OzoneTokenIdentifier> idCodec = TokenIdentifierCodec.get();
 
     OzoneTokenIdentifier idRead = null;
     try {

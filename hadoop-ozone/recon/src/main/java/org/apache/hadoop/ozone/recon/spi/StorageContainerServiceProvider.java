@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 
 /**
  * Interface to access SCM endpoints.
@@ -66,4 +68,35 @@ public interface StorageContainerServiceProvider {
    */
   List<HddsProtos.Node> getNodes() throws IOException;
 
+  /**
+   * Requests SCM for container count.
+   * @return Total number of containers in SCM.
+   */
+  long getContainerCount() throws IOException;
+
+  /**
+   * Requests SCM for DB Snapshot.
+   * @return DBCheckpoint from SCM.
+   */
+  DBCheckpoint getSCMDBSnapshot();
+
+  /**
+   * Get the list of containers from SCM. This is a RPC call.
+   *
+   * @param startContainerID the start container id
+   * @param count the number of containers to return
+   * @param state the containers in given state to be returned
+   * @return the list of containers from SCM in a given state
+   * @throws IOException
+   */
+  List<ContainerInfo> getListOfContainers(long startContainerID,
+                                          int count,
+                                          HddsProtos.LifeCycleState state)
+      throws IOException;
+
+  /**
+   * Requests SCM for container count for a given state.
+   * @return Total number of containers in SCM.
+   */
+  long getContainerCount(HddsProtos.LifeCycleState state) throws IOException;
 }

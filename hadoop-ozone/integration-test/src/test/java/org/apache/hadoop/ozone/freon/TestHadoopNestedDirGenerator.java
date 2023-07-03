@@ -21,8 +21,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -55,6 +57,8 @@ public class TestHadoopNestedDirGenerator {
   private ObjectStore store = null;
   private static final Logger LOG =
           LoggerFactory.getLogger(TestHadoopNestedDirGenerator.class);
+  private OzoneClient client;
+
   @Before
     public void setup() {
     path = getTempPath(TestHadoopNestedDirGenerator.class.getSimpleName());
@@ -69,6 +73,7 @@ public class TestHadoopNestedDirGenerator {
      */
 
   private void shutdown() throws IOException {
+    IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
       FileUtils.deleteDirectory(new File(path));
@@ -88,7 +93,8 @@ public class TestHadoopNestedDirGenerator {
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
     cluster.waitForClusterToBeReady();
     cluster.waitTobeOutOfSafeMode();
-    store = OzoneClientFactory.getRpcClient(conf).getObjectStore();
+    client = OzoneClientFactory.getRpcClient(conf);
+    store = client.getObjectStore();
   }
 
   @Test
@@ -152,28 +158,28 @@ public class TestHadoopNestedDirGenerator {
                         int span, int actualDepth) throws IOException {
     int depth = 0;
     Path p = null;
-    if(span > 0){
+    if (span > 0) {
       depth = 0;
-    } else if(span == 0){
+    } else if (span == 0) {
       depth = 1;
-    } else{
+    } else {
       LOG.info("Span value can never be negative");
     }
     LinkedList<FileStatus> queue = new LinkedList<FileStatus>();
     FileStatus f1 = fileStatuses[0];
     queue.add(f1);
-    while(queue.size() != 0){
+    while (queue.size() != 0) {
       FileStatus f = queue.poll();
       FileStatus[] temp = fs.listStatus(f.getPath());
-      if(temp.length > 0){
+      if (temp.length > 0) {
         ++depth;
-        for(int i = 0; i < temp.length; i++){
+        for (int i = 0; i < temp.length; i++) {
           queue.add(temp[i]);
         }
       }
-      if(span == 0){
+      if (span == 0) {
         p = f.getPath();
-      } else{
+      } else {
         p = f.getPath().getParent();
       }
     }
@@ -188,17 +194,17 @@ public class TestHadoopNestedDirGenerator {
      * and count the span directories.
      */
 
-  private int spanCheck(FileSystem fs, int span, Path p) throws IOException{
+  private int spanCheck(FileSystem fs, int span, Path p) throws IOException {
     int sp = 0;
     int depth = 0;
-    if(span >= 0){
+    if (span >= 0) {
       depth = 0;
-    } else{
+    } else {
       LOG.info("Span value can never be negative");
     }
     FileStatus[] fileStatuses = fs.listStatus(p);
-    for (FileStatus fileStatus : fileStatuses){
-      if(fileStatus.isDirectory()){
+    for (FileStatus fileStatus : fileStatuses) {
+      if (fileStatus.isDirectory()) {
         ++sp;
       }
     }

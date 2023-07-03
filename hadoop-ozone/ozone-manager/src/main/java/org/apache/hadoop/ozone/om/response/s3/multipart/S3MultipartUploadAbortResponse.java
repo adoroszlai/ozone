@@ -20,7 +20,11 @@ package org.apache.hadoop.ozone.om.response.s3.multipart;
 
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.key.OmKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -30,10 +34,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.TreeMap;
 import javax.annotation.Nonnull;
 
+import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.BUCKET_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DELETED_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.MULTIPARTINFO_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
@@ -42,7 +45,7 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
  * Response for Multipart Abort Request.
  */
 @CleanupTableInfo(cleanupTables = {OPEN_KEY_TABLE, DELETED_TABLE,
-    MULTIPARTINFO_TABLE})
+    MULTIPARTINFO_TABLE, BUCKET_TABLE})
 public class S3MultipartUploadAbortResponse extends OmKeyResponse {
 
   private String multipartKey;
@@ -84,27 +87,24 @@ public class S3MultipartUploadAbortResponse extends OmKeyResponse {
         multipartKey);
 
     // Move all the parts to delete table
-    TreeMap<Integer, PartKeyInfo > partKeyInfoMap =
-        omMultipartKeyInfo.getPartKeyInfoMap();
-    for (Map.Entry<Integer, PartKeyInfo > partKeyInfoEntry :
-        partKeyInfoMap.entrySet()) {
-      PartKeyInfo partKeyInfo = partKeyInfoEntry.getValue();
+    for (PartKeyInfo partKeyInfo: omMultipartKeyInfo.getPartKeyInfoMap()) {
       OmKeyInfo currentKeyPartInfo =
           OmKeyInfo.getFromProtobuf(partKeyInfo.getPartKeyInfo());
 
-      RepeatedOmKeyInfo repeatedOmKeyInfo =
-          omMetadataManager.getDeletedTable().get(partKeyInfo.getPartName());
-
-      repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(currentKeyPartInfo,
-          repeatedOmKeyInfo, omMultipartKeyInfo.getUpdateID(), isRatisEnabled);
+      RepeatedOmKeyInfo repeatedOmKeyInfo = OmUtils.prepareKeyForDelete(
+          currentKeyPartInfo, omMultipartKeyInfo.getUpdateID(),
+          isRatisEnabled);
+      // multi-part key format is volumeName/bucketName/keyName/uploadId
+      String deleteKey = omMetadataManager.getOzoneDeletePathKey(
+          currentKeyPartInfo.getObjectID(), multipartKey);
 
       omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-          partKeyInfo.getPartName(), repeatedOmKeyInfo);
-
-      // update bucket usedBytes.
-      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
-          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
-              omBucketInfo.getBucketName()), omBucketInfo);
+          deleteKey, repeatedOmKeyInfo);
     }
+
+    // update bucket usedBytes.
+    omMetadataManager.getBucketTable().putWithBatch(batchOperation,
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName()), omBucketInfo);
   }
 }

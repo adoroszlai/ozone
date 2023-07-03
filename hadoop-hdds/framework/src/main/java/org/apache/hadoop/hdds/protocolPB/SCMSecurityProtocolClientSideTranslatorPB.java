@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership.  The ASF
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -19,25 +19,28 @@ package org.apache.hadoop.hdds.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.cert.CRLException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.CRLInfoProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmNodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetAllRootCaCertificatesRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetSCMCertRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCACertificateRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCrlsRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetOMCertRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMListCACertificateRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetLatestCrlIdRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMListCertificateRequestProto;
@@ -58,7 +61,6 @@ import org.apache.hadoop.ipc.RPC;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import static org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetOMCertRequestProto;
 
 /**
  * This class is the client-side translator that forwards requests for
@@ -72,17 +74,11 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
    */
   private static final RpcController NULL_RPC_CONTROLLER = null;
   private final SCMSecurityProtocolPB rpcProxy;
-  private SCMSecurityProtocolFailoverProxyProvider failoverProxyProvider;
 
   public SCMSecurityProtocolClientSideTranslatorPB(
-      SCMSecurityProtocolPB rpcProxy) {
-    this.rpcProxy = rpcProxy;
-  }
-
-  public SCMSecurityProtocolClientSideTranslatorPB(
-      SCMSecurityProtocolFailoverProxyProvider proxyProvider) {
-    Preconditions.checkState(proxyProvider != null);
-    this.failoverProxyProvider = proxyProvider;
+      SCMSecurityProtocolFailoverProxyProvider failoverProxyProvider) {
+    Objects.requireNonNull(failoverProxyProvider,
+        "failoverProxyProvider == null");
     this.rpcProxy = (SCMSecurityProtocolPB) RetryProxy.create(
         SCMSecurityProtocolPB.class, failoverProxyProvider,
         failoverProxyProvider.getRetryPolicy());
@@ -173,6 +169,21 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   }
 
   /**
+   * Get SCM signed certificate.
+   *
+   * @param nodeDetails - Node Details.
+   * @param certSignReq  - Certificate signing request.
+   * @return String      - pem encoded SCM signed
+   *                         certificate.
+   */
+  @Override
+  public String getCertificate(NodeDetailsProto nodeDetails,
+      String certSignReq) throws IOException {
+    return getCertificateChain(nodeDetails, certSignReq)
+        .getX509Certificate();
+  }
+
+  /**
    * Get signed certificate for SCM node.
    *
    * @param scmNodeDetails  - SCM Node Details.
@@ -180,6 +191,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
    * @return String         - pem encoded SCM signed
    *                          certificate.
    */
+  @Override
   public String getSCMCertificate(ScmNodeDetailsProto scmNodeDetails,
       String certSignReq) throws IOException {
     return getSCMCertChain(scmNodeDetails, certSignReq).getX509Certificate();
@@ -268,6 +280,27 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   }
 
   /**
+   * Get SCM signed certificate.
+   *
+   * @param nodeDetails   - Node Details.
+   * @param certSignReq - Certificate signing request.
+   * @return byte[]         - SCM signed certificate.
+   */
+  public SCMGetCertResponseProto getCertificateChain(
+      NodeDetailsProto nodeDetails, String certSignReq)
+      throws IOException {
+
+    SCMGetCertRequestProto request =
+        SCMGetCertRequestProto.newBuilder()
+            .setCSR(certSignReq)
+            .setNodeDetails(nodeDetails)
+            .build();
+    return submitRequest(Type.GetCert,
+        builder -> builder.setGetCertRequest(request))
+        .getGetCertResponseProto();
+  }
+
+  /**
    * Get CA certificate.
    *
    * @return serial   - Root certificate.
@@ -276,7 +309,6 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   public String getCACertificate() throws IOException {
     return getCACert().getX509Certificate();
   }
-
 
   public SCMGetCertResponseProto getCACert() throws IOException {
     SCMGetCACertificateRequestProto protoIns = SCMGetCACertificateRequestProto
@@ -342,7 +374,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
       try {
         CRLInfo crlInfo = CRLInfo.fromProtobuf(crlProto);
         result.add(crlInfo);
-      } catch (CRLException | CertificateException e) {
+      } catch (CRLException e) {
         throw new SCMSecurityException("Fail to parse CRL info", e);
       }
     }
@@ -366,7 +398,7 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
         .setReason(Reason.valueOf(reason))
         .setRevokeTime(revocationTime).build();
     return submitRequest(Type.RevokeCertificates,
-        builder->builder.setRevokeCertificatesRequest(req))
+        builder -> builder.setRevokeCertificatesRequest(req))
         .getRevokeCertificatesResponseProto().getCrlId();
   }
 
@@ -378,5 +410,15 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   @Override
   public Object getUnderlyingProxyObject() {
     return rpcProxy;
+  }
+
+  @Override
+  public List<String> getAllRootCaCertificates() throws IOException {
+    SCMGetAllRootCaCertificatesRequestProto protoIns =
+        SCMGetAllRootCaCertificatesRequestProto.getDefaultInstance();
+    return submitRequest(Type.GetAllRootCaCertificates,
+        builder -> builder.setGetAllRootCaCertificatesRequestProto(protoIns))
+        .getAllRootCaCertificatesResponseProto()
+        .getAllX509RootCaCertificatesList();
   }
 }

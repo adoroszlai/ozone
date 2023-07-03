@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
@@ -31,8 +32,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
+import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.BUCKET_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.DELETED_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
 import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.MULTIPARTINFO_TABLE;
@@ -47,25 +50,29 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.OPEN_KEY_TABLE;
  * 3) Delete unused parts.
  */
 @CleanupTableInfo(cleanupTables = {OPEN_KEY_TABLE, KEY_TABLE, DELETED_TABLE,
-    MULTIPARTINFO_TABLE})
+    MULTIPARTINFO_TABLE, BUCKET_TABLE})
 public class S3MultipartUploadCompleteResponse extends OmKeyResponse {
   private String multipartKey;
   private String multipartOpenKey;
   private OmKeyInfo omKeyInfo;
-  private List<OmKeyInfo> partsUnusedList;
+  private List<OmKeyInfo> allKeyInfoToRemove;
+  private OmBucketInfo omBucketInfo;
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public S3MultipartUploadCompleteResponse(
       @Nonnull OMResponse omResponse,
       @Nonnull String multipartKey,
       @Nonnull String multipartOpenKey,
       @Nonnull OmKeyInfo omKeyInfo,
-      @Nonnull List<OmKeyInfo> unUsedParts,
-      @Nonnull BucketLayout bucketLayout) {
+      @Nonnull List<OmKeyInfo> allKeyInfoToRemove,
+      @Nonnull BucketLayout bucketLayout,
+      @CheckForNull OmBucketInfo omBucketInfo) {
     super(omResponse, bucketLayout);
-    this.partsUnusedList = unUsedParts;
+    this.allKeyInfoToRemove = allKeyInfoToRemove;
     this.multipartKey = multipartKey;
     this.multipartOpenKey = multipartOpenKey;
     this.omKeyInfo = omKeyInfo;
+    this.omBucketInfo = omBucketInfo;
   }
 
   /**
@@ -89,23 +96,25 @@ public class S3MultipartUploadCompleteResponse extends OmKeyResponse {
         multipartKey);
 
     // 2. Add key to KeyTable
-    String ozoneKey = addToKeyTable(omMetadataManager, batchOperation);
+    addToKeyTable(omMetadataManager, batchOperation);
 
     // 3. Delete unused parts
-    if (!partsUnusedList.isEmpty()) {
+    if (!allKeyInfoToRemove.isEmpty()) {
       // Add unused parts to deleted key table.
-      RepeatedOmKeyInfo repeatedOmKeyInfo = omMetadataManager.getDeletedTable()
-          .get(ozoneKey);
-      if (repeatedOmKeyInfo == null) {
-        repeatedOmKeyInfo = new RepeatedOmKeyInfo(partsUnusedList);
-      } else {
-        for (OmKeyInfo unUsedPart : partsUnusedList) {
-          repeatedOmKeyInfo.addOmKeyInfo(unUsedPart);
-        }
+      for (OmKeyInfo keyInfoToRemove : allKeyInfoToRemove) {
+        String deleteKey = omMetadataManager.getOzoneDeletePathKey(
+            keyInfoToRemove.getObjectID(), multipartKey);
+        omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
+            deleteKey, new RepeatedOmKeyInfo(keyInfoToRemove));
       }
+    }
 
-      omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-          ozoneKey, repeatedOmKeyInfo);
+    // update bucket usedBytes, only when total bucket size has changed
+    // due to unused parts cleanup or an overwritten version.
+    if (omBucketInfo != null) {
+      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
+              omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+                      omBucketInfo.getBucketName()), omBucketInfo);
     }
   }
 
@@ -119,16 +128,7 @@ public class S3MultipartUploadCompleteResponse extends OmKeyResponse {
     return ozoneKey;
   }
 
-  protected String getMultipartKey() {
-    return multipartKey;
-  }
-
   protected OmKeyInfo getOmKeyInfo() {
     return omKeyInfo;
   }
-
-  protected List<OmKeyInfo> getPartsUnusedList() {
-    return partsUnusedList;
-  }
-
 }

@@ -88,6 +88,7 @@ import picocli.CommandLine.Option;
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true,
     showDefaultValues = true)
+@SuppressWarnings("java:S2245") // no need for secure random
 public class FollowerAppendLogEntryGenerator extends BaseAppendLogGenerator
     implements Callable<Void>, StreamObserver<AppendEntriesReplyProto> {
 
@@ -336,7 +337,7 @@ public class FollowerAppendLogEntryGenerator extends BaseAppendLogGenerator
             .build());
     RaftClient client = RaftClient.newBuilder()
         .setClientId(clientId)
-        .setProperties(new RaftProperties(true))
+        .setProperties(new RaftProperties())
         .setRaftGroup(group)
         .build();
 
@@ -362,7 +363,7 @@ public class FollowerAppendLogEntryGenerator extends BaseAppendLogGenerator
     }
     long lastCommit = reply.getFollowerCommit();
     if (lastCommit % 1000 == 0) {
-      long currentIndex = getAttemptCounter().get();
+      long currentIndex = getAttemptCount();
       if (currentIndex - lastCommit > batching * 3) {
         LOG.warn(
             "Last committed index ({}) is behind the current index ({}) on "

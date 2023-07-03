@@ -19,11 +19,13 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandQueueReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CRLStatusReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.LayoutVersionProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -40,14 +42,17 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.IEventInfo;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
-import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.Message;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_ACTIONS;
@@ -120,9 +125,13 @@ public final class SCMDatanodeHeartbeatDispatcher {
       LOG.debug("Processing DataNode Layout Report.");
       nodeManager.processLayoutVersionReport(datanodeDetails, layoutVersion);
 
+      CommandQueueReportProto commandQueueReport = null;
+      if (heartbeat.hasCommandQueueReport()) {
+        commandQueueReport = heartbeat.getCommandQueueReport();
+      }
       // should we dispatch heartbeat through eventPublisher?
       commands = nodeManager.processHeartbeat(datanodeDetails,
-          layoutVersion);
+          layoutVersion, commandQueueReport);
       if (heartbeat.hasNodeReport()) {
         LOG.debug("Dispatching Node Report.");
         eventPublisher.fireEvent(
@@ -201,7 +210,7 @@ public final class SCMDatanodeHeartbeatDispatcher {
   /**
    * Wrapper class for events with the datanode origin.
    */
-  public static class ReportFromDatanode<T extends GeneratedMessage> {
+  public static class ReportFromDatanode<T extends Message> {
 
     private final DatanodeDetails datanodeDetails;
 
@@ -234,6 +243,25 @@ public final class SCMDatanodeHeartbeatDispatcher {
   }
 
   /**
+   * Command Queue Report with origin.
+   */
+  public static class CommandQueueReportFromDatanode
+      extends ReportFromDatanode<CommandQueueReportProto> {
+
+    private final Map<SCMCommandProto.Type, Integer> commandsToBeSent;
+    public CommandQueueReportFromDatanode(DatanodeDetails datanodeDetails,
+        CommandQueueReportProto report,
+        Map<SCMCommandProto.Type, Integer> commandsToBeSent) {
+      super(datanodeDetails, report);
+      this.commandsToBeSent = commandsToBeSent;
+    }
+
+    public Map<SCMCommandProto.Type, Integer> getCommandsToBeSent() {
+      return commandsToBeSent;
+    }
+  }
+
+  /**
    * Layout report event payload with origin.
    */
   public static class LayoutReportFromDatanode
@@ -246,14 +274,65 @@ public final class SCMDatanodeHeartbeatDispatcher {
   }
 
   /**
+   * Container report payload base reference.
+   */
+  public interface ContainerReport {
+    DatanodeDetails getDatanodeDetails();
+    ContainerReportType getType();
+  }
+
+  /**
+   * Container Report Type.
+   */
+  public enum ContainerReportType {
+    /**
+     * Incremental container report type
+     * {@liks IncrementalContainerReportFromDatanode}.
+     */
+    ICR,
+    /**
+     * Full container report type
+     * {@liks ContainerReportFromDatanode}.
+     */
+    FCR
+  }
+
+  /**
    * Container report event payload with origin.
    */
   public static class ContainerReportFromDatanode
-      extends ReportFromDatanode<ContainerReportsProto> {
+      extends ReportFromDatanode<ContainerReportsProto>
+      implements ContainerReport, IEventInfo {
+    private long createTime = Time.monotonicNow();
 
     public ContainerReportFromDatanode(DatanodeDetails datanodeDetails,
         ContainerReportsProto report) {
       super(datanodeDetails, report);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return this.getDatanodeDetails().getUuid().hashCode();
+    }
+    
+    public ContainerReportType getType() {
+      return ContainerReportType.FCR;
+    }
+    
+    @Override
+    public long getCreateTime() {
+      return createTime;
+    }
+
+    @Override
+    public String getEventId() {
+      return getDatanodeDetails().toString() + ", {type: " + getType()
+          + ", size: " + getReport().getReportsList().size() + "}";
     }
   }
 
@@ -261,12 +340,39 @@ public final class SCMDatanodeHeartbeatDispatcher {
    * Incremental Container report event payload with origin.
    */
   public static class IncrementalContainerReportFromDatanode
-      extends ReportFromDatanode<IncrementalContainerReportProto> {
-
+      extends ReportFromDatanode<IncrementalContainerReportProto>
+      implements ContainerReport, IEventInfo {
+    private long createTime = Time.monotonicNow();
+    
     public IncrementalContainerReportFromDatanode(
         DatanodeDetails datanodeDetails,
         IncrementalContainerReportProto report) {
       super(datanodeDetails, report);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return this.getDatanodeDetails().getUuid().hashCode();
+    }
+
+    public ContainerReportType getType() {
+      return ContainerReportType.ICR;
+    }
+
+    @Override
+    public long getCreateTime() {
+      return createTime;
+    }
+    
+    @Override
+    public String getEventId() {
+      return getDatanodeDetails().toString() + ", {type: " + getType()
+          + ", size: " + getReport().getReportList().size() + "}";
     }
   }
 

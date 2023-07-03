@@ -19,15 +19,15 @@
 package org.apache.hadoop.hdds.scm.node.states;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
+import java.util.function.Predicate;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
@@ -87,6 +87,31 @@ public class NodeStateMap {
       nodeMap.put(id, new DatanodeInfo(datanodeDetails, nodeStatus,
           layoutInfo));
       nodeToContainer.put(id, new HashSet<>());
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Update a node in NodeStateMap.
+   *
+   * @param datanodeDetails DatanodeDetails
+   * @param nodeStatus initial NodeStatus
+   * @param layoutInfo initial LayoutVersionProto
+   *
+   */
+  public void updateNode(DatanodeDetails datanodeDetails, NodeStatus nodeStatus,
+                         LayoutVersionProto layoutInfo)
+
+          throws NodeNotFoundException {
+    lock.writeLock().lock();
+    try {
+      UUID id = datanodeDetails.getUuid();
+      if (!nodeMap.containsKey(id)) {
+        throw new NodeNotFoundException("Node UUID: " + id);
+      }
+      nodeMap.put(id, new DatanodeInfo(datanodeDetails, nodeStatus,
+              layoutInfo));
     } finally {
       lock.writeLock().unlock();
     }
@@ -159,21 +184,6 @@ public class NodeStateMap {
   }
 
   /**
-   * Returns the list of node ids which are in the specified state.
-   *
-   * @param status NodeStatus
-   *
-   * @return list of node ids
-   */
-  public List<UUID> getNodes(NodeStatus status) {
-    ArrayList<UUID> nodes = new ArrayList<>();
-    for (DatanodeInfo dn : filterNodes(status)) {
-      nodes.add(dn.getUuid());
-    }
-    return nodes;
-  }
-
-  /**
    * Returns the list of node ids which match the desired operational state
    * and health. Passing a null for either value is equivalent to a wild card.
    *
@@ -228,7 +238,7 @@ public class NodeStateMap {
    * @return List of DatanodeInfo for the matching nodes
    */
   public List<DatanodeInfo> getDatanodeInfos(NodeStatus status) {
-    return filterNodes(status);
+    return filterNodes(matching(status));
   }
 
   /**
@@ -253,7 +263,7 @@ public class NodeStateMap {
    * @return Number of nodes in the specified state
    */
   public int getNodeCount(NodeStatus state) {
-    return getNodes(state).size();
+    return getDatanodeInfos(state).size();
   }
 
   /**
@@ -330,7 +340,7 @@ public class NodeStateMap {
   }
 
   public void setContainers(UUID uuid, Set<ContainerID> containers)
-      throws NodeNotFoundException{
+      throws NodeNotFoundException {
     lock.writeLock().lock();
     try {
       checkIfNodeExist(uuid);
@@ -345,8 +355,7 @@ public class NodeStateMap {
     lock.readLock().lock();
     try {
       checkIfNodeExist(uuid);
-      return Collections
-          .unmodifiableSet(new HashSet<>(nodeToContainer.get(uuid)));
+      return new HashSet<>(nodeToContainer.get(uuid));
     } finally {
       lock.readLock().unlock();
     }
@@ -404,41 +413,47 @@ public class NodeStateMap {
    * @param health
    * @return List of DatanodeInfo objects matching the passed state
    */
-  private List<DatanodeInfo> filterNodes(
+  public List<DatanodeInfo> filterNodes(
       NodeOperationalState opState, NodeState health) {
     if (opState != null && health != null) {
-      return filterNodes(new NodeStatus(opState, health));
+      return filterNodes(matching(new NodeStatus(opState, health)));
     }
-    if (opState == null && health == null) {
-      return getAllDatanodeInfos();
+    if (opState != null) {
+      return filterNodes(matching(opState));
     }
-    try {
-      lock.readLock().lock();
-      return nodeMap.values().stream()
-          .filter(n -> opState == null
-              || n.getNodeStatus().getOperationalState() == opState)
-          .filter(n -> health == null
-              || n.getNodeStatus().getHealth() == health)
-          .collect(Collectors.toList());
-    } finally {
-      lock.readLock().unlock();
+    if (health != null) {
+      return filterNodes(matching(health));
     }
+    return getAllDatanodeInfos();
   }
 
   /**
-   * Create a list of datanodeInfo for all nodes matching the passsed status.
-   *
-   * @param status
-   * @return List of DatanodeInfo objects matching the passed state
+   * @return a list of all nodes matching the {@code filter}
    */
-  private List<DatanodeInfo> filterNodes(NodeStatus status) {
+  private List<DatanodeInfo> filterNodes(Predicate<DatanodeInfo> filter) {
+    List<DatanodeInfo> result = new LinkedList<>();
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
-      return nodeMap.values().stream()
-          .filter(n -> n.getNodeStatus().equals(status))
-          .collect(Collectors.toList());
-    }  finally {
+      for (DatanodeInfo dn : nodeMap.values()) {
+        if (filter.test(dn)) {
+          result.add(dn);
+        }
+      }
+    } finally {
       lock.readLock().unlock();
     }
+    return result;
+  }
+
+  private static Predicate<DatanodeInfo> matching(NodeStatus status) {
+    return dn -> status.equals(dn.getNodeStatus());
+  }
+
+  private static Predicate<DatanodeInfo> matching(NodeOperationalState state) {
+    return dn -> state.equals(dn.getNodeStatus().getOperationalState());
+  }
+
+  private static Predicate<DatanodeInfo> matching(NodeState health) {
+    return dn -> health.equals(dn.getNodeStatus().getHealth());
   }
 }

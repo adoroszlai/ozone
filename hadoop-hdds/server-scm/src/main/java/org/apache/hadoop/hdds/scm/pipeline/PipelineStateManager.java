@@ -40,7 +40,8 @@ public interface PipelineStateManager {
    * @throws IOException
    */
   @Replicate
-  void addPipeline(HddsProtos.Pipeline pipelineProto) throws IOException;
+  void addPipeline(HddsProtos.Pipeline pipelineProto)
+      throws IOException;
 
   /**
    * Removing pipeline would be replicated to Ratis.
@@ -59,11 +60,8 @@ public interface PipelineStateManager {
    * @throws IOException
    */
   @Replicate
-  void updatePipelineState(
-      HddsProtos.PipelineID pipelineIDProto,
-      HddsProtos.PipelineState newState
-  )
-      throws IOException;
+  void updatePipelineState(HddsProtos.PipelineID pipelineIDProto,
+      HddsProtos.PipelineState newState) throws IOException;
 
   void addContainerToPipeline(
       PipelineID pipelineID,
@@ -93,6 +91,11 @@ public interface PipelineStateManager {
       Pipeline.PipelineState state,
       Collection<DatanodeDetails> excludeDns,
       Collection<PipelineID> excludePipelines
+  );
+
+  int getPipelineCount(
+      ReplicationConfig replicationConfig,
+      Pipeline.PipelineState state
   );
 
   NavigableSet<ContainerID> getContainers(PipelineID pipelineID)
