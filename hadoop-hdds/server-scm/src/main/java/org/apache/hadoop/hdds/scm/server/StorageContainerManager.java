@@ -25,8 +25,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 
+import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -188,6 +190,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.HddsUtils.preserveThreadName;
 import static org.apache.hadoop.hdds.ratis.RatisHelper.newJvmPauseMonitor;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_EVENT_REPORT_EXEC_WAIT_THRESHOLD_DEFAULT;
@@ -366,6 +369,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
             + "add the SCM to existing SCM HA group";
       }
       LOG.error(errMsg + ".");
+      debugStorageContents(scmStorageConfig);
       throw new SCMException("SCM not initialized due to storage config " +
           "failure.", ResultCodes.SCM_NOT_INITIALIZED);
     }
@@ -441,6 +445,18 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     registerMXBean();
     registerMetricsSource(this);
+  }
+
+  private static void debugStorageContents(SCMStorageConfig storage) throws IOException {
+    LOG.info("Storage dir contents:\n"
+        + FileUtils.listFiles(new File(storage.getStorageDir()), null, true));
+    LOG.info("Version file: {}, exists: {}",
+        storage.getVersionFile(),
+        storage.getVersionFile().exists());
+    if (storage.getVersionFile().exists()) {
+      LOG.info("Version file contents:\n"
+          + FileUtils.readFileToString(storage.getVersionFile(), UTF_8));
+    }
   }
 
   private void initializeEventHandlers() {
@@ -1209,6 +1225,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
             scmInfo.getClusterId(), scmStorageConfig.getScmId());
         LOG.info("Primary SCM Node ID {}",
             scmStorageConfig.getPrimaryScmNodeId());
+        debugStorageContents(scmStorageConfig);
       } catch (IOException ioe) {
         LOG.error("Could not initialize SCM version file", ioe);
         return false;
