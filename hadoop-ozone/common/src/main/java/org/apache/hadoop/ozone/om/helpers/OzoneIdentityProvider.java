@@ -26,6 +26,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Objects;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_CALLER_CONTEXT_PREFIX;
@@ -54,7 +56,8 @@ public class OzoneIdentityProvider implements IdentityProvider {
   public String makeIdentity(Schedulable schedulable) {
     UserGroupInformation ugi = schedulable.getUserGroupInformation();
     try {
-      CallerContext callerContext = schedulable.getCallerContext();
+      Method m = schedulable.getClass().getMethod("getCallerContext");
+      CallerContext callerContext = (CallerContext) m.invoke(schedulable);
       // If the CallerContext is set by the OM then its value
       // should have the prefix "S3Auth:S3G|"
       // and it should be in format "S3Auth:S3G|username".
@@ -67,9 +70,12 @@ public class OzoneIdentityProvider implements IdentityProvider {
         return callerContext.getContext()
             .substring(OM_S3_CALLER_CONTEXT_PREFIX.length());
       }
-    } catch (UnsupportedOperationException ex) {
-      LOG.error("Trying to access CallerContext from a Schedulable " +
-          "implementation that's not instance of Server.Call");
+    } catch (ClassCastException | UnsupportedOperationException |
+             NoSuchMethodException | IllegalAccessException |
+             InvocationTargetException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CallerContext not available in {}", schedulable);
+      }
     }
     return ugi.getShortUserName() == null ? null : ugi.getShortUserName();
   }

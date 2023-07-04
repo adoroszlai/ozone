@@ -33,6 +33,10 @@ public class TestOzoneIdentityProvider {
   private static OzoneIdentityProvider identityProvider;
   private static final String ACCESS_ID = "testuser";
 
+  private interface SchedulableWithCallerContext extends Schedulable {
+    CallerContext getCallerContext();
+  }
+
   /**
    * Schedulable that doesn't override getCallerContext().
    */
@@ -52,8 +56,8 @@ public class TestOzoneIdentityProvider {
   /**
    * Schedulable that overrides getCallerContext().
    */
-  private static final Schedulable CALLER_CONTEXT_SCHEDULABLE =
-      new Schedulable() {
+  private static final SchedulableWithCallerContext CALLER_CONTEXT_SCHEDULABLE =
+      new SchedulableWithCallerContext() {
         @Override
         public UserGroupInformation getUserGroupInformation() {
           return UserGroupInformation.createRemoteUser("s3g");
@@ -76,8 +80,9 @@ public class TestOzoneIdentityProvider {
    * Schedulable that overrides getCallerContext() but its value
    * is set by the user and doesn't have the proper format.
    */
-  private static final Schedulable NO_PREFIX_CALLER_CONTEXT_SCHEDULABLE =
-      new Schedulable() {
+  private static final SchedulableWithCallerContext
+      NO_PREFIX_CALLER_CONTEXT_SCHEDULABLE =
+      new SchedulableWithCallerContext() {
         @Override
         public UserGroupInformation getUserGroupInformation() {
           return UserGroupInformation.createRemoteUser("s3g");
@@ -129,14 +134,6 @@ public class TestOzoneIdentityProvider {
   @Test
   public void testGetUserFromUGI() {
     String identity = identityProvider.makeIdentity(DEFAULT_SCHEDULABLE);
-
-    // DEFAULT_SCHEDULABLE doesn't override CallerContext and
-    // accessing it should throw an exception.
-    UnsupportedOperationException uoex = Assertions
-        .assertThrows(UnsupportedOperationException.class,
-            DEFAULT_SCHEDULABLE::getCallerContext);
-    Assertions.assertEquals("Invalid operation.",
-        uoex.getMessage());
 
     String usernameFromUGI = DEFAULT_SCHEDULABLE
         .getUserGroupInformation().getShortUserName();
