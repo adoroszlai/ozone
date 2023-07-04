@@ -42,7 +42,7 @@ spec:
       initContainers:
       - name: init
         image: '@docker.image@'
-        command: [ "ozone scm --init; ozone scm --bootstrap" ]
+        command: [ "bash", "-c", "ozone scm --init; ozone scm --bootstrap" ]
         envFrom:
         - configMapRef:
             name: config
