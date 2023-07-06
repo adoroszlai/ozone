@@ -345,7 +345,7 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystem#testSafeMode'
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystem'
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: always()
