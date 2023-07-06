@@ -2556,10 +2556,14 @@ public class TestRootedOzoneFileSystem {
     // shutdown datanodes and restart SCM
     cluster.shutdownHddsDatanodes();
     cluster.restartStorageContainerManager(false);
-    // SCM should be in safe mode
-    assertTrue(safeModeFS.setSafeMode(SafeModeAction.GET));
-    // force exit safe mode and verify that it's out of safe mode.
-    safeModeFS.setSafeMode(SafeModeAction.FORCE_EXIT);
-    assertFalse(safeModeFS.setSafeMode(SafeModeAction.GET));
+    try {
+      // SCM should be in safe mode
+      assertTrue(safeModeFS.setSafeMode(SafeModeAction.GET));
+      // force exit safe mode and verify that it's out of safe mode.
+      safeModeFS.setSafeMode(SafeModeAction.FORCE_EXIT);
+      assertFalse(safeModeFS.setSafeMode(SafeModeAction.GET));
+    } finally {
+      cluster.startHddsDatanodes();
+    }
   }
 }
