@@ -247,8 +247,7 @@ jobs:
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
-        suite:
-          - [ 1, 2, 3, 4, 5 ]
+        suite: [ 1, 2, 3, 4, 5 ]
       fail-fast: false
     steps:
       - name: Checkout project
