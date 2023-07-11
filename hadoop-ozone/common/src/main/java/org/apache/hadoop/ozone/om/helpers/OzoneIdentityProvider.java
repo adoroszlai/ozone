@@ -26,8 +26,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_CALLER_CONTEXT_PREFIX;
@@ -40,6 +44,9 @@ public class OzoneIdentityProvider implements IdentityProvider {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(OzoneIdentityProvider.class);
+
+  private static final Map<Class<? extends Schedulable>, Method> METHODS =
+      Collections.synchronizedMap(new HashMap<>());
 
   public OzoneIdentityProvider() {
   }
@@ -55,28 +62,40 @@ public class OzoneIdentityProvider implements IdentityProvider {
   @Override
   public String makeIdentity(Schedulable schedulable) {
     UserGroupInformation ugi = schedulable.getUserGroupInformation();
-    try {
-      Method m = schedulable.getClass().getMethod("getCallerContext");
-      CallerContext callerContext = (CallerContext) m.invoke(schedulable);
-      // If the CallerContext is set by the OM then its value
-      // should have the prefix "S3Auth:S3G|"
-      // and it should be in format "S3Auth:S3G|username".
-      // If the prefix is not present then its set by a user
-      // and the value should be ignored.
-      if (Objects.nonNull(callerContext) &&
-          !StringUtil.isNullOrEmpty(callerContext.getContext()) &&
-          callerContext.getContext()
-              .startsWith(OM_S3_CALLER_CONTEXT_PREFIX)) {
-        return callerContext.getContext()
-            .substring(OM_S3_CALLER_CONTEXT_PREFIX.length());
-      }
-    } catch (ClassCastException | UnsupportedOperationException |
-             NoSuchMethodException | IllegalAccessException |
-             InvocationTargetException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CallerContext not available in {}", schedulable);
+    Method m = getCallerContext(schedulable);
+    if (m != null) {
+      try {
+        CallerContext callerContext = (CallerContext) m.invoke(schedulable);
+        // If the CallerContext is set by the OM then its value
+        // should have the prefix "S3Auth:S3G|"
+        // and it should be in format "S3Auth:S3G|username".
+        // If the prefix is not present then its set by a user
+        // and the value should be ignored.
+        if (Objects.nonNull(callerContext)) {
+          String context = callerContext.getContext();
+          if (!StringUtil.isNullOrEmpty(context) &&
+              context.startsWith(OM_S3_CALLER_CONTEXT_PREFIX)) {
+            return context.substring(OM_S3_CALLER_CONTEXT_PREFIX.length());
+          }
+        }
+      } catch (ClassCastException | UnsupportedOperationException |
+               IllegalAccessException | InvocationTargetException ignored) {
       }
     }
-    return ugi.getShortUserName() == null ? null : ugi.getShortUserName();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("CallerContext not available in {}", schedulable);
+    }
+    return ugi.getShortUserName();
+  }
+
+  @Nullable
+  private static Method getCallerContext(Schedulable schedulable) {
+    return METHODS.computeIfAbsent(schedulable.getClass(), klass -> {
+      try {
+        return klass.getMethod("getCallerContext");
+      } catch (NoSuchMethodException ignored) {
+        return null;
+      }
+    });
   }
 }
