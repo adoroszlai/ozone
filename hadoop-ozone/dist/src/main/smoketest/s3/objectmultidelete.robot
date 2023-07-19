@@ -29,10 +29,10 @@ ${BUCKET}             generated
 *** Test Cases ***
 
 Delete file with multi delete
-                        Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f1 --body /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f2 --body /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f3 --body /tmp/testfile
+                        Execute                    date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f1 --body ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f2 --body ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/multidelete/key=value/f3 --body ${TEMPDIR}/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix ${PREFIX}/multidelete/key=value/
                         Should contain             ${result}         ${PREFIX}/multidelete/key=value/f1
                         Should contain             ${result}         ${PREFIX}/multidelete/key=value/f2

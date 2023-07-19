@@ -32,15 +32,15 @@ Create a volume and bucket
                         Should not contain  ${output}       Failed
 
 Create key
-                        Execute and checkrc    echo "${PREFIX}: key created using Ozone Shell" > /tmp/sourcekey    0
-    ${output} =         Execute          ozone sh key put /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key /tmp/sourcekey
+                        Execute and checkrc    echo "${PREFIX}: key created using Ozone Shell" > ${TEMPDIR}/sourcekey    0
+    ${output} =         Execute          ozone sh key put /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key ${TEMPDIR}/sourcekey
                         Should not contain  ${output}       Failed
-                        Execute and checkrc    rm /tmp/sourcekey    0
+                        Execute and checkrc    rm ${TEMPDIR}/sourcekey    0
 
 Read data from previously created key
     ${random} =         Generate Random String  5  [NUMBERS]
-    ${output} =         Execute          ozone sh key get /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key /tmp/key-${random}
+    ${output} =         Execute          ozone sh key get /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key ${TEMPDIR}/key-${random}
                         Should not contain  ${output}       Failed
-    ${output} =         Execute and checkrc    cat /tmp/key-${random}    0
+    ${output} =         Execute and checkrc    cat ${TEMPDIR}/key-${random}    0
                         Should contain    ${output}    ${PREFIX}: key created using Ozone Shell
-                        Execute and checkrc    rm /tmp/key-${random}    0
+                        Execute and checkrc    rm ${TEMPDIR}/key-${random}    0

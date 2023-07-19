@@ -188,7 +188,7 @@ Verify Multipart Upload
 
     ${random} =    Generate Ozone String
 
-    Execute AWSS3APICli     get-object --bucket ${bucket} --key ${key} /tmp/verify${random}
+    Execute AWSS3APICli     get-object --bucket ${bucket} --key ${key} ${TEMPDIR}/verify${random}
     ${tmp} =    Catenate    @{files}
-    Execute    cat ${tmp} > /tmp/original${random}
-    Compare files    /tmp/original${random}    /tmp/verify${random}
+    Execute    cat ${tmp} > ${TEMPDIR}/original${random}
+    Compare files    ${TEMPDIR}/original${random}    ${TEMPDIR}/verify${random}

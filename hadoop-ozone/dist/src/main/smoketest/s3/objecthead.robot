@@ -30,8 +30,8 @@ ${BUCKET}             generated
 *** Test Cases ***
 
 Head existing object
-                        Execute                            echo "Randomtext" > /tmp/testfile
-    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${BUCKET} --key ${PREFIX}/headobject/key=value/f1 --body /tmp/testfile   0
+                        Execute                            echo "Randomtext" > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${BUCKET} --key ${PREFIX}/headobject/key=value/f1 --body ${TEMPDIR}/testfile   0
 
     ${result} =         Execute AWSS3APICli and checkrc    head-object --bucket ${BUCKET} --key ${PREFIX}/headobject/key=value/f1   0
     ${result} =         Execute AWSS3APICli and checkrc    delete-object --bucket ${BUCKET} --key ${PREFIX}/headobject/key=value/f1   0
@@ -42,14 +42,14 @@ Head object in non existing bucket
                         Should contain          ${result}    Not Found
 Head object where path is a directory
     ${legacy-bucket} =  Create legacy bucket
-    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${legacy-bucket} --key ${PREFIX}/headobject/keyvalue/f1 --body /tmp/testfile   0
+    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${legacy-bucket} --key ${PREFIX}/headobject/keyvalue/f1 --body ${TEMPDIR}/testfile   0
     ${result} =         Execute AWSS3APICli and checkrc    head-object --bucket ${legacy-bucket} --key ${PREFIX}/headobject/keyvalue/   255
                         Should contain          ${result}    404
                         Should contain          ${result}    Not Found
 
 Head directory objects
     ${obs-bucket} =     Create obs bucket
-    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${obs-bucket} --key ${PREFIX}/mydir/ --body /tmp/testfile   0
+    ${result} =         Execute AWSS3APICli and checkrc    put-object --bucket ${obs-bucket} --key ${PREFIX}/mydir/ --body ${TEMPDIR}/testfile   0
     ${result} =         Execute AWSS3APICli and checkrc    head-object --bucket ${obs-bucket} --key ${PREFIX}/mydir   255
                         Should contain          ${result}    404
                         Should contain          ${result}    Not Found

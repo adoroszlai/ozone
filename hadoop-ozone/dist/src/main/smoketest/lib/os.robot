@@ -42,7 +42,7 @@ Compare files
 
 Create Random File
     ${postfix} =             Generate Random String  5  [NUMBERS]
-    ${tmpfile} =             Set Variable   /tmp/tempfile-${postfix}
+    ${tmpfile} =             Set Variable   ${TEMPDIR}/tempfile-${postfix}
     File Should Not Exist    ${tmpfile}
     ${content} =             Set Variable   "Random string"
     Create File              ${tmpfile}    ${content}

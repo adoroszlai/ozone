@@ -26,17 +26,17 @@ ${VOLUME}    vol${PREFIX}
 
 *** Keywords ***
 Prepare For Tests
-    Execute             dd if=/dev/urandom of=/tmp/1mb bs=1048576 count=1
-    Execute             dd if=/dev/urandom of=/tmp/2mb bs=1048576 count=2
-    Execute             dd if=/dev/urandom of=/tmp/3mb bs=1048576 count=3
-    Execute             dd if=/dev/urandom of=/tmp/100mb bs=1048576 count=100
+    Execute             dd if=/dev/urandom of=${TEMPDIR}/1mb bs=1048576 count=1
+    Execute             dd if=/dev/urandom of=${TEMPDIR}/2mb bs=1048576 count=2
+    Execute             dd if=/dev/urandom of=${TEMPDIR}/3mb bs=1048576 count=3
+    Execute             dd if=/dev/urandom of=${TEMPDIR}/100mb bs=1048576 count=100
 
-# xcompat/test.sh creates unified test data files in /tmp for client containers
+# xcompat/test.sh creates unified test data files in ${TEMPDIR} for client containers
 Prepare Data For Xcompat Tests
     Execute             ozone sh volume create /${VOLUME}
     Execute             ozone sh bucket create /${VOLUME}/default
     Execute             ozone sh bucket create --replication 3 --type RATIS /${VOLUME}/ratis
     Execute             ozone sh bucket create --replication rs-3-2-1024k --type EC /${VOLUME}/ecbucket
-    Execute             ozone sh key put /${VOLUME}/default/3mb /tmp/3mb
-    Execute             ozone sh key put /${VOLUME}/ratis/3mb /tmp/3mb
-    Execute             ozone sh key put /${VOLUME}/ecbucket/3mb /tmp/3mb
+    Execute             ozone sh key put /${VOLUME}/default/3mb ${TEMPDIR}/3mb
+    Execute             ozone sh key put /${VOLUME}/ratis/3mb ${TEMPDIR}/3mb
+    Execute             ozone sh key put /${VOLUME}/ecbucket/3mb ${TEMPDIR}/3mb

@@ -24,5 +24,5 @@ ${SUFFIX}    ${EMPTY}
 
 *** Keywords ***
 Create Local Test File
-    Set Suite Variable    ${TESTFILE}    /tmp/test-data-${SUFFIX}.txt
+    Set Suite Variable    ${TESTFILE}    ${TEMPDIR}/test-data-${SUFFIX}.txt
     Create File    ${TESTFILE}    Compatibility Test

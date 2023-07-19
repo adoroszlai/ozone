@@ -23,12 +23,12 @@ Test Timeout        1 minutes
 
 *** Keywords ***
 CSI Socket check
-   Execute                          [ -S /tmp/csi.sock ]
+   Execute                          [ -S ${TEMPDIR}/csi.sock ]
 
 *** Test Cases ***
 Check if CSI server is started
    Wait Until Keyword Succeeds      3min       1sec      CSI Socket check
 
 Test CSI identity service
-   ${result} =             Execute                        csc -e unix:///tmp/csi.sock identity plugin-info
+   ${result} =             Execute                        csc -e unix://${TEMPDIR}/csi.sock identity plugin-info
                            Should Contain                 ${result}             org.apache.hadoop.ozone

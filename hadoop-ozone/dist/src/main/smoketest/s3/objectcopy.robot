@@ -36,8 +36,8 @@ Create Dest Bucket
 *** Test Cases ***
 Copy Object Happy Scenario
     Run Keyword if    '${DESTBUCKET}' == 'generated1'    Create Dest Bucket
-                        Execute                    date > /tmp/copyfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/copyobject/key=value/f1 --body /tmp/copyfile
+                        Execute                    date > ${TEMPDIR}/copyfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/copyobject/key=value/f1 --body ${TEMPDIR}/copyfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix ${PREFIX}/copyobject/key=value/
                         Should contain             ${result}         f1
 

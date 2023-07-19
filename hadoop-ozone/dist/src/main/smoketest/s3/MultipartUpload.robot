@@ -29,14 +29,14 @@ Setup Multipart Tests
     Setup s3 tests
 
     # 5MB + a bit
-    Create Random File KB    /tmp/part1    5121
+    Create Random File KB    ${TEMPDIR}/part1    5121
 
     # 1MB - a bit
-    Create Random File KB    /tmp/part2    1023
+    Create Random File KB    ${TEMPDIR}/part2    1023
 
 Create Random file
     [arguments]             ${size_in_megabytes}
-    Execute                 dd if=/dev/urandom of=/tmp/part1 bs=1048576 count=${size_in_megabytes} status=none
+    Execute                 dd if=/dev/urandom of=${TEMPDIR}/part1 bs=1048576 count=${size_in_megabytes} status=none
 
 Create Random File KB
     [arguments]             ${file}    ${size_in_kilobytes}
@@ -55,8 +55,8 @@ ${BUCKET}             generated
 *** Test Cases ***
 
 Test Multipart Upload With Adjusted Length
-    Perform Multipart Upload    ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
-    Verify Multipart Upload     ${BUCKET}    multipart/adjusted_length_${PREFIX}    /tmp/part1    /tmp/part2
+    Perform Multipart Upload    ${BUCKET}    multipart/adjusted_length_${PREFIX}    ${TEMPDIR}/part1    ${TEMPDIR}/part2
+    Verify Multipart Upload     ${BUCKET}    multipart/adjusted_length_${PREFIX}    ${TEMPDIR}/part1    ${TEMPDIR}/part2
 
 Test Multipart Upload
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey
@@ -78,11 +78,11 @@ Test Multipart Upload
 # multipart upload, uploading each part as 5MB file, exception is for last part
 
     Run Keyword         Create Random file      5
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body /tmp/part1 --upload-id ${nextUploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${nextUploadID}
                         Should contain          ${result}    ETag
 # override part
     Run Keyword         Create Random file      5
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body /tmp/part1 --upload-id ${nextUploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${nextUploadID}
                         Should contain          ${result}    ETag
 
 
@@ -95,12 +95,12 @@ Test Multipart Upload Complete
 
 #upload parts
     Run Keyword         Create Random file      5
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
-                        Execute                 echo "Part2" > /tmp/part2
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 --part-number 2 --body /tmp/part2 --upload-id ${uploadID}
+                        Execute                 echo "Part2" > ${TEMPDIR}/part2
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 --part-number 2 --body ${TEMPDIR}/part2 --upload-id ${uploadID}
     ${eTag2} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
@@ -111,9 +111,9 @@ Test Multipart Upload Complete
                         Should contain          ${result}    ETag
 
 #read file and check the key
-    ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 /tmp/${PREFIX}-multipartKey1.result
-                                Execute                    cat /tmp/part1 /tmp/part2 > /tmp/${PREFIX}-multipartKey1
-    Compare files               /tmp/${PREFIX}-multipartKey1         /tmp/${PREFIX}-multipartKey1.result
+    ${result} =                 Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key ${PREFIX}/multipartKey1 ${TEMPDIR}/${PREFIX}-multipartKey1.result
+                                Execute                    cat ${TEMPDIR}/part1 ${TEMPDIR}/part2 > ${TEMPDIR}/${PREFIX}-multipartKey1
+    Compare files               ${TEMPDIR}/${PREFIX}-multipartKey1         ${TEMPDIR}/${PREFIX}-multipartKey1.result
 
 Test Multipart Upload Complete Entity too small
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey2
@@ -123,13 +123,13 @@ Test Multipart Upload Complete Entity too small
                         Should contain          ${result}    UploadId
 
 #upload parts
-                        Execute                 echo "Part1" > /tmp/part1
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey2 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
+                        Execute                 echo "Part1" > ${TEMPDIR}/part1
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey2 --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
-                        Execute                 echo "Part2" > /tmp/part2
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey2 --part-number 2 --body /tmp/part2 --upload-id ${uploadID}
+                        Execute                 echo "Part2" > ${TEMPDIR}/part2
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey2 --part-number 2 --body ${TEMPDIR}/part2 --upload-id ${uploadID}
     ${eTag2} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
@@ -152,17 +152,17 @@ Test Multipart Upload Complete Invalid part errors and complete mpu with few par
                         Should contain          ${result}    InvalidPart
 #upload parts
                         Run Keyword             Create Random file      5
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
 
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 2 --body /tmp/part1 --upload-id ${uploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 2 --body ${TEMPDIR}/part1 --upload-id ${uploadID}
     ${eTag2} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
-                        Execute                 echo "Part3" > /tmp/part3
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 3 --body /tmp/part3 --upload-id ${uploadID}
+                        Execute                 echo "Part3" > ${TEMPDIR}/part3
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 --part-number 3 --body ${TEMPDIR}/part3 --upload-id ${uploadID}
     ${eTag3} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
@@ -179,9 +179,9 @@ Test Multipart Upload Complete Invalid part errors and complete mpu with few par
                         Should contain          ${result}    ${PREFIX}/multipartKey3
                         Should contain          ${result}    ETag
 
-    ${result} =         Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 /tmp/${PREFIX}-multipartKey3.result
-                        Execute                    cat /tmp/part1 /tmp/part3 > /tmp/${PREFIX}-multipartKey3
-    Compare files       /tmp/${PREFIX}-multipartKey3         /tmp/${PREFIX}-multipartKey3.result
+    ${result} =         Execute AWSS3ApiCli        get-object --bucket ${BUCKET} --key ${PREFIX}/multipartKey3 ${TEMPDIR}/${PREFIX}-multipartKey3.result
+                        Execute                    cat ${TEMPDIR}/part1 ${TEMPDIR}/part3 > ${TEMPDIR}/${PREFIX}-multipartKey3
+    Compare files       ${TEMPDIR}/${PREFIX}-multipartKey3         ${TEMPDIR}/${PREFIX}-multipartKey3.result
 
 Test abort Multipart upload
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/multipartKey4 --storage-class REDUCED_REDUNDANCY
@@ -197,8 +197,8 @@ Test abort Multipart upload with invalid uploadId
 
 Upload part with Incorrect uploadID
         SKIP    TODO: HDDS-7811
-                        Execute                 echo "Multipart upload" > /tmp/testfile
-        ${result} =     Execute AWSS3APICli and checkrc     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body /tmp/testfile --upload-id "random"  255
+                        Execute                 echo "Multipart upload" > ${TEMPDIR}/testfile
+        ${result} =     Execute AWSS3APICli and checkrc     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey --part-number 1 --body ${TEMPDIR}/testfile --upload-id "random"  255
                         Should contain          ${result}    NoSuchUpload
 
 Test list parts
@@ -211,12 +211,12 @@ Test list parts
 
 #upload parts
     Run Keyword         Create Random file      5
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey5 --part-number 1 --body /tmp/part1 --upload-id ${uploadID}
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey5 --part-number 1 --body ${TEMPDIR}/part1 --upload-id ${uploadID}
     ${eTag1} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
-                        Execute                 echo "Part2" > /tmp/part2
-    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey5 --part-number 2 --body /tmp/part2 --upload-id ${uploadID}
+                        Execute                 echo "Part2" > ${TEMPDIR}/part2
+    ${result} =         Execute AWSS3APICli     upload-part --bucket ${BUCKET} --key ${PREFIX}/multipartKey5 --part-number 2 --body ${TEMPDIR}/part2 --upload-id ${uploadID}
     ${eTag2} =          Execute and checkrc     echo '${result}' | jq -r '.ETag'   0
                         Should contain          ${result}    ETag
 
@@ -245,14 +245,14 @@ Test list parts
 
 Test Multipart Upload with the simplified aws s3 cp API
                         Create Random file      22
-                        Execute AWSS3Cli        cp /tmp/part1 s3://${BUCKET}/mpyawscli
-                        Execute AWSS3Cli        cp s3://${BUCKET}/mpyawscli /tmp/part1.result
+                        Execute AWSS3Cli        cp ${TEMPDIR}/part1 s3://${BUCKET}/mpyawscli
+                        Execute AWSS3Cli        cp s3://${BUCKET}/mpyawscli ${TEMPDIR}/part1.result
                         Execute AWSS3Cli        rm s3://${BUCKET}/mpyawscli
-                        Compare files           /tmp/part1        /tmp/part1.result
+                        Compare files           ${TEMPDIR}/part1        ${TEMPDIR}/part1.result
 
 Test Multipart Upload Put With Copy
     Run Keyword         Create Random file      5
-    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copytest/source --body /tmp/part1
+    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copytest/source --body ${TEMPDIR}/part1
 
 
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/copytest/destination
@@ -268,13 +268,13 @@ Test Multipart Upload Put With Copy
 
 
                         Execute AWSS3APICli     complete-multipart-upload --upload-id ${uploadID} --bucket ${BUCKET} --key ${PREFIX}/copytest/destination --multipart-upload 'Parts=[{ETag=${eTag1},PartNumber=1}]'
-                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copytest/destination /tmp/part-result
+                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copytest/destination ${TEMPDIR}/part-result
 
-                        Compare files           /tmp/part1        /tmp/part-result
+                        Compare files           ${TEMPDIR}/part1        ${TEMPDIR}/part-result
 
 Test Multipart Upload Put With Copy and range
     Run Keyword         Create Random file      10
-    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/source --body /tmp/part1
+    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/source --body ${TEMPDIR}/part1
 
 
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination
@@ -295,9 +295,9 @@ Test Multipart Upload Put With Copy and range
 
 
                         Execute AWSS3APICli     complete-multipart-upload --upload-id ${uploadID} --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination --multipart-upload 'Parts=[{ETag=${eTag1},PartNumber=1},{ETag=${eTag2},PartNumber=2}]'
-                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination /tmp/part-result
+                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination ${TEMPDIR}/part-result
 
-                        Compare files           /tmp/part1        /tmp/part-result
+                        Compare files           ${TEMPDIR}/part1        ${TEMPDIR}/part-result
 
 Test Multipart Upload Put With Copy and range with IfModifiedSince
     Run Keyword         Create Random file      10
@@ -305,7 +305,7 @@ Test Multipart Upload Put With Copy and range with IfModifiedSince
     ${beforeCreate} =   Subtract Time From Date     ${curDate}  1 day
     ${tomorrow} =       Add Time To Date            ${curDate}  1 day
 
-    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/source --body /tmp/part1
+    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/source --body ${TEMPDIR}/part1
 
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination
 
@@ -348,9 +348,9 @@ Test Multipart Upload Put With Copy and range with IfModifiedSince
 
 
                         Execute AWSS3APICli     complete-multipart-upload --upload-id ${uploadID} --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination --multipart-upload 'Parts=[{ETag=${eTag1},PartNumber=1},{ETag=${eTag2},PartNumber=2}]'
-                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination /tmp/part-result
+                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key ${PREFIX}/copyrange/destination ${TEMPDIR}/part-result
 
-                        Compare files           /tmp/part1        /tmp/part-result
+                        Compare files           ${TEMPDIR}/part1        ${TEMPDIR}/part-result
 
 Test Multipart Upload list
     ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key ${PREFIX}/listtest/key1

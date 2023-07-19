@@ -30,7 +30,7 @@ Create Key In EC Bucket
     [arguments]    ${size}
     ${dir} =    Set Variable    /${VOLUME}/ecbucket/dir
     ${key} =    Set Variable    ${dir}/${size}
-    ${file} =    Set Variable    /tmp/${size}
+    ${file} =    Set Variable    ${TEMPDIR}/${size}
     Create Key    ${key}    ${file}
     Key Should Match Local File    ${key}      ${file}
     Verify Key EC Replication Config    ${key}    RS    3    2    1048576
@@ -88,7 +88,7 @@ Create Key in Default Bucket
     ${size} =    Set Variable    1mb
     ${dir} =     Set Variable    /${VOLUME}/default/dir
     ${key} =     Set Variable    ${dir}/${size}
-    ${file} =    Set Variable    /tmp/${size}
+    ${file} =    Set Variable    ${TEMPDIR}/${size}
     Create Key    ${key}    ${file}
     Key Should Match Local File    ${key}      ${file}
     Verify Key Replica Replication Config   ${key}     RATIS    THREE
@@ -98,7 +98,7 @@ Create Key in Ratis Bucket
     ${size} =    Set Variable    1mb
     ${dir} =     Set Variable    /${VOLUME}/ratis/dir
     ${key} =     Set Variable    ${dir}/${size}
-    ${file} =    Set Variable    /tmp/${size}
+    ${file} =    Set Variable    ${TEMPDIR}/${size}
     Create Key    ${key}    ${file}
     Key Should Match Local File    ${key}      ${file}
     Verify Key Replica Replication Config   ${key}     RATIS    THREE
@@ -108,7 +108,7 @@ Create Ratis Key In EC Bucket
     ${size} =    Set Variable    1mb
     ${dir} =     Set Variable    /${VOLUME}/ecbucket/dir2
     ${key} =     Set Variable    ${dir}/${size}Ratis
-    ${file} =    Set Variable    /tmp/${size}
+    ${file} =    Set Variable    ${TEMPDIR}/${size}
     Create Key    ${key}    ${file}    --replication=THREE --type=RATIS
     Key Should Match Local File   ${key}    ${file}
     Verify Key Replica Replication Config   ${key}    RATIS   THREE
@@ -118,7 +118,7 @@ Create EC Key In Ratis Bucket
     ${size} =    Set Variable    1mb
     ${dir} =     Set Variable    /${VOLUME}/ratis/dir2
     ${key} =     Set Variable    ${dir}/${size}EC
-    ${file} =    Set Variable    /tmp/${size}
+    ${file} =    Set Variable    ${TEMPDIR}/${size}
     Create Key    ${key}    ${file}    --replication=rs-3-2-1024k --type=EC 
     Key Should Match Local File    ${key}    ${file}
     Verify Key EC Replication Config    ${key}    RS    3    2    1048576
@@ -129,14 +129,14 @@ Test Invalid Replication Parameters
                     Should contain              ${message}          RATIS
                     Should contain              ${message}          rs-3-2-1024k
                     Should contain              ${message}          not supported
-    ${message} =    Execute And Ignore Error    ozone sh key put --replication=rs-6-3-1024k --type=RATIS /${VOLUME}/foo/bar /tmp/1mb
+    ${message} =    Execute And Ignore Error    ozone sh key put --replication=rs-6-3-1024k --type=RATIS /${VOLUME}/foo/bar ${TEMPDIR}/1mb
                     Should contain              ${message}          RATIS
                     Should contain              ${message}          rs-6-3-1024k
                     Should contain              ${message}          not supported
     ${message} =    Execute And Ignore Error    ozone sh bucket create --replication=rs-6-3-1024k --type=STAND_ALONE /${VOLUME}/foo
                     Should contain              ${message}          STAND_ALONE
                     Should contain              ${message}          Invalid value
-    ${message} =    Execute And Ignore Error    ozone sh key put --replication=rs-3-2-1024k --type=STAND_ALONE /${VOLUME}/foo/bar /tmp/1mb
+    ${message} =    Execute And Ignore Error    ozone sh key put --replication=rs-3-2-1024k --type=STAND_ALONE /${VOLUME}/foo/bar ${TEMPDIR}/1mb
                     Should contain              ${message}          STAND_ALONE
                     Should contain              ${message}          Invalid value
 
@@ -146,7 +146,7 @@ Invalid Replication With Misconfigured Client
     ${message} =    Execute And Ignore Error    ozone sh -Dozone.replication.allowed-configs="" bucket create --replication=rs-2-1-1024k --type=EC /${VOLUME}/invalid
                     Should contain              ${message}          INVALID_REQUEST Invalid replication config
     # 1024 is unsupported EC chunk size
-    ${message} =    Execute And Ignore Error    ozone sh -Dozone.replication.allowed-configs="" key put --replication=rs-3-2-1024 --type=EC /${VOLUME}/ecbucket/invalid /tmp/1mb
+    ${message} =    Execute And Ignore Error    ozone sh -Dozone.replication.allowed-configs="" key put --replication=rs-3-2-1024 --type=EC /${VOLUME}/ecbucket/invalid ${TEMPDIR}/1mb
                     Should contain              ${message}          INVALID_REQUEST Invalid replication config
 
 Check disk usage after create a file which uses EC replication type

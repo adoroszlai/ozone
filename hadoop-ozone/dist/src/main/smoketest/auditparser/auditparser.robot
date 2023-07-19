@@ -24,7 +24,7 @@ Test Timeout        5 minutes
 *** Variables ***
 ${user}              hadoop
 ${buckets}           5
-${auditworkdir}      /tmp
+${auditworkdir}      ${TEMPDIR}
 
 *** Keywords ***
 Set username

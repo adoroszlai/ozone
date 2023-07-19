@@ -30,7 +30,7 @@ Bucket Exists
 Compare Key With Local File
     [arguments]    ${key}    ${file}
     ${postfix} =   Generate Random String  5  [NUMBERS]
-    ${tmpfile} =   Set Variable    /tmp/tempkey-${postfix}
+    ${tmpfile} =   Set Variable    ${TEMPDIR}/tempkey-${postfix}
     Execute        ozone sh key get ${key} ${tmpfile}
     ${rc} =        Run And Return Rc    diff -q ${file} ${tmpfile}
     Execute        rm -f ${tmpfile}

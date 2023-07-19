@@ -29,10 +29,10 @@ ${BUCKET}             generated
 *** Test Cases ***
 
 File upload and directory list
-                        Execute                   date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli          cp /tmp/testfile s3://${BUCKET}
+                        Execute                   date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3Cli          cp ${TEMPDIR}/testfile s3://${BUCKET}
                         Should contain            ${result}         upload
-    ${result} =         Execute AWSS3Cli          cp /tmp/testfile s3://${BUCKET}/dir1/dir2/file
+    ${result} =         Execute AWSS3Cli          cp ${TEMPDIR}/testfile s3://${BUCKET}/dir1/dir2/file
                         Should contain            ${result}         upload
     ${result} =         Execute AWSS3Cli          ls s3://${BUCKET}
                         Should contain            ${result}         testfile
@@ -48,8 +48,8 @@ File upload and directory list
                         Should contain            ${result}         file
 
 File upload with special chars
-                        Execute                   date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli          cp /tmp/testfile s3://${BUCKET}/specialchars/a+b
+                        Execute                   date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3Cli          cp ${TEMPDIR}/testfile s3://${BUCKET}/specialchars/a+b
                         Should contain            ${result}         upload
     ${result} =         Execute AWSS3Cli          ls s3://${BUCKET}/specialchars/
                         Should not contain        ${result}         'a b'

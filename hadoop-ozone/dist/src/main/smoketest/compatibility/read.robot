@@ -31,6 +31,6 @@ Dir Can Be Listed
     Execute    ozone fs -ls o3fs://bucket1.vol1/dir-${SUFFIX}
 
 File Can Be Get
-    Execute    ozone fs -get o3fs://bucket1.vol1/dir-${SUFFIX}/file-${SUFFIX} /tmp/
-    Execute    diff -q ${TESTFILE} /tmp/file-${SUFFIX}
-    [teardown]    Execute    rm /tmp/file-${SUFFIX}
+    Execute    ozone fs -get o3fs://bucket1.vol1/dir-${SUFFIX}/file-${SUFFIX} ${TEMPDIR}/
+    Execute    diff -q ${TESTFILE} ${TEMPDIR}/file-${SUFFIX}
+    [teardown]    Execute    rm ${TEMPDIR}/file-${SUFFIX}

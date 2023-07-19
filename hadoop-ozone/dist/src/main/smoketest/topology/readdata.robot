@@ -26,5 +26,5 @@ Test Timeout        5 minutes
 *** Test Cases ***
 Read data from previously created key
     ${random} =         Generate Random String  5  [NUMBERS]
-    ${output} =         Execute          ozone sh key get /topvol1/bucket1/key1 /tmp/key1-${random}
+    ${output} =         Execute          ozone sh key get /topvol1/bucket1/key1 ${TEMPDIR}/key1-${random}
                         Should not contain  ${output}       Failed

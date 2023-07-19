@@ -28,8 +28,8 @@ ${BUCKET}             generated
 
 *** Test Cases ***
 Delete file with s3api
-                        Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/deletetestapi/key=value/f1 --body /tmp/testfile
+                        Execute                    date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key ${PREFIX}/deletetestapi/key=value/f1 --body ${TEMPDIR}/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix ${PREFIX}/deletetestapi/key=value/
                         Should contain             ${result}         "${PREFIX}/deletetestapi/key=value/f1"
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key ${PREFIX}/deletetestapi/key=value/f1
@@ -44,8 +44,8 @@ Delete file with s3api, file doesn't exist
                         Should not contain         ${result}         thereisnosuchfile
 
 Delete dir with s3api
-                        Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli           cp /tmp/testfile s3://${BUCKET}/${PREFIX}/deletetestapidir/key=value/f1
+                        Execute                    date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3Cli           cp ${TEMPDIR}/testfile s3://${BUCKET}/${PREFIX}/deletetestapidir/key=value/f1
     ${result} =         Execute AWSS3Cli           ls s3://${BUCKET}/${PREFIX}/deletetestapidir/key=value/
                         Should contain             ${result}         f1
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key ${PREFIX}/deletetestapidir/key=value/
@@ -55,8 +55,8 @@ Delete dir with s3api
 
 
 Delete file with s3api, file doesn't exist, prefix of a real file
-                        Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3Cli           cp /tmp/testfile s3://${BUCKET}/${PREFIX}/deletetestapiprefix/key=value/filefile
+                        Execute                    date > ${TEMPDIR}/testfile
+    ${result} =         Execute AWSS3Cli           cp ${TEMPDIR}/testfile s3://${BUCKET}/${PREFIX}/deletetestapiprefix/key=value/filefile
     ${result} =         Execute AWSS3Cli           ls s3://${BUCKET}/${PREFIX}/deletetestapiprefix/key=value/
                         Should contain             ${result}         filefile
     ${result} =         Execute AWSS3APICli        delete-object --bucket ${BUCKET} --key ${PREFIX}/deletetestapiprefix/key=value/file

@@ -29,8 +29,8 @@ Setup Cluster Data
 
 Test Read Key Compat
     [Tags]  test-ec-compat
-    Key Should Match Local File     /${VOLUME}/ratis/3mb      /tmp/3mb
-    Key Should Match Local File     /${VOLUME}/default/3mb    /tmp/3mb
+    Key Should Match Local File     /${VOLUME}/ratis/3mb      ${TEMPDIR}/3mb
+    Key Should Match Local File     /${VOLUME}/default/3mb    ${TEMPDIR}/3mb
 
     ${result} =     Execute and checkrc         ozone sh key get -f /${VOLUME}/ecbucket/3mb /dev/null       255
                     Should Contain  ${result}   NOT_SUPPORTED_OPERATION
@@ -84,24 +84,24 @@ Test FS Compat
 
 Test FS Client Can Read Own Writes
     [Tags]  test-ec-compat
-    Execute         ozone fs -put /tmp/1mb ofs://om/${VOLUME}/default/1mb
-    Execute         ozone fs -put /tmp/1mb ofs://om/${VOLUME}/ratis/1mb
-    Execute         ozone fs -put /tmp/1mb ofs://om/${VOLUME}/ecbucket/1mb
-    Key Should Match Local File     /${VOLUME}/ratis/1mb      /tmp/1mb
-    Key Should Match Local File     /${VOLUME}/ratis/1mb      /tmp/1mb
-    Key Should Match Local File     /${VOLUME}/ratis/1mb      /tmp/1mb
+    Execute         ozone fs -put ${TEMPDIR}/1mb ofs://om/${VOLUME}/default/1mb
+    Execute         ozone fs -put ${TEMPDIR}/1mb ofs://om/${VOLUME}/ratis/1mb
+    Execute         ozone fs -put ${TEMPDIR}/1mb ofs://om/${VOLUME}/ecbucket/1mb
+    Key Should Match Local File     /${VOLUME}/ratis/1mb      ${TEMPDIR}/1mb
+    Key Should Match Local File     /${VOLUME}/ratis/1mb      ${TEMPDIR}/1mb
+    Key Should Match Local File     /${VOLUME}/ratis/1mb      ${TEMPDIR}/1mb
     Execute         ozone fs -rm -skipTrash ofs://om/${VOLUME}/default/1mb
     Execute         ozone fs -rm -skipTrash ofs://om/${VOLUME}/ratis/1mb
     Execute         ozone fs -rm -skipTrash ofs://om/${VOLUME}/ecbucket/1mb
 
 Test Client Can Read Own Writes
     [Tags]  test-ec-compat
-    Execute         ozone sh key put /${VOLUME}/default/2mb /tmp/2mb
-    Execute         ozone sh key put /${VOLUME}/ratis/2mb /tmp/2mb
-    Execute         ozone sh key put /${VOLUME}/ecbucket/2mb /tmp/2mb
-    Key Should Match Local File     /${VOLUME}/ratis/2mb      /tmp/2mb
-    Key Should Match Local File     /${VOLUME}/ratis/2mb      /tmp/2mb
-    Key Should Match Local File     /${VOLUME}/ratis/2mb      /tmp/2mb
+    Execute         ozone sh key put /${VOLUME}/default/2mb ${TEMPDIR}/2mb
+    Execute         ozone sh key put /${VOLUME}/ratis/2mb ${TEMPDIR}/2mb
+    Execute         ozone sh key put /${VOLUME}/ecbucket/2mb ${TEMPDIR}/2mb
+    Key Should Match Local File     /${VOLUME}/ratis/2mb      ${TEMPDIR}/2mb
+    Key Should Match Local File     /${VOLUME}/ratis/2mb      ${TEMPDIR}/2mb
+    Key Should Match Local File     /${VOLUME}/ratis/2mb      ${TEMPDIR}/2mb
     Execute         ozone sh key delete /${VOLUME}/default/2mb
     Execute         ozone sh key delete /${VOLUME}/ratis/2mb
     Execute         ozone sh key delete /${VOLUME}/ecbucket/2mb

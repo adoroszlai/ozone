@@ -33,7 +33,7 @@ ${VOLUME}                           volume1
 ${BUCKET}                           bucket1
 ${TEST_FILE}                        NOTICE.txt
 ${WRITE_FILE_COUNT}                 0
-${TEMPDIR}                          /tmp
+${TEMPDIR}                          ${TEMPDIR}
 
 ** Keywords ***
 Open Connection And Log In

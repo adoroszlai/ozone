@@ -33,10 +33,10 @@ Create a volume and bucket
                         Should not contain  ${output}       Failed
 
 Create key
-                        Execute and checkrc    echo "${PREFIX}: key created using Ozone Shell" > /tmp/sourcekey    0
-    ${output} =         Execute          ozone sh key put /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key /tmp/sourcekey
+                        Execute and checkrc    echo "${PREFIX}: key created using Ozone Shell" > ${TEMPDIR}/sourcekey    0
+    ${output} =         Execute          ozone sh key put /${PREFIX}-volume/${PREFIX}-bucket/${PREFIX}-key ${TEMPDIR}/sourcekey
                         Should not contain  ${output}       Failed
-                        Execute and checkrc    rm /tmp/sourcekey    0
+                        Execute and checkrc    rm ${TEMPDIR}/sourcekey    0
 
 Create a bucket in s3v volume
     [Tags]    create-volume-and-bucket
@@ -44,10 +44,10 @@ Create a bucket in s3v volume
                         Should not contain  ${output}       Failed
 
 Create key in the bucket in s3v volume
-                        Execute and checkrc    echo "${PREFIX}: another key created using Ozone Shell" > /tmp/sourcekey    0
-    ${output} =         Execute          ozone sh key put /s3v/${PREFIX}-bucket/key1-shell /tmp/sourcekey
+                        Execute and checkrc    echo "${PREFIX}: another key created using Ozone Shell" > ${TEMPDIR}/sourcekey    0
+    ${output} =         Execute          ozone sh key put /s3v/${PREFIX}-bucket/key1-shell ${TEMPDIR}/sourcekey
                         Should not contain  ${output}       Failed
-                        Execute and checkrc    rm /tmp/sourcekey    0
+                        Execute and checkrc    rm ${TEMPDIR}/sourcekey    0
 
 Setup credentials for S3
     # TODO: Run "Setup secure v4 headers" instead when security is enabled
@@ -59,7 +59,7 @@ Try to create a bucket using S3 API
                         Should Be Equal    ${output}    ${None}
 
 Create key using S3 API
-                        Execute and checkrc    echo "${PREFIX}: key created using S3 API" > /tmp/sourcekey    0
-    ${output} =         Execute AWSS3APICli and checkrc    put-object --bucket ${PREFIX}-bucket --key key2-s3api --body /tmp/sourcekey    0
+                        Execute and checkrc    echo "${PREFIX}: key created using S3 API" > ${TEMPDIR}/sourcekey    0
+    ${output} =         Execute AWSS3APICli and checkrc    put-object --bucket ${PREFIX}-bucket --key key2-s3api --body ${TEMPDIR}/sourcekey    0
                         Should not contain    ${output}    error
-                        Execute and checkrc    rm /tmp/sourcekey    0
+                        Execute and checkrc    rm ${TEMPDIR}/sourcekey    0

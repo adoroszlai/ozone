@@ -159,18 +159,18 @@ Reject overwrite existing
                    Should contain        ${result}         File exists
 
 Get file
-    [Setup]        Execute               rm -Rf /tmp/GET.txt
-                   Execute               ozone fs -get ${BASE_URL}${SCHEME}.txt /tmp/GET.txt
-                   File Should Exist     /tmp/GET.txt
+    [Setup]        Execute               rm -Rf ${TEMPDIR}/GET.txt
+                   Execute               ozone fs -get ${BASE_URL}${SCHEME}.txt ${TEMPDIR}/GET.txt
+                   File Should Exist     ${TEMPDIR}/GET.txt
 
 *** Keywords ***
 
 Setup localdir1
-                   Execute               rm -Rf /tmp/localdir1
-                   Execute               mkdir /tmp/localdir1
-                   Execute               cp NOTICE.txt /tmp/localdir1/LOCAL.txt
+                   Execute               rm -Rf ${TEMPDIR}/localdir1
+                   Execute               mkdir ${TEMPDIR}/localdir1
+                   Execute               cp NOTICE.txt ${TEMPDIR}/localdir1/LOCAL.txt
                    Execute               ozone fs -mkdir -p ${BASE_URL}testdir1
-                   Execute               ozone fs -copyFromLocal /tmp/localdir1 ${BASE_URL}testdir1/
+                   Execute               ozone fs -copyFromLocal ${TEMPDIR}/localdir1 ${BASE_URL}testdir1/
                    Execute               ozone fs -put NOTICE.txt ${BASE_URL}testdir1/NOTICE.txt
 
 
