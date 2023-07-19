@@ -24,7 +24,6 @@ Test Timeout        5 minutes
 
 *** Variables ***
 ${ENDPOINT_URL}     http://s3g:9878
-${TEMPDIR}          ${TEMPDIR}
 ${TEST_FILE}        NOTICE.txt
 
 *** Keywords ***
