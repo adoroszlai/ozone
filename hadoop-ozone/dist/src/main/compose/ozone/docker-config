@@ -51,6 +51,7 @@ OZONE-SITE.XML_dfs.container.ratis.datastream.enabled=true
 
 OZONE_CONF_DIR=/etc/hadoop
 OZONE_LOG_DIR=/var/log/hadoop
+ROCKSDB_SHAREDLIB_DIR=/var/tmp
 
 no_proxy=om,scm,s3g,recon,kdc,localhost,127.0.0.1
 
