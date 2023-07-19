@@ -41,6 +41,7 @@ Testing audit parser
     [Setup]            Create data
 
     ${logdir} =        Get Environment Variable      OZONE_LOG_DIR     /var/log/ozone
+    Set Environment Variable    OZONE_OPTS    -Djava.io.tmpdir=${TEMPDIR}
     ${logfile} =       Execute              ls -t "${logdir}" | grep om-audit | head -1
                        Execute              ozone auditparser "${auditworkdir}/audit.db" load "${logdir}/${logfile}"
     ${result} =        Execute              ozone auditparser "${auditworkdir}/audit.db" template top5cmds
