@@ -201,12 +201,13 @@ jobs:
           rm -frv ~/runners/*tgz ~/runners/2.306.0 ~/runners/2.307.0
           df -h .
       - name: Execute tests
-        run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :ozone-recon
+        run: hadoop-ozone/dev-support/checks/unit.sh
       - name: Check disk space
         run: |
           df -h .
           du -chs ~/*/*
           find ~ -type f -size '+10M' -ls
+        if: always()
       - name: Summary of failures
         run: cat target/${{ matrix.check }}/summary.txt
         if: ${{ !cancelled() }}
