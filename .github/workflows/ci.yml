@@ -193,17 +193,20 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - run: df -h .
-      - run: du -chs * */*
+      - run: du -chs *
+      - run: du -chs */*
       - run: find . -type f -size '+10M' | xargs ls -1hsS
       - name: Delete old runners
         run: rm -fr ~/runners/*tgz ~/runners/2.306.0 ~/runners/2.307.0
       - run: df -h .
-      - run: du -chs * */*
+      - run: du -chs *
+      - run: du -chs */*
       - run: find . -type f -size '+10M' | xargs ls -1hsS
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh
       - run: df -h .
-      - run: du -chs * */*
+      - run: du -chs *
+      - run: du -chs */*
       - run: find . -type f -size '+1M' | xargs ls -1hsS
         if: always()
       - name: Summary of failures
