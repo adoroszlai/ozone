@@ -210,9 +210,9 @@ jobs:
         if: always()
       - run: du -chs */*
         if: always()
-      - run: find hadoop-hdds/server-scm -type f | xargs ls -1hsS
+      - run: find hadoop-hdds/server-scm/target/test-dir -type f | xargs ls -1hsS
         if: always()
-      - run: find hadoop-ozone/ozone-manager -type f | xargs ls -1hsS
+      - run: find hadoop-ozone/ozone-manager/target/test-dir -type f | xargs ls -1hsS
         if: always()
       - name: Summary of failures
         run: cat target/${{ matrix.check }}/summary.txt
