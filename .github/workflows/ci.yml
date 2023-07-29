@@ -197,11 +197,11 @@ jobs:
           df -h ~ .
           du -sh ~/.m2 *
       - name: Execute tests
-        run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :ozone-manager
+        run: bash hadoop-ozone/dev-support/checks/junit.sh -am -pl :ozone-reconcodegen,:ozone-filesystem
       - name: Check disk space
         run: |
           df -h ~ .
-          du -sh ~/.m2 *
+          du -sh ~/.m2 * hadoop-hdds/* hadoop-ozone/*
           find ~ -type f -size '+10M' -ls
       - name: Summary of failures
         run: cat target/${{ matrix.check }}/summary.txt
