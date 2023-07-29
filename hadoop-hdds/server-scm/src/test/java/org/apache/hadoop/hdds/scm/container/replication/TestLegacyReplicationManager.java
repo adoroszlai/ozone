@@ -71,6 +71,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
@@ -142,7 +143,7 @@ public class TestLegacyReplicationManager {
   }
 
   @BeforeEach
-  public void setup()
+  public void setup(@TempDir File testDir)
       throws IOException, InterruptedException,
       NodeNotFoundException, InvalidStateTransitionException {
     OzoneConfiguration conf = new OzoneConfiguration();
@@ -156,8 +157,6 @@ public class TestLegacyReplicationManager {
     nodeManager = new SimpleMockNodeManager();
     eventQueue = new EventQueue();
     SCMHAManager scmhaManager = SCMHAManagerStub.getInstance(true);
-    testDir = GenericTestUtils.getTestDir(
-        TestLegacyReplicationManager.class.getSimpleName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     dbStore = DBStoreBuilder.createDBStore(
         conf, new SCMDBDefinition());
@@ -294,7 +293,9 @@ public class TestLegacyReplicationManager {
     if (dbStore != null) {
       dbStore.close();
     }
-    FileUtils.deleteDirectory(testDir);
+    if (testDir != null) {
+      FileUtils.deleteDirectory(testDir);
+    }
   }
 
   @Nested
