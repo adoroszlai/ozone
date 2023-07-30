@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdds.scm.container.replication;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -63,6 +62,7 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
 import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
+import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.TestClock;
@@ -71,12 +71,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
@@ -133,7 +131,6 @@ public class TestLegacyReplicationManager {
   private GenericTestUtils.LogCapturer scmLogs;
   private SCMServiceManager serviceManager;
   private TestClock clock;
-  private File testDir;
   private DBStore dbStore;
   private ContainerReplicaPendingOps containerReplicaPendingOps;
 
@@ -143,10 +140,9 @@ public class TestLegacyReplicationManager {
   }
 
   @BeforeEach
-  public void setup(@TempDir File testDir)
-      throws IOException, InterruptedException,
+  void setup() throws IOException, InterruptedException,
       NodeNotFoundException, InvalidStateTransitionException {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    OzoneConfiguration conf = SCMTestUtils.getConf();
     conf.setTimeDuration(
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
         0, TimeUnit.SECONDS);
@@ -157,7 +153,6 @@ public class TestLegacyReplicationManager {
     nodeManager = new SimpleMockNodeManager();
     eventQueue = new EventQueue();
     SCMHAManager scmhaManager = SCMHAManagerStub.getInstance(true);
-    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     dbStore = DBStoreBuilder.createDBStore(
         conf, new SCMDBDefinition());
     PipelineManager pipelineManager = Mockito.mock(PipelineManager.class);
@@ -247,11 +242,7 @@ public class TestLegacyReplicationManager {
   void createReplicationManager(ReplicationManagerConfiguration rmConf,
       LegacyReplicationManagerConfiguration lrmConf)
       throws InterruptedException, IOException {
-    OzoneConfiguration config = new OzoneConfiguration();
-    testDir = GenericTestUtils
-      .getTestDir(TestLegacyReplicationManager.class.getSimpleName());
-    config.set(HddsConfigKeys.OZONE_METADATA_DIRS,
-        testDir.getAbsolutePath());
+    OzoneConfiguration config = SCMTestUtils.getConf();
     config.setTimeDuration(
         HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
         0, TimeUnit.SECONDS);
@@ -292,9 +283,6 @@ public class TestLegacyReplicationManager {
     replicationManager.stop();
     if (dbStore != null) {
       dbStore.close();
-    }
-    if (testDir != null) {
-      FileUtils.deleteDirectory(testDir);
     }
   }
 

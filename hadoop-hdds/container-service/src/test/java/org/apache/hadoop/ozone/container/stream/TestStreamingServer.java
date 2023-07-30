@@ -21,9 +21,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -42,10 +42,13 @@ public class TestStreamingServer {
   private static final byte[] CONTENT = "Stream it if you can"
       .getBytes(StandardCharsets.UTF_8);
 
+  @TempDir
+  private Path sourceDir;
+  @TempDir
+  private Path destDir;
+
   @Test
   public void simpleStream() throws Exception {
-    Path sourceDir = GenericTestUtils.getRandomizedTestDir().toPath();
-    Path destDir = GenericTestUtils.getRandomizedTestDir().toPath();
     Files.createDirectories(sourceDir.resolve(SUBDIR));
     Files.createDirectories(destDir.resolve(SUBDIR));
 
@@ -75,8 +78,6 @@ public class TestStreamingServer {
         .trustManager(InsecureTrustManagerFactory.INSTANCE)
         .build();
 
-    Path sourceDir = GenericTestUtils.getRandomizedTestDir().toPath();
-    Path destDir = GenericTestUtils.getRandomizedTestDir().toPath();
     Files.createDirectories(sourceDir.resolve(SUBDIR));
     Files.createDirectories(destDir.resolve(SUBDIR));
 
@@ -109,8 +110,6 @@ public class TestStreamingServer {
   }
   @Test
   public void failedStream() throws Exception {
-    Path sourceDir = GenericTestUtils.getRandomizedTestDir().toPath();
-    Path destDir = GenericTestUtils.getRandomizedTestDir().toPath();
     Files.createDirectories(sourceDir.resolve(SUBDIR));
     Files.createDirectories(destDir.resolve(SUBDIR));
 
@@ -128,8 +127,6 @@ public class TestStreamingServer {
 
   @Test
   public void timeout() throws Exception {
-    Path sourceDir = GenericTestUtils.getRandomizedTestDir().toPath();
-    Path destDir = GenericTestUtils.getRandomizedTestDir().toPath();
     Files.createDirectories(sourceDir.resolve(SUBDIR));
     Files.createDirectories(destDir.resolve(SUBDIR));
 
