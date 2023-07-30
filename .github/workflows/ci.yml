@@ -195,13 +195,11 @@ jobs:
       - run: df -h .
       - run: du -chs *
       - run: du -chs */*
-      - run: find . -type f -size '+10M' | xargs ls -1hsS
       - name: Delete old runners
         run: rm -fr ~/runners/*tgz ~/runners/2.306.0 ~/runners/2.307.0
       - run: df -h .
       - run: du -chs *
       - run: du -chs */*
-      - run: find . -type f -size '+10M' | xargs ls -1hsS
       - name: Execute tests
         run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh
       - run: df -h .
@@ -210,9 +208,7 @@ jobs:
         if: always()
       - run: du -chs */*
         if: always()
-      - run: find hadoop-hdds/server-scm/target/test-dir -type f | xargs ls -1hsS
-        if: always()
-      - run: find hadoop-ozone/ozone-manager/target/test-dir -type f | xargs ls -1hsS
+      - run: du -sh hadoop-*/*/target/test-dir/*
         if: always()
       - name: Summary of failures
         run: cat target/${{ matrix.check }}/summary.txt
