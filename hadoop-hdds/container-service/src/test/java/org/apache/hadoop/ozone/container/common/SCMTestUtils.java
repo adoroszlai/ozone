@@ -45,6 +45,9 @@ import org.apache.ozone.test.GenericTestUtils;
 import com.google.protobuf.BlockingService;
 import org.mockito.Mockito;
 
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
+import static org.apache.logging.log4j.util.StackLocatorUtil.getCallerClass;
+
 /**
  * Test Endpoint class.
  */
@@ -123,7 +126,9 @@ public final class SCMTestUtils {
   }
 
   public static OzoneConfiguration getConf() {
-    File testDir = GenericTestUtils.getRandomizedTestDir();
+    String name = getCallerClass(2).getSimpleName()
+        + "-" + randomAlphanumeric(10);
+    File testDir = GenericTestUtils.getTestDir(name);
     Runtime.getRuntime().addShutdownHook(new Thread(
         () -> FileUtils.deleteQuietly(testDir)));
     return getConf(testDir);
