@@ -20,7 +20,7 @@
 COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export COMPOSE_DIR
 
-export SECURITY_ENABLED=false
+export SECURITY_ENABLED=true
 export OZONE_REPLICATION_FACTOR=3
 
 # shellcheck source=/dev/null
@@ -30,3 +30,5 @@ start_docker_env 5
 
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../common/ec-test.sh"
+
+execute_robot_test scm kinit.robot
