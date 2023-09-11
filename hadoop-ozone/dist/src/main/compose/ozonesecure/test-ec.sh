@@ -30,5 +30,3 @@ start_docker_env 5
 
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../common/ec-test.sh"
-
-execute_robot_test scm kinit.robot
