@@ -855,7 +855,8 @@ public class TestRootedOzoneFileSystem {
 
       FileStatus[] fileStatuses = ofs.listStatus(root);
       Assert.assertEquals(
-          "Total directories listed do not match the existing directories",
+          "Total directories listed do not match the existing directories: "
+              + Arrays.toString(fileStatuses),
           numDirs, fileStatuses.length);
 
       for (int i = 0; i < numDirs; i++) {
