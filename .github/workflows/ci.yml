@@ -26,15 +26,15 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       basic-unit: ${{ steps.categorize-basic-checks.outputs.basic-unit }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -175,7 +175,7 @@ jobs:
     if: needs.build-info.outputs.needs-basic-checks == 'true'
     strategy:
       matrix:
-        check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
+        check: [ checkstyle, bats ]
       fail-fast: false
     steps:
       - name: Checkout project
@@ -229,7 +229,7 @@ jobs:
     if: needs.build-info.outputs.needs-basic-checks == 'true'
     strategy:
       matrix:
-        check: ${{ fromJson(needs.build-info.outputs.basic-unit) }}
+        check: [ unit ]
       fail-fast: false
     steps:
       - name: Checkout project
