@@ -112,10 +112,10 @@ import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
 import static org.apache.hadoop.fs.CommonPathCapabilities.FS_CHECKSUMS;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
-import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
 import static org.apache.hadoop.hdds.client.ECReplicationConfig.EcCodec.RS;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_LISTING_PAGE_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR;
@@ -145,6 +145,7 @@ public class TestRootedOzoneFileSystem {
       LoggerFactory.getLogger(TestRootedOzoneFileSystem.class);
 
   private static final float TRASH_INTERVAL = 0.05f; // 3 seconds
+  private static final int TEST_LISTING_PAGE_SIZE = 32;
   private static OzoneClient client;
 
   @Parameterized.Parameters
@@ -243,6 +244,7 @@ public class TestRootedOzoneFileSystem {
   public static void initClusterAndEnv() throws IOException,
       InterruptedException, TimeoutException {
     conf = new OzoneConfiguration();
+    conf.setInt(OZONE_FS_LISTING_PAGE_SIZE, TEST_LISTING_PAGE_SIZE);
     conf.setFloat(OMConfigKeys.OZONE_FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, TRASH_INTERVAL / 2);
@@ -564,25 +566,15 @@ public class TestRootedOzoneFileSystem {
   @Test
   public void testListStatusIteratorOnPageSize() throws Exception {
     int[] pageSize = {
-        1, LISTING_PAGE_SIZE, LISTING_PAGE_SIZE + 1,
-        LISTING_PAGE_SIZE - 1, LISTING_PAGE_SIZE + LISTING_PAGE_SIZE / 2,
-        LISTING_PAGE_SIZE + LISTING_PAGE_SIZE
+        1,
+        TEST_LISTING_PAGE_SIZE - 1,
+        TEST_LISTING_PAGE_SIZE,
+        TEST_LISTING_PAGE_SIZE + 1,
+        TEST_LISTING_PAGE_SIZE + TEST_LISTING_PAGE_SIZE / 2,
+        TEST_LISTING_PAGE_SIZE + TEST_LISTING_PAGE_SIZE
     };
     for (int numDir : pageSize) {
-      int range = numDir / LISTING_PAGE_SIZE;
-      switch (range) {
-      case 0:
-        listStatusIterator(numDir);
-        break;
-      case 1:
-        listStatusIterator(numDir);
-        break;
-      case 2:
-        listStatusIterator(numDir);
-        break;
-      default:
-        listStatusIterator(numDir);
-      }
+      listStatusIterator(numDir);
     }
   }
 
@@ -853,7 +845,7 @@ public class TestRootedOzoneFileSystem {
   public void testListStatusOnLargeDirectory() throws Exception {
     Path root = new Path("/" + volumeName + "/" + bucketName);
     Set<String> paths = new TreeSet<>();
-    int numDirs = LISTING_PAGE_SIZE + LISTING_PAGE_SIZE / 2;
+    int numDirs = TEST_LISTING_PAGE_SIZE + TEST_LISTING_PAGE_SIZE / 2;
     try {
       for (int i = 0; i < numDirs; i++) {
         Path p = new Path(root, String.valueOf(i));
