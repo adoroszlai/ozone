@@ -27,13 +27,13 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-basic-checks: true
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -169,7 +169,8 @@ jobs:
     if: needs.build-info.outputs.needs-basic-checks == 'true'
     strategy:
       matrix:
-        check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
+        check: [ native ]
+        split: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
       fail-fast: false
     steps:
       - name: Checkout project
@@ -184,7 +185,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-8-${{ matrix.check }}-${{ matrix.split }}
           restore-keys: |
             maven-repo-${{ hashFiles('**/pom.xml') }}-8
             maven-repo-${{ hashFiles('**/pom.xml') }}
@@ -196,10 +197,15 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh
+        run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh -Dtest=TestManagedSSTDumpIterator
+        env:
+          ITERATIONS: 50
       - name: Summary of failures
         run: cat target/${{ matrix.check }}/summary.txt
         if: ${{ !cancelled() }}
+      - name: Number of failures
+        run: cat target/${{ github.job }}/failures
+        if: always()
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: ${{ !cancelled() }}
