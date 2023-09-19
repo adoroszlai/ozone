@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.utils.TestUtils;
 import org.apache.ozone.test.tag.Native;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,6 +40,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static org.apache.hadoop.hdds.HddsUtils.shutdownAndAwaitTermination;
 import static org.apache.hadoop.hdds.utils.NativeConstants.ROCKS_TOOLS_NATIVE_LIBRARY_NAME;
 
 /**
@@ -177,7 +178,6 @@ class TestManagedSSTDumpIterator {
   @Native(ROCKS_TOOLS_NATIVE_LIBRARY_NAME)
   @ParameterizedTest
   @MethodSource("keyValueFormatArgs")
-  @Disabled("HDDS-9274")
   public void testSSTDumpIteratorWithKeyFormat(String keyFormat,
                                                String valueFormat)
       throws Exception {
@@ -236,12 +236,12 @@ class TestManagedSSTDumpIterator {
           }
           Assertions.assertEquals(0, expectedKeys.size());
         } finally {
+          shutdownAndAwaitTermination(executorService, Duration.ofSeconds(5));
           lowerBound.ifPresent(ManagedSlice::close);
           upperBound.ifPresent(ManagedSlice::close);
         }
       }
     }
-    executorService.shutdown();
   }
 
 

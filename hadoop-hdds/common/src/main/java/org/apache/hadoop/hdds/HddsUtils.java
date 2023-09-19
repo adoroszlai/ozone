@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.ConfigRedactor;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -68,6 +70,8 @@ import org.apache.hadoop.net.NetUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import org.apache.commons.lang3.StringUtils;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_DNS_INTERFACE_KEY;
 import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_DNS_NAMESERVER_KEY;
 import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_HOST_NAME_KEY;
@@ -894,5 +898,30 @@ public final class HddsUtils {
     return logger.isDebugEnabled()
         ? Thread.currentThread().getStackTrace()
         : null;
+  }
+
+  public static void shutdownAndAwaitTermination(ExecutorService executor,
+      Duration timeout) {
+    shutdownAndAwaitTermination(executor, timeout, null, null);
+  }
+
+  public static void shutdownAndAwaitTermination(ExecutorService executor,
+      Duration timeout, @Nullable Logger logger, @Nullable String name) {
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(timeout.toMillis(), MILLISECONDS)) {
+        executor.shutdownNow();
+      }
+      if (!executor.awaitTermination(timeout.toMillis(), MILLISECONDS)) {
+        if (logger != null) {
+          logger.warn("{} failed to shutdown in {}", name, timeout);
+        }
+      }
+    } catch (InterruptedException e) {
+      if (logger != null) {
+        logger.warn("Interrupted while waiting for {} to shutdown", name);
+      }
+      Thread.currentThread().interrupt();
+    }
   }
 }
