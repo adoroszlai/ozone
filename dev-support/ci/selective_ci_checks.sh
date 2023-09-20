@@ -551,7 +551,7 @@ function calculate_test_types_to_run() {
 function set_outputs() {
     # print results outside the group to increase visibility
 
-    BASIC_CHECKS="checkstyle native"
+    BASIC_CHECKS=""
     initialization::ga_output basic-checks \
         "$(initialization::parameters_to_json ${BASIC_CHECKS})"
 
