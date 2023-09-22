@@ -89,7 +89,7 @@ class TestConfigurationReflectionUtil {
         ConfigurationReflectionUtil.mapReconfigurableProperties(
             ConfigurationExample.class).keySet();
 
-    String prefix = "ozone.scm.client";
+    String prefix = "ozone.SCM.client";
     assertEquals(ImmutableSet.of(
         prefix + ".dynamic",
         prefix + ".grandpa.dyna"
