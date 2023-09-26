@@ -378,14 +378,17 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystemWithFSO#testDeleteVolumeAndBucket'
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystemWithFSO' || true
         env:
-          ITERATIONS: 25
+          ITERATIONS: 10
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: ${{ !cancelled() }}
       - name: Number of failures
         run: cat target/${{ github.job }}/failures
+        if: ${{ !cancelled() }}
+      - name: Check for leaks
+        run: if grep -lr 'not shutdown properly' target/${{ github.job }}; then exit 1; fi
         if: ${{ !cancelled() }}
       - name: Archive build results
         uses: actions/upload-artifact@v3
