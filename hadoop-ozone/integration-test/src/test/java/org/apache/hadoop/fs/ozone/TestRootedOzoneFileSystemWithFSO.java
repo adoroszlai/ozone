@@ -28,7 +28,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.jupiter.api.Disabled;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
@@ -272,7 +271,7 @@ public class TestRootedOzoneFileSystemWithFSO
     Assert.assertEquals(valueGreaterBatchSize, fileStatuses.length);
   }
 
-  @Disabled
+  @Ignore
   @Test
   public void testLeaseRecoverable() throws Exception {
     // Create a file
