@@ -179,7 +179,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   @Override
   public void connect() throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
+      LOG.debug("{} Connecting to pipeline:{} datanode:{}",
+          this,
+          getPipeline().getId(),
           RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
     }
 
@@ -206,7 +208,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private void closeRaftClient(RaftClient raftClient) {
     try {
-      LOG.debug("Closing connection to pipeline:{} datanode:{}",
+      LOG.debug("{} Closing connection to pipeline:{} datanode:{}",
+          this,
           getPipeline().getId(),
           RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
       raftClient.close();
@@ -235,12 +238,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               request, TracingUtil.exportCurrentSpan());
           if (HddsUtils.isReadOnly(request)) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("sendCommandAsync ReadOnly {}", message);
+              LOG.trace("sendCommandAsync ReadOnly {}", message);
             }
             return getClient().async().sendReadOnly(message);
           } else {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("sendCommandAsync {}", message);
+              LOG.trace("sendCommandAsync {}", message);
             }
             return getClient().async().send(message);
           }
@@ -265,7 +268,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private XceiverClientReply newWatchReply(
       long watchIndex, Object reason, long replyIndex) {
-    LOG.debug("watchForCommit({}) returns {} {}",
+    LOG.trace("watchForCommit({}) returns {} {}",
         watchIndex, reason, replyIndex);
     final XceiverClientReply reply = new XceiverClientReply(null);
     reply.setLogIndex(replyIndex);
@@ -334,7 +337,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     CompletableFuture<ContainerCommandResponseProto> containerCommandResponse =
         raftClientReply.whenComplete((reply, e) -> {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("received reply {} for request: cmdType={} containerID={}"
+            LOG.trace("received reply {} for request: cmdType={} containerID={}"
                     + " pipelineID={} traceID={} exception: {}", reply,
                 request.getCmdType(), request.getContainerID(),
                 request.getPipelineID(), request.getTraceID(), e);
