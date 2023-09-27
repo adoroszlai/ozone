@@ -279,12 +279,13 @@ public class TestRootedOzoneFileSystemWithFSO
     final Path source = new Path(getBucketPath(), key);
 
     LeaseRecoverable fs = (LeaseRecoverable)getFs();
-    FSDataOutputStream stream = getFs().create(source);
-    assertThrows(OMException.class, () -> fs.isFileClosed(source));
-    stream.write(1);
-    stream.hsync();
-    assertFalse(fs.isFileClosed(source));
-    assertTrue(fs.recoverLease(source));
-    assertTrue(fs.isFileClosed(source));
+    try (FSDataOutputStream stream = getFs().create(source)) {
+      assertThrows(OMException.class, () -> fs.isFileClosed(source));
+      stream.write(1);
+      stream.hsync();
+      assertFalse(fs.isFileClosed(source));
+      assertTrue(fs.recoverLease(source));
+      assertTrue(fs.isFileClosed(source));
+    }
   }
 }
