@@ -121,10 +121,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.tlsConfig = tlsConfig;
     this.ozoneConfiguration = configuration;
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("new XceiverClientRatis for pipeline " + pipeline.getId(),
-          new Throwable("TRACE"));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("new {}", this, new Throwable("TRACE"));
     }
+  }
+
+  @Override
+  public String toString() {
+    return super.toString()
+        + " hasClient:" + (client.get() != null)
+        + " refs:" + getRefcount();
   }
 
   private long updateCommitInfosMap(RaftClientReply reply) {

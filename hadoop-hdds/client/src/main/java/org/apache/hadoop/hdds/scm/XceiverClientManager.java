@@ -123,6 +123,7 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
         OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
 
     cacheMetrics = CacheMetrics.create(clientCache, this);
+    LOG.debug("{} created", this, new Throwable());
   }
 
   @VisibleForTesting
@@ -173,6 +174,7 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
     synchronized (clientCache) {
       XceiverClientSpi info = getClient(pipeline, read);
       info.incrementReference();
+      LOG.debug("Acquire {}", info);
       return info;
     }
   }
@@ -214,6 +216,7 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
         }
       }
     }
+    LOG.debug("Release {} (invalidate:{})", client, invalidateClient);
   }
 
   private XceiverClientSpi getClient(Pipeline pipeline, boolean forRead)
@@ -282,10 +285,11 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
   @Override
   public void close() {
     //closing is done through RemovalListener
+    LOG.debug("{} closing, clients: {}", this, clientCache.asMap());
     clientCache.invalidateAll();
     clientCache.cleanUp();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("XceiverClient cache stats: {}", clientCache.stats());
+      LOG.debug("{} XceiverClient cache stats: {}", this, clientCache.stats());
     }
     cacheMetrics.unregister();
 
