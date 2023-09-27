@@ -453,8 +453,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       ContainerCache.getInstance(conf).shutdownCache();
       DefaultMetricsSystem.shutdown();
 
-      ManagedRocksObjectMetrics.INSTANCE.assertNoLeaks();
       CodecTestUtil.gc();
+      ManagedRocksObjectMetrics.INSTANCE.assertNoLeaks();
     } catch (Exception e) {
       LOG.error("Exception while shutting down the cluster.", e);
     }
