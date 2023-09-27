@@ -386,7 +386,7 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystemWithFSO' -Dmaven.test.failure.ignore=true
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestLeaseRecovery#testRecovery' -Dmaven.test.failure.ignore=true
       - name: Summary of failures
         run: cat target/${{ github.job }}/summary.txt
         if: ${{ !cancelled() }}
