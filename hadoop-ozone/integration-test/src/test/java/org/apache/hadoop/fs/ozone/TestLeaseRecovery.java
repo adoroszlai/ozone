@@ -31,11 +31,12 @@ import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -47,58 +48,60 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test cases for recoverLease() API.
  */
-public class TestLeaseRecovery {
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
+@Timeout(300)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class TestLeaseRecovery {
 
   private MiniOzoneCluster cluster;
   private OzoneBucket bucket;
 
   private OzoneClient client;
   private final OzoneConfiguration conf = new OzoneConfiguration();
+  private final BucketLayout bucketLayout = BucketLayout.FILE_SYSTEM_OPTIMIZED;
 
-  @Before
-  public void init() throws IOException, InterruptedException,
-      TimeoutException {
+  @BeforeAll
+  void startup() throws IOException, InterruptedException, TimeoutException {
     final int chunkSize = 16 << 10;
     final int flushSize = 2 * chunkSize;
     final int maxFlushSize = 2 * flushSize;
     final int blockSize = 2 * maxFlushSize;
-    final BucketLayout layout = BucketLayout.FILE_SYSTEM_OPTIMIZED;
 
     conf.setBoolean(OZONE_OM_RATIS_ENABLE_KEY, false);
     conf.setBoolean(OzoneConfigKeys.OZONE_FS_HSYNC_ENABLED, true);
-    conf.set(OZONE_DEFAULT_BUCKET_LAYOUT, layout.name());
+    conf.set(OZONE_DEFAULT_BUCKET_LAYOUT, bucketLayout.name());
     cluster = MiniOzoneCluster.newBuilder(conf)
-      .setNumDatanodes(5)
-      .setTotalPipelineNumLimit(10)
-      .setBlockSize(blockSize)
-      .setChunkSize(chunkSize)
-      .setStreamBufferFlushSize(flushSize)
-      .setStreamBufferMaxSize(maxFlushSize)
-      .setDataStreamBufferFlushize(maxFlushSize)
-      .setStreamBufferSizeUnit(StorageUnit.BYTES)
-      .setDataStreamMinPacketSize(chunkSize)
-      .setDataStreamStreamWindowSize(5 * chunkSize)
-      .build();
+        .setNumDatanodes(5)
+        .setTotalPipelineNumLimit(10)
+        .setBlockSize(blockSize)
+        .setChunkSize(chunkSize)
+        .setStreamBufferFlushSize(flushSize)
+        .setStreamBufferMaxSize(maxFlushSize)
+        .setDataStreamBufferFlushize(maxFlushSize)
+        .setStreamBufferSizeUnit(StorageUnit.BYTES)
+        .setDataStreamMinPacketSize(chunkSize)
+        .setDataStreamStreamWindowSize(5 * chunkSize)
+        .build();
     cluster.waitForClusterToBeReady();
     client = cluster.newClient();
-
-    // create a volume and a bucket to be used by OzoneFileSystem
-    bucket = TestDataUtil.createVolumeAndBucket(client, layout);
   }
 
-  @After
-  public void tearDown() {
+  @BeforeEach
+  void init() throws IOException {
+    // create a volume and a bucket to be used by OzoneFileSystem
+    bucket = TestDataUtil.createVolumeAndBucket(client, bucketLayout);
+  }
+
+  @AfterAll
+  void tearDown() {
     IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
@@ -106,7 +109,7 @@ public class TestLeaseRecovery {
   }
 
   @Test
-  public void testRecovery() throws Exception {
+  void testRecovery() throws Exception {
     // Set the fs.defaultFS
     final String rootPath = String.format("%s://%s/",
         OZONE_OFS_URI_SCHEME, conf.get(OZONE_OM_ADDRESS_KEY));
@@ -130,7 +133,7 @@ public class TestLeaseRecovery {
       Thread.sleep(1000);
     }
     // The lease should have been recovered.
-    assertTrue("File should be closed", fs.recoverLease(file));
+    assertTrue(fs.recoverLease(file), "File should be closed");
     assertTrue(fs.isFileClosed(file));
     // open it again, make sure the data is correct
     byte[] readData = new byte[1 << 20];
@@ -142,7 +145,7 @@ public class TestLeaseRecovery {
   }
 
   @Test
-  public void testOBSRecoveryShouldFail() throws Exception {
+  void testOBSRecoveryShouldFail() throws Exception {
     // Set the fs.defaultFS
     bucket = TestDataUtil.createVolumeAndBucket(client,
         "vol2", "obs", BucketLayout.OBJECT_STORE);
