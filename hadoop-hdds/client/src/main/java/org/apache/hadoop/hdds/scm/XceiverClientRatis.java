@@ -206,6 +206,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private void closeRaftClient(RaftClient raftClient) {
     try {
+      LOG.debug("Closing connection to pipeline:{} datanode:{}",
+          getPipeline().getId(),
+          RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
       raftClient.close();
     } catch (IOException e) {
       throw new IllegalStateException(e);
