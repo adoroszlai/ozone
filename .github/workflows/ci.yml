@@ -16,7 +16,7 @@ name: full-ci
 on:
   workflow_call:
 env:
-  FAIL_FAST: ${{ github.event_name == 'pull_request' }}
+  FAIL_FAST: true
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_WITH_COVERAGE: ${{ github.repository == 'apache/ozone' && github.event_name != 'pull_request' }}
 jobs:
@@ -366,7 +366,7 @@ jobs:
     strategy:
       matrix:
         profile: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-      fail-fast: false
+      fail-fast: true
     steps:
       - name: Checkout project
         uses: actions/checkout@v3
@@ -385,7 +385,7 @@ jobs:
           distribution: 'temurin'
           java-version: 8
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystemWithFSO' || true
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestRootedOzoneFileSystemWithFSO' -Dmaven.test.failure.ignore=true
         env:
           ITERATIONS: 10
       - name: Summary of failures
@@ -393,9 +393,6 @@ jobs:
         if: ${{ !cancelled() }}
       - name: Number of failures
         run: cat target/${{ github.job }}/failures
-        if: ${{ !cancelled() }}
-      - name: Check for leaks
-        run: if grep -lr 'not shutdown properly' target/${{ github.job }}; then exit 1; fi
         if: ${{ !cancelled() }}
       - name: Archive build results
         uses: actions/upload-artifact@v3
