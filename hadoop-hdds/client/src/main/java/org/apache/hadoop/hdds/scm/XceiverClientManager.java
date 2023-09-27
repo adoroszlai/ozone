@@ -174,7 +174,7 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
     synchronized (clientCache) {
       XceiverClientSpi info = getClient(pipeline, read);
       info.incrementReference();
-      LOG.debug("Acquire {}", info);
+      LOG.debug("{} acquire {}", this, info);
       return info;
     }
   }
@@ -216,7 +216,7 @@ public class XceiverClientManager implements Closeable, XceiverClientFactory {
         }
       }
     }
-    LOG.debug("Release {} (invalidate:{})", client, invalidateClient);
+    LOG.debug("{} release {} (invalidate:{})", this, client, invalidateClient);
   }
 
   private XceiverClientSpi getClient(Pipeline pipeline, boolean forRead)
