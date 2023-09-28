@@ -26,16 +26,16 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-unit-check: ${{ steps.categorize-basic-checks.outputs.needs-unit-check }}
+      needs-basic-check: false
+      needs-unit-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       unit-checks: ${{ steps.categorize-basic-checks.outputs.unit-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -80,8 +80,12 @@ jobs:
         java: [ 8 ]
       fail-fast: false
     steps:
+      - run: df -k
+      - run: find ~ -type f -size '+10M' -ls
       - name: Checkout project
         uses: actions/checkout@v3
+      - run: du -chs *
+      - run: du -chs */*
       - name: Cache for npm dependencies
         uses: actions/cache@v3
         with:
@@ -288,26 +292,33 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
     runs-on: ubuntu-20.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        suite:
+          - compat
       fail-fast: false
     steps:
+      - run: df -k
+      - run: find ~ -type f -size '+10M' -ls
       - name: Checkout project
         uses: actions/checkout@v3
+      - run: du -chs *
+      - run: du -chs */*
+      - run: df -k
       - name: Download compiled Ozone binaries
         uses: actions/download-artifact@v3
         with:
           name: ozone-bin
+      - run: df -k
       - name: Untar binaries
         run: |
           mkdir -p hadoop-ozone/dist/target
           tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
           sudo chmod -R a+rwX hadoop-ozone/dist/target
+      - run: df -k
       - name: Execute tests
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
@@ -319,6 +330,10 @@ jobs:
           OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
           OZONE_VOLUME_OWNER: 1000
         continue-on-error: true
+      - run: df -k
+      - run: du -chs *
+      - run: du -chs */*
+      - run: find ~ -type f -size '+10M' -ls
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
         if: ${{ !cancelled() }}

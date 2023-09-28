@@ -183,6 +183,7 @@ execute_robot_test(){
       ${ARGUMENTS[@]} --log NONE --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" \
       "$SMOKETEST_DIR_INSIDE/$TEST"
   local -i rc=$?
+  df -k
 
   FULL_CONTAINER_NAME=$(docker-compose ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
   docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
@@ -190,6 +191,7 @@ execute_robot_test(){
   if [[ ${rc} -gt 0 ]] && [[ ${rc} -le 250 ]]; then
     create_stack_dumps
   fi
+  df -k
 
   set -e
 
