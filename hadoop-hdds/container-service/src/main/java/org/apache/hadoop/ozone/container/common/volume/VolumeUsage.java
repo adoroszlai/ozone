@@ -57,10 +57,6 @@ public class VolumeUsage {
     return source.snapshot();
   }
 
-  public long getCapacity() {
-    return Math.max(source.getCapacity() - reservedInBytes, 0);
-  }
-
   /**
    * Calculate available space use method B.
    * |----used----|   (avail)   |++++++++reserved++++++++|
@@ -69,10 +65,6 @@ public class VolumeUsage {
    *                      remainingReserved
    * B) avail = fsAvail - Max(reserved - other, 0);
    */
-  public long getAvailable() {
-    return source.getAvailable() - getRemainingReserved();
-  }
-
   public long getUsedSpace() {
     return source.getUsedSpace();
   }
@@ -102,24 +94,13 @@ public class VolumeUsage {
    * so there could be that DU value > totalUsed when there are deletes.
    * @return other used space
    */
-  private long getOtherUsed() {
-    long totalUsed = source.getCapacity() - source.getAvailable();
-    return Math.max(totalUsed - source.getUsedSpace(), 0L);
+  private static long getOtherUsed(SpaceUsageSource usage) {
+    long totalUsed = usage.getCapacity() - usage.getAvailable();
+    return Math.max(totalUsed - usage.getUsedSpace(), 0L);
   }
 
-  private static long getOtherUsed(SpaceUsageSource precomputedVolumeSpace) {
-    long totalUsed = precomputedVolumeSpace.getCapacity() -
-        precomputedVolumeSpace.getAvailable();
-    return Math.max(totalUsed - precomputedVolumeSpace.getUsedSpace(), 0L);
-  }
-
-  private long getRemainingReserved() {
-    return Math.max(reservedInBytes - getOtherUsed(), 0L);
-  }
-
-  private long getRemainingReserved(
-      SpaceUsageSource precomputedVolumeSpace) {
-    return Math.max(reservedInBytes - getOtherUsed(precomputedVolumeSpace), 0L);
+  private long getRemainingReserved(SpaceUsageSource usage) {
+    return Math.max(reservedInBytes - getOtherUsed(usage), 0L);
   }
 
   public synchronized void start() {

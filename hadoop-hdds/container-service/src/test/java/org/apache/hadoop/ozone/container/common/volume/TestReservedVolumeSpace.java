@@ -64,7 +64,7 @@ public class TestReservedVolumeSpace {
     float percentage = conf.getFloat(HDDS_DATANODE_DIR_DU_RESERVED_PERCENT,
         HDDS_DATANODE_DIR_DU_RESERVED_PERCENT_DEFAULT);
 
-    long volumeCapacity = hddsVolume.getCapacity();
+    long volumeCapacity = hddsVolume.getCurrentUsage().getCapacity();
     VolumeUsage usage = hddsVolume.getVolumeInfo().get().getUsageForTesting();
 
     //Gets the actual total capacity
