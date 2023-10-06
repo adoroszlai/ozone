@@ -57,7 +57,7 @@ public interface SpaceUsageSource {
     private final long available;
     private final long used;
 
-    Fixed(long capacity, long available, long used) {
+    public Fixed(long capacity, long available, long used) {
       this.capacity = capacity;
       this.available = available;
       this.used = used;

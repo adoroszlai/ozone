@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.ozone.container.common.volume;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.fs.CachingSpaceUsageSource;
 import org.apache.hadoop.hdds.fs.SpaceUsageCheckParams;
 import org.apache.hadoop.hdds.fs.SpaceUsageSource;
+import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,17 +40,25 @@ public class VolumeUsage {
 
   private final CachingSpaceUsageSource source;
   private boolean shutdownComplete;
-  private long reservedInBytes;
+  private final long reservedInBytes;
 
   private static final Logger LOG = LoggerFactory.getLogger(VolumeUsage.class);
 
-  VolumeUsage(SpaceUsageCheckParams checkParams) {
+  VolumeUsage(SpaceUsageCheckParams checkParams, ConfigurationSource conf) {
     source = new CachingSpaceUsageSource(checkParams);
+    reservedInBytes = VolumeInfo.getReserved(conf, checkParams.getPath(),
+        source.getCapacity());
+    Preconditions.assertTrue(reservedInBytes >= 0, reservedInBytes + " < 0");
     start(); // TODO should start only on demand
   }
 
+  @VisibleForTesting
+  SpaceUsageSource realUsage() {
+    return source.snapshot();
+  }
+
   public long getCapacity() {
-    return Math.max(source.getCapacity(), 0);
+    return Math.max(source.getCapacity() - reservedInBytes, 0);
   }
 
   /**
@@ -63,17 +73,19 @@ public class VolumeUsage {
     return source.getAvailable() - getRemainingReserved();
   }
 
-  public long getAvailable(SpaceUsageSource precomputedVolumeSpace) {
-    long available = precomputedVolumeSpace.getAvailable();
-    return available - getRemainingReserved(precomputedVolumeSpace);
-  }
-
   public long getUsedSpace() {
     return source.getUsedSpace();
   }
 
   public SpaceUsageSource snapshot() {
-    return source.snapshot();
+    SpaceUsageSource real = source.snapshot();
+
+    return reservedInBytes == 0
+        ? real
+        : new SpaceUsageSource.Fixed(
+            real.getCapacity() - reservedInBytes,
+            real.getAvailable() - getRemainingReserved(real),
+            real.getUsedSpace());
   }
 
   public void incrementUsedSpace(long usedSpace) {
@@ -95,10 +107,10 @@ public class VolumeUsage {
     return Math.max(totalUsed - source.getUsedSpace(), 0L);
   }
 
-  private long getOtherUsed(SpaceUsageSource precomputedVolumeSpace) {
+  private static long getOtherUsed(SpaceUsageSource precomputedVolumeSpace) {
     long totalUsed = precomputedVolumeSpace.getCapacity() -
         precomputedVolumeSpace.getAvailable();
-    return Math.max(totalUsed - source.getUsedSpace(), 0L);
+    return Math.max(totalUsed - precomputedVolumeSpace.getUsedSpace(), 0L);
   }
 
   private long getRemainingReserved() {
@@ -125,8 +137,8 @@ public class VolumeUsage {
     source.refreshNow();
   }
 
-  public void setReserved(long reserved) {
-    this.reservedInBytes = reserved;
+  public long getReservedBytes() {
+    return reservedInBytes;
   }
 
   /**

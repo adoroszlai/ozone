@@ -100,8 +100,6 @@ public final class VolumeInfo {
   // Space usage calculator
   private final VolumeUsage usage;
 
-  private long reservedInBytes;
-
   /**
    * Builder for VolumeInfo.
    */
@@ -131,7 +129,8 @@ public final class VolumeInfo {
     }
   }
 
-  private long getReserved(ConfigurationSource conf) {
+  static long getReserved(ConfigurationSource conf, String rootDir,
+      long capacity) {
     if (conf.isConfigured(HDDS_DATANODE_DIR_DU_RESERVED_PERCENT)
         && conf.isConfigured(HDDS_DATANODE_DIR_DU_RESERVED)) {
       LOG.error("Both {} and {} are set. Set either one, not both. If the " +
@@ -169,7 +168,7 @@ public final class VolumeInfo {
       float percentage = conf.getFloat(HDDS_DATANODE_DIR_DU_RESERVED_PERCENT,
           HDDS_DATANODE_DIR_DU_RESERVED_PERCENT_DEFAULT);
       if (0 <= percentage && percentage <= 1) {
-        return (long) Math.ceil(this.usage.getCapacity() * percentage);
+        return (long) Math.ceil(capacity * percentage);
       }
       //If it comes here then the percentage is not between 0-1.
       LOG.error("The value of {} should be between 0 to 1. Defaulting to 0.",
@@ -202,13 +201,11 @@ public final class VolumeInfo {
     SpaceUsageCheckParams checkParams =
         usageCheckFactory.paramsFor(root);
 
-    this.usage = new VolumeUsage(checkParams);
-    this.reservedInBytes = getReserved(b.conf);
-    this.usage.setReserved(reservedInBytes);
+    usage = new VolumeUsage(checkParams, b.conf);
   }
 
   public long getCapacity() {
-    return Math.max(usage.getCapacity() - reservedInBytes, 0);
+    return usage.getCapacity();
   }
 
   /**
@@ -219,13 +216,7 @@ public final class VolumeInfo {
    * A) avail = capacity - used
    */
   public long getAvailable() {
-    long avail = getCapacity() - usage.getUsedSpace();
-    return Math.max(Math.min(avail, usage.getAvailable()), 0);
-  }
-
-  public long getAvailable(SpaceUsageSource precomputedValues) {
-    long avail = precomputedValues.getCapacity() - usage.getUsedSpace();
-    return Math.max(Math.min(avail, usage.getAvailable(precomputedValues)), 0);
+    return usage.getAvailable();
   }
 
   public SpaceUsageSource getCurrentUsage() {
@@ -268,8 +259,7 @@ public final class VolumeInfo {
     return usage;
   }
 
-  @VisibleForTesting
   public long getReservedInBytes() {
-    return reservedInBytes;
+    return usage.getReservedBytes();
   }
 }
