@@ -45,6 +45,8 @@ public interface SpaceUsageSource {
     return new Fixed(getCapacity(), getAvailable(), getUsedSpace());
   }
 
+  SpaceUsageSource UNKNOWN = new Fixed(0, 0, 0);
+
   /**
    * A static source of space usage.  Can be a point in time snapshot of a
    * real volume usage, or can be used for testing.
