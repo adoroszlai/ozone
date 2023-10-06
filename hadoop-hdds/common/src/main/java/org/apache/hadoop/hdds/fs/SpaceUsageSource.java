@@ -40,4 +40,36 @@ public interface SpaceUsageSource {
   long getCapacity();
 
   long getAvailable();
+
+  /**
+   * A static source of space usage.  Can be a point in time snapshot of a
+   * real volume usage, or can be used for testing.
+   */
+  final class Fixed implements SpaceUsageSource {
+
+    private final long capacity;
+    private final long available;
+    private final long used;
+
+    Fixed(long capacity, long available, long used) {
+      this.capacity = capacity;
+      this.available = available;
+      this.used = used;
+    }
+
+    @Override
+    public long getCapacity() {
+      return capacity;
+    }
+
+    @Override
+    public long getAvailable() {
+      return available;
+    }
+
+    @Override
+    public long getUsedSpace() {
+      return used;
+    }
+  }
 }
