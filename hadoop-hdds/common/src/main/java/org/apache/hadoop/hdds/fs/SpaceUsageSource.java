@@ -41,6 +41,10 @@ public interface SpaceUsageSource {
 
   long getAvailable();
 
+  default SpaceUsageSource snapshot() {
+    return new Fixed(getCapacity(), getAvailable(), getUsedSpace());
+  }
+
   /**
    * A static source of space usage.  Can be a point in time snapshot of a
    * real volume usage, or can be used for testing.
@@ -70,6 +74,11 @@ public interface SpaceUsageSource {
     @Override
     public long getUsedSpace() {
       return used;
+    }
+
+    @Override
+    public SpaceUsageSource snapshot() {
+      return this; // immutable
     }
   }
 }
