@@ -325,16 +325,11 @@ jobs:
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
           sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          popd
-          ./hadoop-ozone/dev-support/checks/acceptance.sh
+          cd compose/ozone
+          ./disabled-test-s3-haproxy.sh
         env:
           KEEP_IMAGE: false
-          OZONE_ACCEPTANCE_SUITE: misc
           OZONE_VOLUME_OWNER: 1000
-        continue-on-error: true
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
