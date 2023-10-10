@@ -204,17 +204,6 @@ public final class VolumeInfo {
     usage = new VolumeUsage(checkParams, b.conf);
   }
 
-  /**
-   * Calculate available space use method A.
-   * |----used----|   (avail)   |++++++++reserved++++++++|
-   * |<-     capacity         ->|
-   *
-   * A) avail = capacity - used
-   */
-  public long getAvailable() {
-    return getCurrentUsage().getAvailable();
-  }
-
   public SpaceUsageSource getCurrentUsage() {
     return usage.snapshot();
   }
@@ -229,10 +218,6 @@ public final class VolumeInfo {
 
   public void refreshNow() {
     usage.refreshNow();
-  }
-
-  public long getScmUsed() {
-    return usage.getUsedSpace();
   }
 
   void shutdownUsageThread() {

@@ -65,10 +65,6 @@ public class VolumeUsage {
    *                      remainingReserved
    * B) avail = fsAvail - Max(reserved - other, 0);
    */
-  public long getUsedSpace() {
-    return source.getUsedSpace();
-  }
-
   public SpaceUsageSource snapshot() {
     SpaceUsageSource real = source.snapshot();
 
