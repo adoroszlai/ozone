@@ -205,7 +205,7 @@ public final class VolumeInfo {
   }
 
   public SpaceUsageSource getCurrentUsage() {
-    return usage.snapshot();
+    return usage.getCurrentUsage();
   }
 
   public void incrementUsedSpace(long usedSpace) {
