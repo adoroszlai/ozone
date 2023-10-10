@@ -72,7 +72,7 @@ public class VolumeUsage {
         ? real
         : new SpaceUsageSource.Fixed(
             real.getCapacity() - reservedInBytes,
-            real.getAvailable() - getRemainingReserved(real),
+            Math.max(real.getAvailable() - getRemainingReserved(real), 0),
             real.getUsedSpace());
   }
 
