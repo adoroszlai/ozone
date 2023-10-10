@@ -30,12 +30,14 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageSize;
 import org.apache.hadoop.hdds.fs.MockSpaceUsageCheckFactory;
+import org.apache.hadoop.hdds.fs.MockSpaceUsageSource;
 import org.apache.hadoop.hdds.fs.SpaceUsageCheckFactory;
 import org.apache.hadoop.hdds.fs.SpaceUsagePersistence;
 import org.apache.hadoop.hdds.fs.SpaceUsageSource;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 
 import static org.apache.hadoop.hdds.fs.MockSpaceUsagePersistence.inMemory;
@@ -46,7 +48,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.ozone.container.common.ContainerTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.DatanodeVersionFile;
@@ -293,7 +294,8 @@ public class TestHddsVolume {
     // so, other = max((500 - 290 - 300, 0) = 0
     // actual other = 10(system usage)
     // A = 500 - 100 - 300 = 100, B = 290 - max((100 - 0), 0) = 190
-    SpaceUsageSource spaceUsage = fixed(500, 290, 300);
+    AtomicLong usedSpace = new AtomicLong(300);
+    SpaceUsageSource spaceUsage = MockSpaceUsageSource.of(500, usedSpace);
     SpaceUsageCheckFactory factory = MockSpaceUsageCheckFactory.of(
         spaceUsage, Duration.ZERO, inMemory(new AtomicLong(0)));
     volumeBuilder.usageCheckFactory(factory);
@@ -511,7 +513,7 @@ public class TestHddsVolume {
 
     try {
       // In case of failed volume, metrics should not throw
-      MetricsCollector collector = mock(MetricsCollector.class);
+      MetricsCollector collector = new MetricsCollectorImpl();
       volumeInfoMetrics.getMetrics(collector, true);
     } finally {
       // Shutdown the volume.
