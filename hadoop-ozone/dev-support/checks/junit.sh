@@ -41,12 +41,12 @@ else
   MAVEN_OPTIONS="${MAVEN_OPTIONS} --fail-at-end"
 fi
 
-if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
-  mvn ${MAVEN_OPTIONS} -DskipTests clean install
-fi
-
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 mkdir -p "$REPORT_DIR"
+
+if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
+  mvn ${MAVEN_OPTIONS} -DskipTests clean install > "${REPORT_DIR}/output.log"
+fi
 
 rc=0
 for i in $(seq 1 ${ITERATIONS}); do
@@ -57,7 +57,7 @@ for i in $(seq 1 ${ITERATIONS}); do
   fi
 
   mvn ${MAVEN_OPTIONS} "$@" test \
-    | tee "${REPORT_DIR}/output.log"
+    | tee -a "${REPORT_DIR}/output.log"
   irc=$?
 
   # shellcheck source=hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
