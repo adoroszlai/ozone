@@ -161,6 +161,7 @@ function ozonecmd_case
       OZONE_CLASSNAME=org.apache.hadoop.ozone.shell.OzoneShell
       ozone_deprecate_envvar HDFS_OM_SH_OPTS OZONE_SH_OPTS
       OZONE_SH_OPTS="${OZONE_SH_OPTS} ${OZONE_MODULE_ACCESS_ARGS}"
+      OZONE_SH_OPTS="${OZONE_SH_OPTS} -Xlog:class+init"
       OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
     s3)
