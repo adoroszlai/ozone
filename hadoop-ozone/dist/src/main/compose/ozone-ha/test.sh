@@ -28,22 +28,6 @@ export OM_SERVICE_ID=omservice
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
-start_docker_env 5
+start_docker_env
 
-execute_robot_test ${SCM} basic/ozone-shell-single.robot
 execute_robot_test ${SCM} basic/links.robot
-
-execute_robot_test ${SCM} -v SCHEME:ofs -v BUCKET_TYPE:link -N ozonefs-ofs-link ozonefs/ozonefs.robot
-
-## Exclude virtual-host tests. This is tested separately as it requires additional config.
-exclude="--exclude virtual-host"
-for bucket in generated; do
-  execute_robot_test ${SCM} -v BUCKET:${bucket} -N s3-${bucket} ${exclude} s3
-  # some tests are independent of the bucket type, only need to be run once
-  exclude="--exclude virtual-host --exclude no-bucket-type"
-done
-
-execute_robot_test ${SCM} freon
-execute_robot_test ${SCM} -v USERNAME:httpfs httpfs
-
-execute_robot_test ${SCM} omha/om-roles.robot

@@ -308,6 +308,7 @@ jobs:
       matrix:
         suite:
           - HA-secure
+          - HA-unsecure
       fail-fast: false
     steps:
       - name: Checkout project
