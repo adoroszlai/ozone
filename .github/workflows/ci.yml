@@ -431,7 +431,7 @@ jobs:
         run: |
           ls -lah ${{ steps.download-ozone-repo.outputs.download-path }} || true
           if [[ -e "${{ steps.download-ozone-repo.outputs.download-path }}" ]]; then
-            OZONE_REPO_CACHED=true
+            export OZONE_REPO_CACHED=true
           fi
 
           args=

@@ -45,7 +45,8 @@ fi
 if [[ "${CHECK}" == "integration" ]] || [[ ${ITERATIONS} -gt 1 ]]; then
   echo "OZONE_REPO_CACHED: $OZONE_REPO_CACHED"
   if [[ ${OZONE_REPO_CACHED} == "false" ]]; then
-    mvn ${MAVEN_OPTIONS} -DskipTests clean install
+    # mvn ${MAVEN_OPTIONS} -DskipTests clean install
+    :
   fi
 fi
 
