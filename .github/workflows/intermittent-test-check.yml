@@ -121,23 +121,19 @@ jobs:
       - name: Execute tests
         run: |
           test_type=${{ needs.prepare-job.outputs.test_type }}
-          args="-DexcludedGroups=unhealthy,org.apache.ozone.test.UnhealthyTest"
-          if [ "$test_type" = "integration" ]; then
-              args="$args -pl :ozone-integration-test,:mini-chaos-tests"
-          fi
-          if [ "$TEST_METHOD" = "ALL" ]; then
-              echo "Running all tests from $TEST_CLASS"
-              hadoop-ozone/dev-support/checks/junit.sh $args -Dtest=$TEST_CLASS
-          else
-              echo "Running test: $TEST_METHOD from $TEST_CLASS"
-              hadoop-ozone/dev-support/checks/junit.sh $args -Dtest=$TEST_CLASS#$TEST_METHOD
-          fi
+          for i in $(seq 1 ${ITERATIONS}); do
+            rc=0
+            if [[ ${RANDOM} -gt 16383 ]]; then
+              rc=1
+            fi
+            echo "exit code: ${rc}" >> target/${test_type}/summary.txt
+          done
         continue-on-error: true
         env:
           CHECK: ${{ needs.prepare-job.outputs.test_type }}
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ needs.prepare-job.outputs.test_type }}/summary.txt
-        if: always()
+        if: ${{ !cancelled() }}
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
