@@ -101,6 +101,9 @@ jobs:
         split: ${{fromJson(needs.prepare-job.outputs.matrix)}}  # Define  splits
       fail-fast: ${{ fromJson(github.event.inputs.fail-fast) }}
     steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
       - name: Simulate failures
         run: |
           test_type=${{ needs.prepare-job.outputs.test_type }}
