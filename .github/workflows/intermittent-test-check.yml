@@ -150,3 +150,12 @@ jobs:
           rm -rf ~/.m2/repository/org/apache/ozone/hdds*
           rm -rf ~/.m2/repository/org/apache/ozone/ozone*
         if: always()
+  count-failures:
+    needs: run-test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download build results
+        uses: actions/download-artifact@v3
+      - name: Count failures
+        run: |
+          find . -name 'summary.txt' | xargs grep -v 'exit code: 0' | wc -l
