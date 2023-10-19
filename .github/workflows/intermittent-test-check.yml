@@ -121,6 +121,7 @@ jobs:
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ needs.prepare-job.outputs.test_type }}/summary.txt
         if: ${{ !cancelled() }}
+        continue-on-error: true
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
@@ -141,4 +142,9 @@ jobs:
         uses: actions/download-artifact@v3
       - name: Count failures
         run: |
-          find . -name 'summary.txt' | xargs grep -v 'exit code: 0' | wc -l
+          find . -name 'summary.txt' | xargs grep -v 'exit code: 0'
+          failures=$(find . -name 'summary.txt' | xargs grep -v 'exit code: 0' | wc -l)
+          echo "Total failures: $failures"
+          if [[ $failures -gt 0 ]]; then
+            exit 1
+          fi
