@@ -23,7 +23,7 @@ jobs:
   debug:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
-    if: github.event_name != 'pull_request' && !contains(github.ref, 'dependabot')
+    if: github.event_name != 'pull_request' && !startsWith(github.ref_name, 'dependabot')
     steps:
       - run: |
           echo ${{ github.ref }}
