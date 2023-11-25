@@ -26,16 +26,16 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-unit-check: ${{ steps.categorize-basic-checks.outputs.needs-unit-check }}
+      needs-basic-check: false
+      needs-unit-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       unit-checks: ${{ steps.categorize-basic-checks.outputs.unit-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
+      needs-compile: false
+      needs-compose-tests: false
+      needs-dependency-check: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -398,22 +398,18 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
     runs-on: ubuntu-20.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
-        profile:
-          - client
-          - contract
-          - filesystem
-          - hdds
-          - om
-          - ozone
-          - scm
-          - shell
-          - flaky
+        profile: [ 1, 2, 3, 4, 5 ]
+        method:
+          - testInstallIncrementalSnapshot
+          - testInstallIncrementalSnapshotWithFailure
+          - testInstallSnapshotWithClientWrite
+          - testInstallSnapshotWithClientRead
+          - testInstallOldCheckpointFailure
+          - testInstallCorruptedCheckpointFailure
       fail-fast: false
     steps:
       - name: Checkout project
@@ -452,9 +448,10 @@ jobs:
             args="-Dsurefire.rerunFailingTestsCount=5 -Dsurefire.fork.timeout=3600"
           fi
 
-          hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }} ${args}
+          hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestOMRatisSnapshots#${{ matrix.method }}' ${args}
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
+          ITERATIONS: 20
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
         if: ${{ !cancelled() }}
@@ -462,7 +459,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: it-${{ matrix.profile }}
+          name: it-${{ matrix.method }}-${{ matrix.profile }}
           path: target/integration
         continue-on-error: true
       - name: Delete temporary build artifacts before caching
