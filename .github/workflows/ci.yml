@@ -19,6 +19,7 @@ env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_WITH_COVERAGE: ${{ github.repository == 'apache/ozone' && github.event_name != 'pull_request' }}
+  ITERATIONS: 20
 jobs:
   build-info:
     runs-on: ubuntu-20.04
@@ -451,7 +452,6 @@ jobs:
           hadoop-ozone/dev-support/checks/integration.sh -Dtest='TestOMRatisSnapshots#${{ matrix.method }}' ${args}
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
-          ITERATIONS: 20
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
         if: ${{ !cancelled() }}
