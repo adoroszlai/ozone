@@ -26,6 +26,8 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -34,6 +36,9 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 @InterfaceAudience.Private
 @Metrics(about = "DB checkpoint Metrics", context = "dfs")
 public class DBCheckpointMetrics {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBCheckpointMetrics.class);
   private static final String SOURCE_NAME =
       DBCheckpointMetrics.class.getSimpleName();
 
@@ -47,6 +52,7 @@ public class DBCheckpointMetrics {
   private @Metric MutableCounterLong numIncrementalCheckpoints;
 
   public DBCheckpointMetrics() {
+    LOG.info("ZZZ new {}", this);
   }
 
   public static DBCheckpointMetrics create(String parent) {
@@ -72,6 +78,8 @@ public class DBCheckpointMetrics {
   }
 
   public void setLastCheckpointStreamingNumSSTExcluded(long val) {
+    LOG.info("ZZZ {} lastCheckpoint  excluded: {}", this,
+        lastCheckpointStreamingNumSSTExcluded.value() + " -> " + val);
     this.lastCheckpointStreamingNumSSTExcluded.set(val);
   }
 
