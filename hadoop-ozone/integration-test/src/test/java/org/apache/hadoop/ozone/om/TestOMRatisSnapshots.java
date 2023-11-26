@@ -258,7 +258,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 100, 30_000);
+    }, 100, 10000);
 
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
@@ -294,7 +294,7 @@ public class TestOMRatisSnapshots {
     // Verify RPC server is running
     GenericTestUtils.waitFor(() -> {
       return followerOM.isOmRpcServerRunning();
-    }, 100, 30_000);
+    }, 100, 5000);
 
     assertLogCapture(logCapture,
         "Install Checkpoint is finished");
@@ -418,7 +418,7 @@ public class TestOMRatisSnapshots {
     // Wait the follower download the snapshot,but get stuck by injector
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
-    }, 1000, 30_000);
+    }, 1000, 10000);
 
     // Get two incremental tarballs, adding new keys/snapshot for each.
     IncrementData firstIncrement = getNextIncrementalTarball(160, 2, leaderOM,
@@ -443,7 +443,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 1000, 30_000);
+    }, 1000, 30000);
 
     assertEquals(3, followerOM.getOmSnapshotProvider().getNumDownloaded());
     // Verify that the follower OM's DB contains the transactions which were
@@ -478,7 +478,7 @@ public class TestOMRatisSnapshots {
     // Verify RPC server is running
     GenericTestUtils.waitFor(() -> {
       return followerOM.isOmRpcServerRunning();
-    }, 100, 30_000);
+    }, 100, 5000);
 
     // Read & Write after snapshot installed.
     List<String> newKeys = writeKeys(1);
@@ -491,7 +491,7 @@ public class TestOMRatisSnapshots {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }, 100, 30_000);
+    }, 100, 10000);
 
     // Verify follower candidate directory get cleaned
     String[] filesInCandidate = followerOM.getOmSnapshotProvider().
@@ -550,7 +550,7 @@ public class TestOMRatisSnapshots {
     // by injector
     GenericTestUtils.waitFor(() ->
         followerOM.getOmSnapshotProvider().getNumDownloaded() ==
-        expectedNumDownloads, 1000, 30_000);
+        expectedNumDownloads, 1000, 10000);
 
     assertTrue(followerOM.getOmRatisServer().
         getLastAppliedTermIndex().getIndex()
@@ -625,7 +625,7 @@ public class TestOMRatisSnapshots {
     // Wait the follower download the snapshot,but get stuck by injector
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
-    }, 1000, 30_000);
+    }, 1000, 10000);
 
     // Do some transactions, let leader OM take a new snapshot and purge the
     // old logs, so that follower must download the new snapshot again.
@@ -642,7 +642,7 @@ public class TestOMRatisSnapshots {
     // by injector
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
-    }, 1000, 30_000);
+    }, 1000, 10000);
 
     // Corrupt the mixed checkpoint in the candidate DB dir
     File followerCandidateDir = followerOM.getOmSnapshotProvider().
@@ -673,7 +673,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 1000, 30_000);
+    }, 1000, 10000);
 
     // Verify that the follower OM's DB contains the transactions which were
     // made while it was inactive.
@@ -700,25 +700,25 @@ public class TestOMRatisSnapshots {
       DBCheckpointMetrics dbMetrics =
           leaderOM.getMetrics().getDBCheckpointMetrics();
       return dbMetrics.getLastCheckpointStreamingNumSSTExcluded() == 0;
-    }, 100, 30_000);
+    }, 100, 10000);
 
     GenericTestUtils.waitFor(() -> {
       DBCheckpointMetrics dbMetrics =
           leaderOM.getMetrics().getDBCheckpointMetrics();
       return dbMetrics.getNumIncrementalCheckpoints() >= 1;
-    }, 100, 30_000);
+    }, 100, 10000);
 
     GenericTestUtils.waitFor(() -> {
       DBCheckpointMetrics dbMetrics =
           leaderOM.getMetrics().getDBCheckpointMetrics();
       return dbMetrics.getNumCheckpoints() >= 3;
-    }, 100, 30_000);
+    }, 100, 10000);
     */
 
     // Verify RPC server is running
     GenericTestUtils.waitFor(() -> {
       return followerOM.isOmRpcServerRunning();
-    }, 100, 30_000);
+    }, 100, 5000);
 
     // Read & Write after snapshot installed.
     List<String> newKeys = writeKeys(1);
@@ -731,7 +731,7 @@ public class TestOMRatisSnapshots {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }, 100, 30_000);
+    }, 100, 10000);
 
     // Verify follower candidate directory get cleaned
     String[] filesInCandidate = followerOM.getOmSnapshotProvider().
@@ -790,7 +790,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 100, 30_000);
+    }, 100, 3000);
 
     // Verify checkpoint installation was happened.
     String msg = "Reloaded OM state";
@@ -894,7 +894,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 100, 30_000);
+    }, 100, 3000);
 
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
@@ -1112,7 +1112,7 @@ public class TestOMRatisSnapshots {
       throws InterruptedException, TimeoutException {
     GenericTestUtils.waitFor(() -> {
       return logCapture.getOutput().contains(msg);
-    }, 100, 30_000);
+    }, 100, 5000);
   }
 
   // Returns temp dir where tarball was untarred.
