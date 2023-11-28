@@ -303,7 +303,6 @@ Apache License 2.0
    com.squareup.okio:okio
    com.sun.xml.fastinfoset:FastInfoset
    commons-beanutils:commons-beanutils
-   commons-cli:commons-cli
    commons-codec:commons-codec
    commons-collections:commons-collections
    commons-daemon:commons-daemon

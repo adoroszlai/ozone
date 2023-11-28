@@ -17,7 +17,6 @@ share/ozone/lib/bonecp.RELEASE.jar
 share/ozone/lib/cdi-api.jar
 share/ozone/lib/checker-qual.jar
 share/ozone/lib/commons-beanutils.jar
-share/ozone/lib/commons-cli.jar
 share/ozone/lib/commons-codec.jar
 share/ozone/lib/commons-collections.jar
 share/ozone/lib/commons-compress.jar
