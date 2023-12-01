@@ -4257,7 +4257,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.ec.grpc.zerocopy.enabled</name>
+    <name>ozone.ec.grpc.zero-copy.enabled</name>
     <value>true</value>
     <tag>OZONE, DATANODE</tag>
     <description>

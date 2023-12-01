@@ -57,20 +57,20 @@ public class GrpcXceiverService extends
   }
 
   /**
-   * Bind service with zerocopy marshaller equipped for the `send` API if
-   * zerocopy is enabled.
+   * Bind service with zero-copy marshaller equipped for the `send` API if
+   * zero-copy is enabled.
    * @return  service definition.
    */
-  public ServerServiceDefinition bindServiceWithZerocopy() {
+  public ServerServiceDefinition bindServiceWithZeroCopy() {
     ServerServiceDefinition orig = super.bindService();
     if (!zeroCopyEnabled) {
-      LOG.info("Zerocopy is not enabled.");
+      LOG.info("Zero-copy is not enabled.");
       return orig;
     }
 
     ServerServiceDefinition.Builder builder =
         ServerServiceDefinition.builder(orig.getServiceDescriptor().getName());
-    // Add `send` method with zerocopy marshaller.
+    // Add `send` method with zero-copy marshaller.
     addZeroCopyMethod(orig, builder, getSendMethod(),
         zeroCopyMessageMarshaller);
     // Add other methods as is.
