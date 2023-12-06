@@ -349,7 +349,7 @@ public abstract class TestContainerScannerIntegrationAbstract {
       RANDOM.nextBytes(corruptedBytes);
       try {
         Files.write(file.toPath(), corruptedBytes,
-            StandardOpenOption.TRUNCATE_EXISTING);
+            StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.SYNC);
       } catch (IOException ex) {
         // Fail the test.
         throw new UncheckedIOException(ex);
@@ -362,7 +362,7 @@ public abstract class TestContainerScannerIntegrationAbstract {
     private static void truncateFile(File file) {
       try {
         Files.write(file.toPath(), new byte[]{},
-            StandardOpenOption.TRUNCATE_EXISTING);
+            StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.SYNC);
       } catch (IOException ex) {
         // Fail the test.
         throw new UncheckedIOException(ex);
