@@ -45,7 +45,7 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - name: Compile Ozone using Java ${{ matrix.java }}
-        run: hadoop-ozone/dev-support/checks/build.sh -X -Dskip.npx -Dskip.installnpx -DskipShade -Djavac.version=${{ matrix.java }}
+        run: hadoop-ozone/dev-support/checks/build.sh -X -Dskip.npx -Dskip.installnpx -DskipShade -Djavac.version=${{ matrix.java }} -am -pl :ozone-common
         env:
           OZONE_WITH_COVERAGE: false
       - name: Delete temporary build artifacts before caching
