@@ -47,6 +47,7 @@ import org.apache.hadoop.ozone.container.metadata.DatanodeStore;
 import org.apache.hadoop.ozone.container.metadata.SchemaOneDeletedBlocksTable;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.ozone.test.GenericTestUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -132,6 +133,12 @@ public class TestSchemaOneBackwardsCompatibility {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         metadataDir.getAbsolutePath());
   }
+
+  @AfterEach
+  void cleanup() {
+    BlockUtils.shutdownCache(conf);
+  }
+
 
   /**
    * Because all tables in schema version one map back to the default table,
