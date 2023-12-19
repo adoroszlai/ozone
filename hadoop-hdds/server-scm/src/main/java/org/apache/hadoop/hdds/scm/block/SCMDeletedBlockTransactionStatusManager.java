@@ -317,14 +317,18 @@ public class SCMDeletedBlockTransactionStatusManager {
       Instant now = Instant.now();
       for (Long scmCmdId : scmCmdIds) {
         Instant updateTime = getUpdateTime(dnId, scmCmdId);
-        if (updateTime != null &&
-            Duration.between(updateTime, now).toMillis() > timeoutMs) {
-          CmdStatusData state = removeScmCommand(dnId, scmCmdId);
-          LOG.warn("Remove Timeout SCM BlockDeletionCommand {} for DN {} " +
-              "after without update {}ms}", state, dnId, timeoutMs);
+        if (updateTime == null) {
+          LOG.debug("No update yet for SCM command id={} for DN {}", scmCmdId, dnId);
         } else {
-          LOG.warn("Timeout SCM scmCmdIds {} for DN {} " +
-              "after without update {}ms}", scmCmdIds, dnId, timeoutMs);
+          final long sinceLastUpdate = Duration.between(updateTime, now).toMillis();
+          if (sinceLastUpdate> timeoutMs) {
+            CmdStatusData state = removeScmCommand(dnId, scmCmdId);
+            LOG.warn("Removed SCM command id={} (state={}) sent to DN {}, no update for {} (since {})",
+                scmCmdId, state, dnId, sinceLastUpdate, updateTime);
+          } else {
+            LOG.debug("SCM command id={} sent to DN {} waiting for response after {} (since {})",
+                scmCmdId, dnId, sinceLastUpdate, updateTime);
+          }
         }
       }
     }
