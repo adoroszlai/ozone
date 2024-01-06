@@ -51,13 +51,16 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils;
 import org.apache.ozone.test.GenericTestUtils;
+import org.apache.ozone.test.LifecycleLogger;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.assertj.core.api.Fail;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -104,7 +107,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests the Ratis snapshots feature in OM.
  */
 @Timeout(5000)
-public class TestOMRatisSnapshots {
+@TestMethodOrder(MethodOrderer.Random.class)
+public class TestOMRatisSnapshots implements LifecycleLogger {
 
   private MiniOzoneHAClusterImpl cluster = null;
   private ObjectStore objectStore;
