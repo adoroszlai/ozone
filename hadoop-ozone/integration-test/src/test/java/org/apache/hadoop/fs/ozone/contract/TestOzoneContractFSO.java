@@ -18,30 +18,23 @@
 package org.apache.hadoop.fs.ozone.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
-import java.io.IOException;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT;
+import static org.apache.hadoop.ozone.om.helpers.BucketLayout.FILE_SYSTEM_OPTIMIZED;
 
-/**
- * Ozone contract tests for {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer}.
- */
-public class ITestOzoneContractUnbuffer extends AbstractContractUnbufferTest {
+class TestOzoneContractFSO extends AbstractOzoneContractTest {
 
-  @BeforeClass
-  public static void createCluster() throws IOException {
-    OzoneContract.createCluster();
-  }
-
-  @AfterClass
-  public static void teardownCluster() throws IOException {
-    OzoneContract.destroyCluster();
+  @Override
+  OzoneConfiguration createOzoneConfig() {
+    OzoneConfiguration conf = createBaseConfiguration();
+    conf.set(OZONE_DEFAULT_BUCKET_LAYOUT, FILE_SYSTEM_OPTIMIZED.name());
+    return conf;
   }
 
   @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new OzoneContract(conf);
+  AbstractFSContract createOzoneContract(Configuration conf) {
+    return new OzoneContract(getCluster());
   }
 }

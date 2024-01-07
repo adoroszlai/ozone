@@ -25,24 +25,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.TestDataUtil;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClient;
 
-import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.junit.Assert;
 
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT;
-import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT;
-
 /**
- * FS contract for O3FS.
+ * The contract of Rooted Ozone FileSystem (OFS).
  */
-public class OzoneContract extends AbstractFSContract {
+public class RootedOzoneContract extends AbstractFSContract {
 
   private final MiniOzoneCluster cluster;
 
-  OzoneContract(MiniOzoneCluster cluster) {
+  RootedOzoneContract(MiniOzoneCluster cluster) {
     super(cluster.getConf());
     this.cluster = cluster;
     addConfResource(AbstractOzoneContractTest.CONTRACT_XML);
@@ -50,12 +43,12 @@ public class OzoneContract extends AbstractFSContract {
 
   @Override
   public String getScheme() {
-    return OzoneConsts.OZONE_URI_SCHEME;
+    return OzoneConsts.OZONE_OFS_URI_SCHEME;
   }
 
   @Override
   public Path getTestPath() {
-    return new Path("/test");
+    return new Path("/testvol1/testbucket1/test");
   }
 
   @Override
@@ -63,15 +56,10 @@ public class OzoneContract extends AbstractFSContract {
     //assumes cluster is not null
     Assert.assertNotNull("cluster not created", cluster);
 
-    try (OzoneClient client = cluster.newClient()) {
-      BucketLayout layout = BucketLayout.fromString(
-          getConf().get(OZONE_DEFAULT_BUCKET_LAYOUT, OZONE_DEFAULT_BUCKET_LAYOUT_DEFAULT));
-      OzoneBucket bucket = TestDataUtil.createVolumeAndBucket(client, layout);
-
-      String uri = String.format("%s://%s.%s/",
-          getScheme(), bucket.getName(), bucket.getVolumeName());
-      getConf().set("fs.defaultFS", uri);
-    }
+    String uri = String.format("%s://localhost:%s/",
+        getScheme(),
+        cluster.getOzoneManager().getRpcPort());
+    getConf().set("fs.defaultFS", uri);
 
     return FileSystem.get(getConf());
   }

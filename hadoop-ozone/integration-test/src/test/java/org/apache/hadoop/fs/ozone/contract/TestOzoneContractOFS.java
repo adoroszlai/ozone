@@ -15,34 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.ozone.contract.rooted;
+package org.apache.hadoop.fs.ozone.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
-import java.io.IOException;
+class TestOzoneContractOFS extends AbstractOzoneContractTest {
 
-/**
- * Ozone contract tests for {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer}.
- */
-public class ITestRootedOzoneContractUnbuffer
-    extends AbstractContractUnbufferTest {
-
-  @BeforeClass
-  public static void createCluster() throws IOException {
-    RootedOzoneContract.createCluster();
-  }
-
-  @AfterClass
-  public static void teardownCluster() {
-    RootedOzoneContract.destroyCluster();
+  @Override
+  OzoneConfiguration createOzoneConfig() {
+    return createBaseConfiguration();
   }
 
   @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new RootedOzoneContract(conf);
+  AbstractFSContract createOzoneContract(Configuration conf) {
+    return new RootedOzoneContract(getCluster());
   }
 }
