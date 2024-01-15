@@ -799,9 +799,10 @@ public class TestStorageContainerManager {
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         StaticMapping.class, DNSToSwitchMapping.class);
     conf.set(DFS_DATANODE_HOST_NAME_KEY, "localhost");
-    StaticMapping.addNodeToRack(NetUtils.normalizeHostNames(
-        Collections.singleton(HddsUtils.getHostName(conf))).get(0),
-        "/rack1");
+    String name = HddsUtils.getHostName(conf);
+    String normalizedName = NetUtils.normalizeHostNames(Collections.singleton(name)).get(0);
+    StaticMapping.addNodeToRack(normalizedName, "/rack1");
+    LOG.info("ZZZ add node to rack1: {} -> {}", name, normalizedName);
 
     final int datanodeNum = 3;
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -827,8 +828,8 @@ public class TestStorageContainerManager {
         DatanodeInfo datanodeInfo = (DatanodeInfo) scm.getScmNodeManager()
             .getNodeByUuid(node.getUuidString());
         assertTrue(datanodeInfo.getLastHeartbeatTime() > start);
-        assertEquals(datanodeInfo.getUuidString(),
-            datanodeInfo.getNetworkName());
+        LOG.info("ZZZ verify node: {} -> {}", datanodeInfo, datanodeInfo.getNetworkLocation());
+        assertEquals(datanodeInfo.getUuidString(), datanodeInfo.getNetworkName());
         assertEquals("/rack1", datanodeInfo.getNetworkLocation());
       }
     } finally {
