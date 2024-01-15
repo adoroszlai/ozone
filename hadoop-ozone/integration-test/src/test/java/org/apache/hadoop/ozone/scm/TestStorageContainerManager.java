@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.scm;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -70,7 +72,6 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdds.server.events.FixedThreadPoolWithAffinityExecutor;
 import org.apache.hadoop.hdds.utils.HddsVersionInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -115,7 +116,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -133,7 +133,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
-import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION;
@@ -798,11 +797,11 @@ public class TestStorageContainerManager {
     String scmId = UUID.randomUUID().toString();
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         StaticMapping.class, DNSToSwitchMapping.class);
-    conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
-    String name = HddsUtils.getHostName(conf);
-    String normalizedName = NetUtils.normalizeHostNames(Collections.singleton(name)).get(0);
-    StaticMapping.addNodeToRack(normalizedName, "/rack1");
-    LOG.info("ZZZ add node to rack1: {} -> {}", name, normalizedName);
+    String hostname = HddsUtils.getHostName(conf);
+    String ip = InetAddress.getByName(hostname).getHostAddress();
+    StaticMapping.addNodeToRack(hostname, "/rack1");
+    StaticMapping.addNodeToRack(ip, "/rack1");
+    LOG.info("ZZZ add node to rack1: {} -> {}", hostname, ip);
 
     final int datanodeNum = 3;
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
