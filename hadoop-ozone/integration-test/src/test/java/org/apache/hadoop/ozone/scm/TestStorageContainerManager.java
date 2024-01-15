@@ -798,7 +798,7 @@ public class TestStorageContainerManager {
     String scmId = UUID.randomUUID().toString();
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         StaticMapping.class, DNSToSwitchMapping.class);
-    conf.set(DFS_DATANODE_HOST_NAME_KEY, "localhost");
+    conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
     String name = HddsUtils.getHostName(conf);
     String normalizedName = NetUtils.normalizeHostNames(Collections.singleton(name)).get(0);
     StaticMapping.addNodeToRack(normalizedName, "/rack1");
