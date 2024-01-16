@@ -133,6 +133,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.hdds.DFSConfigKeysLegacy.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_CREATION;
@@ -797,11 +798,13 @@ public class TestStorageContainerManager {
     String scmId = UUID.randomUUID().toString();
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         StaticMapping.class, DNSToSwitchMapping.class);
+    conf.set(DFS_DATANODE_HOST_NAME_KEY, GenericTestUtils.PortAllocator.HOSTNAME);
     String hostname = HddsUtils.getHostName(conf);
     String ip = InetAddress.getByName(hostname).getHostAddress();
-    StaticMapping.addNodeToRack(hostname, "/rack1");
-    StaticMapping.addNodeToRack(ip, "/rack1");
-    LOG.info("ZZZ add node to rack1: {} -> {}", hostname, ip);
+    String rack = "/rack1";
+    StaticMapping.addNodeToRack(GenericTestUtils.PortAllocator.HOSTNAME, rack);
+    StaticMapping.addNodeToRack(hostname, rack);
+    StaticMapping.addNodeToRack(ip, rack);
 
     final int datanodeNum = 3;
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -827,9 +830,8 @@ public class TestStorageContainerManager {
         DatanodeInfo datanodeInfo = (DatanodeInfo) scm.getScmNodeManager()
             .getNodeByUuid(node.getUuidString());
         assertTrue(datanodeInfo.getLastHeartbeatTime() > start);
-        LOG.info("ZZZ verify node: {} -> {}", datanodeInfo, datanodeInfo.getNetworkLocation());
         assertEquals(datanodeInfo.getUuidString(), datanodeInfo.getNetworkName());
-        assertEquals("/rack1", datanodeInfo.getNetworkLocation());
+        assertEquals(rack, datanodeInfo.getNetworkLocation());
       }
     } finally {
       cluster.shutdown();
