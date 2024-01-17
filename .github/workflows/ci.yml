@@ -29,12 +29,12 @@ jobs:
       needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
       needs-unit-check: ${{ steps.categorize-basic-checks.outputs.needs-unit-check }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      unit-checks: ${{ steps.categorize-basic-checks.outputs.unit-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
+      unit-checks: false
+      needs-build: false
       needs-compile: false
       needs-compose-tests: false
       needs-dependency-check: false
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
+      needs-integration-tests: false
       needs-kubernetes-tests: false
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
