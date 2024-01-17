@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdds;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Various reusable utility methods related to Java.
  */
@@ -34,6 +36,23 @@ public final class JavaUtils {
    */
   public static boolean isJavaVersionAtLeast(int version) {
     return JAVA_SPEC_VER >= version;
+  }
+
+  @SuppressWarnings({"BusyWait", "ReassignedVariable", "UnusedAssignment"})
+  public static void gc() {
+    // use WeakReference to detect gc
+    Object obj = new Object();
+    final WeakReference<Object> weakRef = new WeakReference<>(obj);
+    obj = null;
+
+    try {
+      // loop until gc has completed.
+      while (weakRef.get() != null) {
+        System.gc();
+        Thread.sleep(100);
+      }
+    } catch (InterruptedException ignored) {
+    }
   }
 
   /**

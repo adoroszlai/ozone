@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.utils.db;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.JavaUtils;
 import org.apache.hadoop.hdds.StringUtils;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedCheckpoint;
@@ -764,11 +765,14 @@ public final class RocksDatabase implements Closeable {
 
   public ManagedRocksIterator newIterator(ColumnFamily family,
       boolean fillCache) throws IOException {
+    final ManagedRocksIterator iterator;
     try (UncheckedAutoCloseable ignored = acquire();
          ManagedReadOptions readOptions = new ManagedReadOptions()) {
       readOptions.setFillCache(fillCache);
-      return managed(db.get().newIterator(family.getHandle(), readOptions));
+      iterator = managed(db.get().newIterator(family.getHandle(), readOptions));
     }
+    JavaUtils.gc();
+    return iterator;
   }
 
   public void batchWrite(ManagedWriteBatch writeBatch,
