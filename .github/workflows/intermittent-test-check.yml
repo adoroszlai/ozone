@@ -139,6 +139,14 @@ jobs:
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ needs.prepare-job.outputs.test_type }}/summary.txt
         if: ${{ !cancelled() }}
+      - name: Collect logs for cancelled test
+        run: |
+          set -x
+          hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
+        if: ${{ cancelled() }}
+        env:
+          CHECK: ${{ needs.prepare-job.outputs.test_type }}
+          REPORT_DIR: target/${{ needs.prepare-job.outputs.test_type }}/cancelled
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
