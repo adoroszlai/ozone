@@ -40,7 +40,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMNotLeaderException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
-import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.hadoop.ozone.om.snapshot.ReferenceCounted;
 import org.apache.hadoop.ozone.om.snapshot.SnapshotCache;
 import org.apache.hadoop.ozone.snapshot.SnapshotDiffReportOzone;
@@ -123,12 +122,6 @@ public class TestSnapshotBackgroundServices {
         StorageUnit.KB);
     conf.setStorageSize(OMConfigKeys.
         OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY, 16, StorageUnit.KB);
-
-    OzoneManagerRatisServerConfig omRatisConf =
-        conf.getObject(OzoneManagerRatisServerConfig.class);
-    omRatisConf.setLogAppenderWaitTimeMin(10);
-    conf.setFromObject(omRatisConf);
-
     if ("testSSTFilteringBackgroundService".equals(testInfo.getDisplayName())) {
       conf.setTimeDuration(OZONE_SNAPSHOT_SST_FILTERING_SERVICE_INTERVAL, 1,
           TimeUnit.SECONDS);
