@@ -96,6 +96,7 @@ jobs:
     needs: prepare-job
     name: Run-Split
     runs-on: ubuntu-20.04
+    timeout-minutes: 30
     strategy:
       matrix:
         split: ${{fromJson(needs.prepare-job.outputs.matrix)}}  # Define  splits
@@ -141,8 +142,9 @@ jobs:
         if: ${{ !cancelled() }}
       - name: Collect logs for cancelled test
         run: |
-          mkdir -p $REPORT_DIR
           set -x
+          mkdir -pv $REPORT_DIR
+          mv -iv $(find hadoop-hdds hadoop-ozone -type f -path '*/surefire-reports/*') $REPORT_DIR/
           hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
         if: ${{ cancelled() }}
         env:
