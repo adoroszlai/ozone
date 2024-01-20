@@ -167,7 +167,7 @@ jobs:
           fi
 
           test_type=${{ needs.prepare-job.outputs.test_type }}
-          args="-DexcludedGroups=unhealthy"
+          args="-DexcludedGroups=slow,unhealthy"
           if [ "$test_type" = "integration" ]; then
               args="$args -pl :ozone-integration-test,:mini-chaos-tests"
           fi
