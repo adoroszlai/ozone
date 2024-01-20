@@ -61,6 +61,7 @@ import org.apache.ozone.test.tag.Flaky;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +69,7 @@ import org.slf4j.LoggerFactory;
  * Test OM prepare against actual mini cluster.
  */
 @Flaky("HDDS-5990")
+@Timeout(300)
 public class TestOzoneManagerPrepare extends TestOzoneManagerHA {
   private static final String BUCKET = "bucket";
   private static final String VOLUME = "volume";
