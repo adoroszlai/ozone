@@ -141,6 +141,7 @@ jobs:
         if: ${{ !cancelled() }}
       - name: Collect logs for cancelled test
         run: |
+          mkdir -p $REPORT_DIR
           set -x
           hadoop-ozone/dev-support/checks/_mvn_unit_report.sh
         if: ${{ cancelled() }}
