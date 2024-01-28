@@ -290,7 +290,7 @@ public class TestSCMNodeManager {
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL,
         1, TimeUnit.DAYS);
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       assertTrue(scm.checkLeader());
       // Register 2 nodes correctly.
       // These will be used with a faulty node to test pipeline creation.
@@ -382,6 +382,7 @@ public class TestSCMNodeManager {
 
     // node sends incorrect layout.
     nodeManager.processHeartbeat(node, layout);
+    fastForward(1000, nodeManager);
 
     // Its pipelines should be closed then removed, meaning there is not
     // enough nodes for factor 3 pipelines.
@@ -405,7 +406,7 @@ public class TestSCMNodeManager {
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL,
         1, TimeUnit.DAYS);
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       assertTrue(scm.checkLeader());
       // Nodes with mismatched SLV cannot join the cluster.
       registerWithCapacity(nodeManager,
@@ -447,6 +448,7 @@ public class TestSCMNodeManager {
       // Heartbeat bad MLV nodes back to healthy.
       nodeManager.processHeartbeat(badMlvNode1, CORRECT_LAYOUT_PROTO);
       nodeManager.processHeartbeat(badMlvNode2, CORRECT_LAYOUT_PROTO);
+      fastForward(100, nodeManager);
 
       // After moving out of healthy readonly, pipeline creation should be
       // triggered.
@@ -519,7 +521,7 @@ public class TestSCMNodeManager {
       }
 
       return success;
-    }, 1000, 10000);
+    }, 100, 10000);
   }
 
   /**
