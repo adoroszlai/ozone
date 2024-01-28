@@ -140,7 +140,7 @@ public class TestSCMNodeManager {
       LoggerFactory.getLogger(TestSCMNodeManager.class);
 
   private File testDir;
-  private TestClock clock;
+  private TestClock testClock;
   private StorageContainerManager scm;
   private SCMContext scmContext;
 
@@ -162,7 +162,7 @@ public class TestSCMNodeManager {
   void setup() {
     testDir = PathUtils.getTestDir(
         TestSCMNodeManager.class);
-    clock = TestClock.newInstance();
+    testClock = TestClock.newInstance();
   }
 
   @AfterEach
@@ -199,7 +199,7 @@ public class TestSCMNodeManager {
    */
   private SCMNodeManager createNodeManager(OzoneConfiguration config)
       throws IOException, AuthenticationException {
-    SCMNodeManager nodeManager = createNodeManager(config, clock);
+    SCMNodeManager nodeManager = createNodeManager(config, testClock);
     nodeManager.getNodeStateManager().pause();
     return nodeManager;
   }
@@ -251,23 +251,23 @@ public class TestSCMNodeManager {
   @Test
   void testGetLastHeartbeatTimeDiff() throws Exception {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      String timeNow = nodeManager.getLastHeartbeatTimeDiff(clock.millis());
+      String timeNow = nodeManager.getLastHeartbeatTimeDiff(testClock.millis());
       assertEquals("Just now", timeNow);
 
-      String time1s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 10000);
+      String time1s = nodeManager.getLastHeartbeatTimeDiff(testClock.millis() - 10000);
       assertEquals("10s ago", time1s);
 
-      String time1m = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 60000);
+      String time1m = nodeManager.getLastHeartbeatTimeDiff(testClock.millis() - 60000);
       assertEquals("1m ago", time1m);
 
-      String time1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 70000);
+      String time1m10s = nodeManager.getLastHeartbeatTimeDiff(testClock.millis() - 70000);
       assertEquals("1m 10s ago", time1m10s);
 
       // 1h 1m 10s
       // 10000ms = 10s
       // 60000ms = 1m
       // 60000ms * 60 = 3600000ms = 1h
-      String time1h1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 3670000);
+      String time1h1m10s = nodeManager.getLastHeartbeatTimeDiff(testClock.millis() - 3670000);
       assertEquals("1h 1m 10s ago", time1h1m10s);
 
       // 1d 1h 1m 10s
@@ -275,7 +275,7 @@ public class TestSCMNodeManager {
       // 60000ms = 1m
       // 60000ms * 60 = 3600000ms = 1h
       // 3600000ms * 24 = 86400000ms = 1d
-      String time1d1h1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 90070000);
+      String time1d1h1m10s = nodeManager.getLastHeartbeatTimeDiff(testClock.millis() - 90070000);
       assertEquals("1d 1h 1m 10s ago", time1d1h1m10s);
     }
   }
@@ -647,7 +647,7 @@ public class TestSCMNodeManager {
           versionManager.getMetadataLayoutVersion(),
           versionManager.getSoftwareLayoutVersion());
 
-      long expiry = clock.millis() / 1000 + 1000;
+      long expiry = testClock.millis() / 1000 + 1000;
       nodeManager.setNodeOperationalState(dn,
           HddsProtos.NodeOperationalState.ENTERING_MAINTENANCE, expiry);
 
@@ -832,7 +832,7 @@ public class TestSCMNodeManager {
       assertEquals(0, nodeManager.getSkippedHealthChecks(),
           "Unexpected, already skipped heartbeat checks");
 
-      clock.fastForward(MILLISECONDS.convert(staleNodeInterval, SECONDS));
+      testClock.fastForward(MILLISECONDS.convert(staleNodeInterval, SECONDS));
       nodeManager.getNodeStateManager().run();
 
       assertThat(nodeManager.getSkippedHealthChecks())
@@ -862,7 +862,7 @@ public class TestSCMNodeManager {
     assertThat(total).isGreaterThanOrEqualTo(checkInterval);
 
     while (total > 0) {
-      clock.fastForward(checkInterval);
+      testClock.fastForward(checkInterval);
       nodeManager.getNodeStateManager().checkNodesHealth();
       total -= checkInterval;
     }
@@ -901,7 +901,7 @@ public class TestSCMNodeManager {
     nodeManagerContext.setFinalizationCheckpoint(currentCheckpoint);
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        nodeManagerContext, lvm, clock, hostname -> null);
+        nodeManagerContext, lvm, testClock, hostname -> null);
 
     // Regardless of SCM's finalization checkpoint, datanodes with higher MLV
     // than SCM should not be found in the cluster.
@@ -936,7 +936,7 @@ public class TestSCMNodeManager {
     nodeManagerContext.setFinalizationCheckpoint(currentCheckpoint);
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        nodeManagerContext, lvm, clock, hostname -> null);
+        nodeManagerContext, lvm, testClock, hostname -> null);
     DatanodeDetails node1 =
         HddsTestUtils.createRandomDatanodeAndRegister(nodeManager);
     verify(eventPublisher,
@@ -979,7 +979,7 @@ public class TestSCMNodeManager {
     createNodeManager(getConf());
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        scmContext, lvm, clock, hostname -> null);
+        scmContext, lvm, testClock, hostname -> null);
     LayoutVersionProto layoutInfo = toLayoutVersionProto(
         lvm.getMetadataLayoutVersion(), lvm.getSoftwareLayoutVersion());
 
