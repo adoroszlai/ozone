@@ -35,13 +35,13 @@ import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.container.upgrade.UpgradeUtils;
 import org.apache.hadoop.ozone.upgrade.LayoutVersionManager;
-import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -72,6 +72,7 @@ public class TestNodeStateManager {
   private SCMContext scmContext;
   private int scmSlv;
   private int scmMlv;
+  private final Clock clock = Clock.systemUTC();
 
   @BeforeEach
   public void setUp() {
@@ -103,7 +104,7 @@ public class TestNodeStateManager {
     when(mockVersionManager.getMetadataLayoutVersion()).thenReturn(scmMlv);
     when(mockVersionManager.getSoftwareLayoutVersion()).thenReturn(scmSlv);
     nsm = new NodeStateManager(conf, eventPublisher, mockVersionManager,
-        scmContext);
+        scmContext, clock);
   }
 
   @Test
@@ -150,7 +151,7 @@ public class TestNodeStateManager {
   @Test
   public void testNodesMarkedDeadAndStale()
       throws NodeAlreadyExistsException, NodeNotFoundException {
-    long now = Time.monotonicNow();
+    long now = clock.millis();
 
     // Set the dead and stale limits to be 1 second larger than configured
     long staleLimit = HddsServerUtil.getStaleNodeInterval(conf) + 1000;
@@ -183,7 +184,7 @@ public class TestNodeStateManager {
   @Test
   public void testNodeCanTransitionThroughHealthStatesAndFiresEvents()
       throws NodeAlreadyExistsException, NodeNotFoundException {
-    long now = Time.monotonicNow();
+    long now = clock.millis();
 
     // Set the dead and stale limits to be 1 second larger than configured
     long staleLimit = HddsServerUtil.getStaleNodeInterval(conf) + 1000;
@@ -311,7 +312,7 @@ public class TestNodeStateManager {
 
     // Now make the node stale and run through all states again ensuring the
     // stale event gets fired
-    long now = Time.monotonicNow();
+    long now = clock.millis();
     long staleLimit = HddsServerUtil.getStaleNodeInterval(conf) + 1000;
     long deadLimit = HddsServerUtil.getDeadNodeInterval(conf) + 1000;
     DatanodeInfo dni = nsm.getNode(dn);

@@ -72,6 +72,7 @@ import java.io.IOException;
 import java.math.RoundingMode;
 import java.net.InetAddress;
 import java.text.DecimalFormat;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -117,6 +118,7 @@ public class SCMNodeManager implements NodeManager {
       LoggerFactory.getLogger(SCMNodeManager.class);
 
   private final NodeStateManager nodeStateManager;
+  private final Clock clock;
   private final VersionInfo version;
   private final CommandQueue commandQueue;
   private final SCMNodeMetrics metrics;
@@ -156,9 +158,10 @@ public class SCMNodeManager implements NodeManager {
       SCMContext scmContext,
       HDDSLayoutVersionManager layoutVersionManager) {
     this(conf, scmStorageConfig, eventPublisher, networkTopology, scmContext,
-        layoutVersionManager, hostname -> null);
+        layoutVersionManager, Clock.systemUTC(), hostname -> null);
   }
 
+  @SuppressWarnings("parameternumber")
   public SCMNodeManager(
       OzoneConfiguration conf,
       SCMStorageConfig scmStorageConfig,
@@ -166,10 +169,12 @@ public class SCMNodeManager implements NodeManager {
       NetworkTopology networkTopology,
       SCMContext scmContext,
       HDDSLayoutVersionManager layoutVersionManager,
+      Clock clock,
       Function<String, String> nodeResolver) {
     this.scmNodeEventPublisher = eventPublisher;
+    this.clock = clock;
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher,
-        layoutVersionManager, scmContext);
+        layoutVersionManager, scmContext, clock);
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
     this.scmStorageConfig = scmStorageConfig;
@@ -1215,7 +1220,7 @@ public class SCMNodeManager implements NodeManager {
    * @return string with the relative value of the time diff.
    */
   public String getLastHeartbeatTimeDiff(long lastHeartbeatTime) {
-    long currentTime = Time.monotonicNow();
+    long currentTime = clock.millis();
     long timeDiff = currentTime - lastHeartbeatTime;
 
     // Time is in ms. Calculate total time in seconds.

@@ -37,6 +37,8 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.upgrade.UpgradeFinalizationExecutor;
 
+import java.time.Clock;
+
 /**
  * This class acts as an SCM builder Class. This class is important for us
  * from a resilience perspective of SCM. This class will allow us swap out
@@ -81,6 +83,7 @@ public final class SCMConfigurator {
   private UpgradeFinalizationExecutor<SCMUpgradeFinalizationContext>
       finalizationExecutor;
   private LeaseManager<Object> leaseManager;
+  private Clock clock;
 
   /**
    * Allows user to specify a version of Node manager to use with this SCM.
@@ -317,5 +320,13 @@ public final class SCMConfigurator {
    */
   public LeaseManager<Object> getLeaseManager() {
     return leaseManager;
+  }
+
+  public Clock getClock() {
+    return clock;
+  }
+
+  public void setClock(Clock clock) {
+    this.clock = clock;
   }
 }

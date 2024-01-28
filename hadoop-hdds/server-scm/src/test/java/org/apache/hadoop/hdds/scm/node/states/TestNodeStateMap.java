@@ -58,7 +58,7 @@ public class TestNodeStateMap {
       throws NodeAlreadyExistsException, NodeNotFoundException {
     DatanodeDetails dn = generateDatanode();
     NodeStatus status = NodeStatus.inServiceHealthy();
-    map.addNode(dn, status, null);
+    map.addNode(dn.getUuid(), () -> new DatanodeInfo(dn, status, null));
     assertEquals(dn, map.getNodeInfo(dn.getUuid()));
     assertEquals(status, map.getNodeStatus(dn.getUuid()));
   }
@@ -68,7 +68,7 @@ public class TestNodeStateMap {
       throws NodeAlreadyExistsException, NodeNotFoundException {
     DatanodeDetails dn = generateDatanode();
     NodeStatus status = NodeStatus.inServiceHealthy();
-    map.addNode(dn, status, null);
+    map.addNode(dn.getUuid(), () -> new DatanodeInfo(dn, status, null));
 
     NodeStatus expectedStatus = NodeStatus.inServiceStale();
     NodeStatus returnedStatus =
@@ -82,7 +82,7 @@ public class TestNodeStateMap {
       throws NodeAlreadyExistsException, NodeNotFoundException {
     DatanodeDetails dn = generateDatanode();
     NodeStatus status = NodeStatus.inServiceHealthy();
-    map.addNode(dn, status, null);
+    map.addNode(dn.getUuid(), () -> new DatanodeInfo(dn, status, null));
 
     NodeStatus expectedStatus = new NodeStatus(
         NodeOperationalState.DECOMMISSIONING,
@@ -131,9 +131,9 @@ public class TestNodeStateMap {
     final DatanodeDetails datanodeDetails =
         MockDatanodeDetails.randomDatanodeDetails();
 
-    map.addNode(datanodeDetails, NodeStatus.inServiceHealthy(), null);
-
     UUID dnUuid = datanodeDetails.getUuid();
+
+    map.addNode(dnUuid, () -> new DatanodeInfo(datanodeDetails, NodeStatus.inServiceHealthy(), null));
 
     map.addContainer(dnUuid, ContainerID.valueOf(1L));
     map.addContainer(dnUuid, ContainerID.valueOf(2L));
@@ -170,7 +170,7 @@ public class TestNodeStateMap {
   )
       throws NodeAlreadyExistsException {
     NodeStatus status = new NodeStatus(opState, health);
-    map.addNode(dn, status, null);
+    map.addNode(dn.getUuid(), () -> new DatanodeInfo(dn, status, null));
   }
 
   private void addRandomNodeWithState(

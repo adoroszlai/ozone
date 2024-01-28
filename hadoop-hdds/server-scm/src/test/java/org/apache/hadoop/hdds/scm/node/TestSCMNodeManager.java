@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.node;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,8 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -48,6 +47,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManagerImpl;
+import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
@@ -76,9 +76,9 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.upgrade.LayoutVersionManager;
 import org.apache.hadoop.ozone.protocol.commands.SetNodeOperationalStateCommand;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.util.Time;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.ozone.test.TestClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,6 +140,7 @@ public class TestSCMNodeManager {
       LoggerFactory.getLogger(TestSCMNodeManager.class);
 
   private File testDir;
+  private TestClock clock;
   private StorageContainerManager scm;
   private SCMContext scmContext;
 
@@ -158,13 +159,14 @@ public class TestSCMNodeManager {
       toLayoutVersionProto(MAX_LV, MAX_LV);
 
   @BeforeEach
-  public void setup() {
+  void setup() {
     testDir = PathUtils.getTestDir(
         TestSCMNodeManager.class);
+    clock = TestClock.newInstance();
   }
 
   @AfterEach
-  public void cleanup() {
+  void cleanup() {
     if (scm != null) {
       scm.stop();
       scm.join();
@@ -194,12 +196,20 @@ public class TestSCMNodeManager {
    *
    * @param config - Config for the node manager.
    * @return SCNNodeManager
-   * @throws IOException
    */
-
-  SCMNodeManager createNodeManager(OzoneConfiguration config)
+  private SCMNodeManager createNodeManager(OzoneConfiguration config)
       throws IOException, AuthenticationException {
-    scm = HddsTestUtils.getScm(config);
+    SCMNodeManager nodeManager = createNodeManager(config, clock);
+    nodeManager.getNodeStateManager().pause();
+    return nodeManager;
+  }
+
+  /** Create SCMNodeManager with custom clock. */
+  private SCMNodeManager createNodeManager(OzoneConfiguration config, Clock clock)
+      throws IOException, AuthenticationException {
+    SCMConfigurator configurator = HddsTestUtils.getScmConfigurator();
+    configurator.setClock(clock);
+    scm = HddsTestUtils.getScm(config, configurator);
     scmContext = new SCMContext.Builder().setIsInSafeMode(true)
         .setLeader(true).setIsPreCheckComplete(true)
         .setSCM(scm).build();
@@ -212,14 +222,10 @@ public class TestSCMNodeManager {
   /**
    * Tests that Node manager handles heartbeats correctly, and comes out of
    * safe Mode.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmHeartbeat()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmHeartbeat()
+      throws IOException, AuthenticationException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       LayoutVersionManager versionManager =
@@ -236,32 +242,32 @@ public class TestSCMNodeManager {
       }
 
       //TODO: wait for heartbeat to be processed
-      Thread.sleep(4 * 1000);
+      fastForward(4 * 1000, nodeManager);
       assertEquals(nodeManager.getAllNodes().size(), registeredNodes,
           "Heartbeat thread should have picked up the scheduled heartbeats.");
     }
   }
 
   @Test
-  public void testGetLastHeartbeatTimeDiff() throws Exception {
+  void testGetLastHeartbeatTimeDiff() throws Exception {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      String timeNow = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow());
+      String timeNow = nodeManager.getLastHeartbeatTimeDiff(clock.millis());
       assertEquals("Just now", timeNow);
 
-      String time1s = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow() - 10000);
+      String time1s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 10000);
       assertEquals("10s ago", time1s);
 
-      String time1m = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow() - 60000);
+      String time1m = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 60000);
       assertEquals("1m ago", time1m);
 
-      String time1m10s = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow() - 70000);
+      String time1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 70000);
       assertEquals("1m 10s ago", time1m10s);
 
       // 1h 1m 10s
       // 10000ms = 10s
       // 60000ms = 1m
       // 60000ms * 60 = 3600000ms = 1h
-      String time1h1m10s = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow() - 3670000);
+      String time1h1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 3670000);
       assertEquals("1h 1m 10s ago", time1h1m10s);
 
       // 1d 1h 1m 10s
@@ -269,7 +275,7 @@ public class TestSCMNodeManager {
       // 60000ms = 1m
       // 60000ms * 60 = 3600000ms = 1h
       // 3600000ms * 24 = 86400000ms = 1d
-      String time1d1h1m10s = nodeManager.getLastHeartbeatTimeDiff(Time.monotonicNow() - 90070000);
+      String time1d1h1m10s = nodeManager.getLastHeartbeatTimeDiff(clock.millis() - 90070000);
       assertEquals("1d 1h 1m 10s ago", time1d1h1m10s);
     }
   }
@@ -277,18 +283,14 @@ public class TestSCMNodeManager {
   /**
    * Tests that node manager handles layout version changes from heartbeats
    * correctly.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmLayoutOnHeartbeat() throws Exception {
+  void testScmLayoutOnHeartbeat() throws Exception {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL,
         1, TimeUnit.DAYS);
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
       assertTrue(scm.checkLeader());
       // Register 2 nodes correctly.
       // These will be used with a faulty node to test pipeline creation.
@@ -394,20 +396,16 @@ public class TestSCMNodeManager {
   /**
    * Tests that node manager handles layout versions for newly registered nodes
    * correctly.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmLayoutOnRegister()
+  void testScmLayoutOnRegister()
       throws Exception {
 
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL,
         1, TimeUnit.DAYS);
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
       assertTrue(scm.checkLeader());
       // Nodes with mismatched SLV cannot join the cluster.
       registerWithCapacity(nodeManager,
@@ -526,18 +524,14 @@ public class TestSCMNodeManager {
 
   /**
    * asserts that if we send no heartbeats node manager stays in safemode.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmNoHeartbeats()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmNoHeartbeats()
+      throws IOException, AuthenticationException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       //TODO: wait for heartbeat to be processed
-      Thread.sleep(4 * 1000);
+      fastForward(4 * 1000, nodeManager);
       assertEquals(0, nodeManager.getAllNodes().size(),
           "No heartbeats, 0 nodes should be registered");
     }
@@ -547,14 +541,10 @@ public class TestSCMNodeManager {
    * Asserts that adding heartbeats after shutdown does not work. This implies
    * that heartbeat thread has been shutdown safely by closing the node
    * manager.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmShutdown()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmShutdown()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);
@@ -571,7 +561,7 @@ public class TestSCMNodeManager {
     nodeManager.processHeartbeat(datanodeDetails, layoutInfo);
 
     // Let us just wait for 2 seconds to prove that HBs are not processed.
-    Thread.sleep(2 * 1000);
+    fastForward(2 * 1000, nodeManager);
 
     //TODO: add assertion
   }
@@ -579,14 +569,10 @@ public class TestSCMNodeManager {
   /**
    * Asserts that we detect as many healthy nodes as we have generated heartbeat
    * for.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmHealthyNodeCount()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmHealthyNodeCount()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int count = 10;
 
@@ -603,7 +589,7 @@ public class TestSCMNodeManager {
         nodeManager.processHeartbeat(datanodeDetails, layoutInfo);
       }
       //TODO: wait for heartbeat to be processed
-      Thread.sleep(4 * 1000);
+      fastForward(4 * 1000, nodeManager);
       assertEquals(count, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
 
       Map<String, Map<String, Integer>> nodeCounts = nodeManager.getNodeCount();
@@ -616,14 +602,9 @@ public class TestSCMNodeManager {
   /**
    * Asserts that if Stale Interval value is more than 5 times the value of HB
    * processing thread it is a sane value.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmSanityOfUserConfig2()
-      throws IOException, AuthenticationException {
+  void testScmSanityOfUserConfig2() throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int interval = 100;
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, interval,
@@ -644,7 +625,7 @@ public class TestSCMNodeManager {
    * operationalState of the node will be updated according to the heartbeat.
    */
   @Test
-  public void testSetNodeOpStateAndCommandFired()
+  void testSetNodeOpStateAndCommandFired()
       throws IOException, NodeNotFoundException, AuthenticationException {
     final int interval = 100;
 
@@ -666,7 +647,7 @@ public class TestSCMNodeManager {
           versionManager.getMetadataLayoutVersion(),
           versionManager.getSoftwareLayoutVersion());
 
-      long expiry = System.currentTimeMillis() / 1000 + 1000;
+      long expiry = clock.millis() / 1000 + 1000;
       nodeManager.setNodeOperationalState(dn,
           HddsProtos.NodeOperationalState.ENTERING_MAINTENANCE, expiry);
 
@@ -697,13 +678,10 @@ public class TestSCMNodeManager {
    * Asserts that a single node moves from Healthy to stale node, then from
    * stale node to dead node if it misses enough heartbeats.
    *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmDetectStaleAndDeadNode()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmDetectStaleAndDeadNode()
+      throws IOException, AuthenticationException {
     final int interval = 100;
     final int nodeCount = 10;
 
@@ -736,7 +714,7 @@ public class TestSCMNodeManager {
       }
 
       // Wait for 2 seconds .. and heartbeat good nodes again.
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
 
       for (DatanodeDetails dn : nodeList) {
         nodeManager.processHeartbeat(dn, layoutInfo);
@@ -744,7 +722,8 @@ public class TestSCMNodeManager {
 
       // Wait for 2 seconds, wait a total of 4 seconds to make sure that the
       // node moves into stale state.
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
+
       List<DatanodeDetails> staleNodeList =
           nodeManager.getNodes(NodeStatus.inServiceStale());
       assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceStale()),
@@ -759,7 +738,7 @@ public class TestSCMNodeManager {
           nodeCounts.get(HddsProtos.NodeOperationalState.IN_SERVICE.name())
               .get(HddsProtos.NodeState.STALE.name()).intValue());
 
-      Thread.sleep(1000);
+      fastForward(1000, nodeManager);
       // heartbeat good nodes again.
       for (DatanodeDetails dn : nodeList) {
         nodeManager.processHeartbeat(dn, layoutInfo);
@@ -767,7 +746,7 @@ public class TestSCMNodeManager {
 
       //  6 seconds is the dead window for this test , so we wait a total of
       // 7 seconds to make sure that the node moves into dead state.
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
 
       // the stale node has been removed
       staleNodeList = nodeManager.getNodes(NodeStatus.inServiceStale());
@@ -797,18 +776,14 @@ public class TestSCMNodeManager {
   /**
    * Simulate a JVM Pause by pausing the health check process
    * Ensure that none of the nodes with heartbeats become Dead or Stale.
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws AuthenticationException
    */
   @Test
-  public void testScmHandleJvmPause()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmHandleJvmPause()
+      throws IOException, AuthenticationException {
     final int healthCheckInterval = 200; // milliseconds
     final int heartbeatInterval = 1; // seconds
     final int staleNodeInterval = 3; // seconds
     final int deadNodeInterval = 6; // seconds
-    ScheduledFuture schedFuture;
 
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
@@ -835,13 +810,13 @@ public class TestSCMNodeManager {
       nodeManager.processHeartbeat(node2, layoutInfo);
 
       // Sleep so that heartbeat processing thread gets to run.
-      Thread.sleep(1000);
+      fastForward(healthCheckInterval, nodeManager);
 
       //Assert all nodes are healthy.
       assertEquals(2, nodeManager.getAllNodes().size());
       assertEquals(2,
           nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
-      /**
+      /*
        * Simulate a JVM Pause and subsequent handling in following steps:
        * Step 1 : stop heartbeat check process for stale node interval
        * Step 2 : resume heartbeat check
@@ -854,24 +829,15 @@ public class TestSCMNodeManager {
        * and node1 is HEALTHY
        */
 
-      // Step 1 : stop health check process (simulate JVM pause)
-      nodeManager.pauseHealthCheck();
-      Thread.sleep(MILLISECONDS.convert(staleNodeInterval, SECONDS));
-
-      // Step 2 : resume health check
       assertEquals(0, nodeManager.getSkippedHealthChecks(),
           "Unexpected, already skipped heartbeat checks");
-      schedFuture = nodeManager.unpauseHealthCheck();
 
-      // Step 3 : wait for 1 iteration of health check
-      try {
-        schedFuture.get();
-        assertThat(nodeManager.getSkippedHealthChecks())
-            .withFailMessage("We did not skip any heartbeat checks")
-            .isGreaterThan(0);
-      } catch (ExecutionException e) {
-        fail("Unexpected exception waiting for Scheduled Health Check");
-      }
+      clock.fastForward(MILLISECONDS.convert(staleNodeInterval, SECONDS));
+      nodeManager.getNodeStateManager().run();
+
+      assertThat(nodeManager.getSkippedHealthChecks())
+          .withFailMessage("We did not skip any heartbeat checks")
+          .isGreaterThan(0);
 
       // Step 4 : all nodes should still be HEALTHY
       assertEquals(2, nodeManager.getAllNodes().size());
@@ -881,7 +847,7 @@ public class TestSCMNodeManager {
       nodeManager.processHeartbeat(node1, layoutInfo);
 
       // Step 6 : wait for health check process to run
-      Thread.sleep(1000);
+      fastForward(1000, nodeManager);
 
       // Step 7 : node2 should transition to STALE
       assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
@@ -889,8 +855,21 @@ public class TestSCMNodeManager {
     }
   }
 
+  private void fastForward(long total, SCMNodeManager nodeManager) {
+    final long checkInterval = getConf()
+        .getTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100, MILLISECONDS);
+
+    assertThat(total).isGreaterThanOrEqualTo(checkInterval);
+
+    while (total > 0) {
+      clock.fastForward(checkInterval);
+      nodeManager.getNodeStateManager().checkNodesHealth();
+      total -= checkInterval;
+    }
+  }
+
   @Test
-  public void testProcessLayoutVersion() throws IOException {
+  void testProcessLayoutVersion() throws IOException {
     // TODO: Refactor this class to use org.junit.jupiter so test
     //  parameterization can be used.
     for (FinalizationCheckpoint checkpoint: FinalizationCheckpoint.values()) {
@@ -901,7 +880,7 @@ public class TestSCMNodeManager {
   }
 
   // Currently invoked by testProcessLayoutVersion.
-  public void testProcessLayoutVersionReportHigherMlv(
+  void testProcessLayoutVersionReportHigherMlv(
       FinalizationCheckpoint currentCheckpoint)
       throws IOException {
     final int healthCheckInterval = 200; // milliseconds
@@ -922,7 +901,7 @@ public class TestSCMNodeManager {
     nodeManagerContext.setFinalizationCheckpoint(currentCheckpoint);
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        nodeManagerContext, lvm);
+        nodeManagerContext, lvm, clock, hostname -> null);
 
     // Regardless of SCM's finalization checkpoint, datanodes with higher MLV
     // than SCM should not be found in the cluster.
@@ -945,7 +924,7 @@ public class TestSCMNodeManager {
   }
 
   // Currently invoked by testProcessLayoutVersion.
-  public void testProcessLayoutVersionLowerMlv(FinalizationCheckpoint
+  void testProcessLayoutVersionLowerMlv(FinalizationCheckpoint
       currentCheckpoint) throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     SCMStorageConfig scmStorageConfig = mock(SCMStorageConfig.class);
@@ -957,7 +936,7 @@ public class TestSCMNodeManager {
     nodeManagerContext.setFinalizationCheckpoint(currentCheckpoint);
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        nodeManagerContext, lvm);
+        nodeManagerContext, lvm, clock, hostname -> null);
     DatanodeDetails node1 =
         HddsTestUtils.createRandomDatanodeAndRegister(nodeManager);
     verify(eventPublisher,
@@ -989,7 +968,7 @@ public class TestSCMNodeManager {
   }
 
   @Test
-  public void testProcessCommandQueueReport()
+  void testProcessCommandQueueReport()
       throws IOException, NodeNotFoundException, AuthenticationException {
     OzoneConfiguration conf = new OzoneConfiguration();
     SCMStorageConfig scmStorageConfig = mock(SCMStorageConfig.class);
@@ -1000,7 +979,7 @@ public class TestSCMNodeManager {
     createNodeManager(getConf());
     SCMNodeManager nodeManager  = new SCMNodeManager(conf,
         scmStorageConfig, eventPublisher, new NetworkTopologyImpl(conf),
-        scmContext, lvm);
+        scmContext, lvm, clock, hostname -> null);
     LayoutVersionProto layoutInfo = toLayoutVersionProto(
         lvm.getMetadataLayoutVersion(), lvm.getSoftwareLayoutVersion());
 
@@ -1087,7 +1066,7 @@ public class TestSCMNodeManager {
   }
 
   @Test
-  public void testCommandCount()
+  void testCommandCount()
       throws AuthenticationException, IOException {
     SCMNodeManager nodeManager = createNodeManager(getConf());
 
@@ -1123,10 +1102,9 @@ public class TestSCMNodeManager {
   /**
    * Check for NPE when datanodeDetails is passed null for sendHeartbeat.
    *
-   * @throws IOException
    */
   @Test
-  public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException, AuthenticationException {
+  void testScmCheckForErrorOnNullDatanodeDetails() throws IOException, AuthenticationException {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       NullPointerException npe = assertThrows(NullPointerException.class,
           () -> nodeManager.processHeartbeat(null, null));
@@ -1184,8 +1162,8 @@ public class TestSCMNodeManager {
    */
 
   @Test
-  public void testScmClusterIsInExpectedState1()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmClusterIsInExpectedState1()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100,
         MILLISECONDS);
@@ -1214,7 +1192,7 @@ public class TestSCMNodeManager {
       nodeManager.processHeartbeat(deadNode, layoutInfo);
 
       // Sleep so that heartbeat processing thread gets to run.
-      Thread.sleep(500);
+      fastForward(500, nodeManager);
 
       //Assert all nodes are healthy.
       assertEquals(3, nodeManager.getAllNodes().size());
@@ -1224,7 +1202,7 @@ public class TestSCMNodeManager {
        * Cluster state: Quiesced: We are going to sleep for 3 seconds. Which
        * means that no node is heartbeating. All nodes should move to Stale.
        */
-      Thread.sleep(3 * 1000);
+      fastForward(3 * 1000, nodeManager);
       assertEquals(3, nodeManager.getAllNodes().size());
       assertEquals(3, nodeManager.getNodeCount(NodeStatus.inServiceStale()));
 
@@ -1241,9 +1219,9 @@ public class TestSCMNodeManager {
       nodeManager.processHeartbeat(staleNode, layoutInfo);
       nodeManager.processHeartbeat(deadNode, layoutInfo);
 
-      Thread.sleep(1500);
+      fastForward(1500, nodeManager);
       nodeManager.processHeartbeat(healthyNode, layoutInfo);
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
       assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
 
 
@@ -1265,9 +1243,9 @@ public class TestSCMNodeManager {
 
       nodeManager.processHeartbeat(healthyNode, layoutInfo);
       nodeManager.processHeartbeat(staleNode, layoutInfo);
-      Thread.sleep(1500);
+      fastForward(1500, nodeManager);
       nodeManager.processHeartbeat(healthyNode, layoutInfo);
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
 
       // 3.5 seconds have elapsed for stale node, so it moves into Stale.
       // 7 seconds have elapsed for dead node, so it moves into dead.
@@ -1301,7 +1279,7 @@ public class TestSCMNodeManager {
       nodeManager.processHeartbeat(healthyNode, layoutInfo);
       nodeManager.processHeartbeat(staleNode, layoutInfo);
       nodeManager.processHeartbeat(deadNode, layoutInfo);
-      Thread.sleep(500);
+      fastForward(500, nodeManager);
       //Assert all nodes are healthy.
       assertEquals(3, nodeManager.getAllNodes().size());
       assertEquals(3, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
@@ -1314,7 +1292,6 @@ public class TestSCMNodeManager {
    * @param manager       - Node Manager
    * @param list          - List of datanodeIDs
    * @param sleepDuration - Duration to sleep between heartbeats.
-   * @throws InterruptedException
    */
   private void heartbeatNodeSet(SCMNodeManager manager,
                                 List<DatanodeDetails> list,
@@ -1364,11 +1341,9 @@ public class TestSCMNodeManager {
    * Asserts that we can create a set of nodes that send its heartbeats from
    * different threads and NodeManager behaves as expected.
    *
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
-  public void testScmClusterIsInExpectedState2()
+  void testScmClusterIsInExpectedState2()
       throws IOException, InterruptedException, TimeoutException,
       AuthenticationException {
     final int healthyCount = 5000;
@@ -1383,7 +1358,7 @@ public class TestSCMNodeManager {
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
       List<DatanodeDetails> healthyNodeList = createNodeSet(nodeManager,
           healthyCount);
       List<DatanodeDetails> staleNodeList = createNodeSet(nodeManager,
@@ -1465,12 +1440,9 @@ public class TestSCMNodeManager {
   /**
    * Asserts that we can handle 6000+ nodes heartbeating SCM.
    *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmCanHandleScale()
+  void testScmCanHandleScale()
       throws IOException, InterruptedException, TimeoutException,
       AuthenticationException {
     final int healthyCount = 3000;
@@ -1485,7 +1457,7 @@ public class TestSCMNodeManager {
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6 * 1000,
         MILLISECONDS);
 
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+    try (SCMNodeManager nodeManager = createNodeManager(conf, Clock.systemUTC())) {
       List<DatanodeDetails> healthyList = createNodeSet(nodeManager,
           healthyCount);
       List<DatanodeDetails> staleList = createNodeSet(nodeManager,
@@ -1528,13 +1500,10 @@ public class TestSCMNodeManager {
   /**
    * Test multiple nodes sending initial heartbeat with their node report.
    *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmStatsFromNodeReport()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmStatsFromNodeReport()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
         MILLISECONDS);
@@ -1602,9 +1571,9 @@ public class TestSCMNodeManager {
 
   @ParameterizedTest
   @MethodSource("calculateStoragePercentageScenarios")
-  public void testCalculateStoragePercentage(long perCapacity,
+  void testCalculateStoragePercentage(long perCapacity,
       long used, long remaining, int volumeCount, String totalCapacity,
-          String scmUsedPerc, String nonScmUsedPerc) {
+      String scmUsedPerc, String nonScmUsedPerc) {
     DatanodeDetails dn = MockDatanodeDetails.randomDatanodeDetails();
     UUID dnId = dn.getUuid();
     List<StorageReportProto> reports = volumeCount > 0 ?
@@ -1622,13 +1591,10 @@ public class TestSCMNodeManager {
    * Test multiple nodes sending initial heartbeat with their node report
    * with multiple volumes.
    *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void tesVolumeInfoFromNodeReport()
-      throws IOException, InterruptedException, AuthenticationException {
+  void tesVolumeInfoFromNodeReport()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
         MILLISECONDS);
@@ -1672,13 +1638,10 @@ public class TestSCMNodeManager {
   /**
    * Test single node stat update based on nodereport from different heartbeat
    * status (healthy, stale and dead).
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   @Test
-  public void testScmNodeReportUpdate()
-      throws IOException, InterruptedException, TimeoutException,
+  void testScmNodeReportUpdate()
+      throws IOException,
       AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int heartbeatCount = 5;
@@ -1717,15 +1680,11 @@ public class TestSCMNodeManager {
             versionManager.getMetadataLayoutVersion(),
             versionManager.getSoftwareLayoutVersion());
         nodeManager.processHeartbeat(datanodeDetails, layoutInfo);
-        Thread.sleep(100);
+        fastForward(100, nodeManager);
       }
 
       final long expectedScmUsed = usedPerHeartbeat * (heartbeatCount - 1);
       final long expectedRemaining = capacity - expectedScmUsed;
-
-      GenericTestUtils.waitFor(
-          () -> nodeManager.getStats().getScmUsed().get() == expectedScmUsed,
-          100, 4 * 1000);
 
       long foundCapacity = nodeManager.getStats().getCapacity().get();
       assertEquals(capacity, foundCapacity);
@@ -1759,9 +1718,8 @@ public class TestSCMNodeManager {
 
       // Wait up to 4s so that the node becomes stale
       // Verify the usage info should be unchanged.
-      GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeStatus.inServiceStale()) == 1, 100,
-          4 * 1000);
+      fastForward(4000, nodeManager);
+      assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceStale()));
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
 
       foundCapacity = nodeManager.getNodeStat(datanodeDetails).get()
@@ -1777,10 +1735,9 @@ public class TestSCMNodeManager {
 
       // Wait up to 4 more seconds so the node becomes dead
       // Verify usage info should be updated.
-      GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeStatus.inServiceDead()) == 1, 100,
-          4 * 1000);
+      fastForward(4000, nodeManager);
 
+      assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceDead()));
       assertEquals(0, nodeManager.getNodeStats().size());
       foundCapacity = nodeManager.getStats().getCapacity().get();
       assertEquals(0, foundCapacity);
@@ -1798,15 +1755,14 @@ public class TestSCMNodeManager {
           versionManager.getSoftwareLayoutVersion());
 
       nodeManager.processHeartbeat(datanodeDetails, layoutInfo);
+      fastForward(100, nodeManager);
 
       // Wait up to 5 seconds so that the dead node becomes healthy
       // Verify usage info should be updated.
-      GenericTestUtils.waitFor(
-          () -> nodeManager.getNodeCount(NodeStatus.inServiceHealthy()) == 1,
-          100, 5 * 1000);
-      GenericTestUtils.waitFor(
-          () -> nodeManager.getStats().getScmUsed().get() == expectedScmUsed,
-          100, 4 * 1000);
+      nodeManager.processHeartbeat(datanodeDetails, layoutInfo);
+      fastForward(100, nodeManager);
+      assertEquals(1, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
+      assertEquals(expectedScmUsed, nodeManager.getStats().getScmUsed().get());
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
       foundCapacity = nodeManager.getNodeStat(datanodeDetails).get()
           .getCapacity().get();
@@ -1821,7 +1777,7 @@ public class TestSCMNodeManager {
   }
 
   @Test
-  public void testHandlingSCMCommandEvent()
+  void testHandlingSCMCommandEvent()
       throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
@@ -1869,8 +1825,8 @@ public class TestSCMNodeManager {
    * Test add node into a 4-layer network topology during node register.
    */
   @Test
-  public void testScmRegisterNodeWith4LayerNetworkTopology()
-      throws IOException, InterruptedException, AuthenticationException {
+  void testScmRegisterNodeWith4LayerNetworkTopology()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
         MILLISECONDS);
@@ -1897,7 +1853,7 @@ public class TestSCMNodeManager {
       }
 
       // verify network topology cluster has all the registered nodes
-      Thread.sleep(4 * 1000);
+      fastForward(4 * 1000, nodeManager);
       NetworkTopology clusterMap = scm.getClusterMap();
       assertEquals(nodeCount, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
       assertEquals(nodeCount, clusterMap.getNumOfLeafNode(""));
@@ -1912,7 +1868,7 @@ public class TestSCMNodeManager {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testScmRegisterNodeWithNetworkTopology(boolean useHostname)
-      throws IOException, InterruptedException, AuthenticationException {
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
         MILLISECONDS);
@@ -1940,7 +1896,7 @@ public class TestSCMNodeManager {
       }
 
       // verify network topology cluster has all the registered nodes
-      Thread.sleep(4 * 1000);
+      fastForward(4 * 1000, nodeManager);
       NetworkTopology clusterMap = scm.getClusterMap();
       assertEquals(nodeCount,
           nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
@@ -1960,8 +1916,8 @@ public class TestSCMNodeManager {
   }
 
   @Test
-  public void testGetNodeInfo()
-      throws IOException, InterruptedException, NodeNotFoundException,
+  void testGetNodeInfo()
+      throws IOException, NodeNotFoundException,
       AuthenticationException {
     OzoneConfiguration conf = getConf();
     final int nodeCount = 6;
@@ -2002,7 +1958,7 @@ public class TestSCMNodeManager {
             HddsProtos.NodeOperationalState.DECOMMISSIONED);
       }
     }
-    Thread.sleep(100);
+    fastForward(100, nodeManager);
 
     Map<String, Long> stats = nodeManager.getNodeInfo();
     // 3 IN_SERVICE nodes:
@@ -2067,8 +2023,8 @@ public class TestSCMNodeManager {
    * Test node register with updated IP and host name.
    */
   @Test
-  public void testScmRegisterNodeWithUpdatedIpAndHostname()
-          throws IOException, InterruptedException, AuthenticationException {
+  void testScmRegisterNodeWithUpdatedIpAndHostname()
+          throws IOException, AuthenticationException {
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
             MILLISECONDS);
@@ -2092,7 +2048,7 @@ public class TestSCMNodeManager {
       nodeManager.register(node, null, null);
 
       // verify network topology cluster has all the registered nodes
-      Thread.sleep(2 * 1000);
+      fastForward(2 * 1000, nodeManager);
       NetworkTopology clusterMap = scm.getClusterMap();
       assertEquals(1,
               nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));

@@ -28,12 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.LayoutVersionProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
@@ -68,24 +66,16 @@ public class NodeStateMap {
   /**
    * Adds a node to NodeStateMap.
    *
-   * @param datanodeDetails DatanodeDetails
-   * @param nodeStatus initial NodeStatus
-   * @param layoutInfo initial LayoutVersionProto
-   *
    * @throws NodeAlreadyExistsException if the node already exist
    */
-  public void addNode(DatanodeDetails datanodeDetails, NodeStatus nodeStatus,
-                      LayoutVersionProto layoutInfo)
-
+  public void addNode(UUID id, Supplier<DatanodeInfo> supplier)
       throws NodeAlreadyExistsException {
     lock.writeLock().lock();
     try {
-      UUID id = datanodeDetails.getUuid();
       if (nodeMap.containsKey(id)) {
         throw new NodeAlreadyExistsException("Node UUID: " + id);
       }
-      nodeMap.put(id, new DatanodeInfo(datanodeDetails, nodeStatus,
-          layoutInfo));
+      nodeMap.put(id, supplier.get());
       nodeToContainer.put(id, new HashSet<>());
     } finally {
       lock.writeLock().unlock();
@@ -94,24 +84,15 @@ public class NodeStateMap {
 
   /**
    * Update a node in NodeStateMap.
-   *
-   * @param datanodeDetails DatanodeDetails
-   * @param nodeStatus initial NodeStatus
-   * @param layoutInfo initial LayoutVersionProto
-   *
    */
-  public void updateNode(DatanodeDetails datanodeDetails, NodeStatus nodeStatus,
-                         LayoutVersionProto layoutInfo)
-
+  public void updateNode(UUID id, Supplier<DatanodeInfo> supplier)
           throws NodeNotFoundException {
     lock.writeLock().lock();
     try {
-      UUID id = datanodeDetails.getUuid();
       if (!nodeMap.containsKey(id)) {
         throw new NodeNotFoundException("Node UUID: " + id);
       }
-      nodeMap.put(id, new DatanodeInfo(datanodeDetails, nodeStatus,
-              layoutInfo));
+      nodeMap.put(id, supplier.get());
     } finally {
       lock.writeLock().unlock();
     }

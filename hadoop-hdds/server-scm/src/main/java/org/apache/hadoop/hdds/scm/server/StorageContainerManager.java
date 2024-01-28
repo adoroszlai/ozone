@@ -184,7 +184,6 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Clock;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -650,7 +649,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       SCMConfigurator configurator) throws IOException {
     // Use SystemClock when data is persisted
     // and used again after system restarts.
-    systemClock = Clock.system(ZoneOffset.UTC);
+    if (configurator.getClock() != null) {
+      systemClock = configurator.getClock();
+    } else {
+      systemClock = Clock.systemUTC();
+    }
 
     if (configurator.getNetworkTopology() != null) {
       clusterMap = configurator.getNetworkTopology();
@@ -733,7 +736,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       scmNodeManager = configurator.getScmNodeManager();
     } else {
       scmNodeManager = new SCMNodeManager(conf, scmStorageConfig, eventQueue,
-          clusterMap, scmContext, scmLayoutVersionManager,
+          clusterMap, scmContext, scmLayoutVersionManager, systemClock,
           this::resolveNodeLocation);
     }
 

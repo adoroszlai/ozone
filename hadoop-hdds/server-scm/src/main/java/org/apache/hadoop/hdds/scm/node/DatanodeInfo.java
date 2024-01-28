@@ -30,10 +30,10 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.MetadataStorageReportProto;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,9 +47,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class DatanodeInfo extends DatanodeDetails {
 
+  private static final Clock SYSTEM_CLOCK = Clock.systemUTC();
+
   private static final Logger LOG = LoggerFactory.getLogger(DatanodeInfo.class);
 
   private final ReadWriteLock lock;
+  private final Clock clock;
 
   private volatile long lastHeartbeatTime;
   private long lastStatsUpdatedTime;
@@ -70,9 +73,15 @@ public class DatanodeInfo extends DatanodeDetails {
    */
   public DatanodeInfo(DatanodeDetails datanodeDetails, NodeStatus nodeStatus,
         LayoutVersionProto layoutInfo) {
+    this(datanodeDetails, nodeStatus, layoutInfo, SYSTEM_CLOCK);
+  }
+
+  public DatanodeInfo(DatanodeDetails datanodeDetails, NodeStatus nodeStatus,
+        LayoutVersionProto layoutInfo, Clock clock) {
     super(datanodeDetails);
     this.lock = new ReentrantReadWriteLock();
-    this.lastHeartbeatTime = Time.monotonicNow();
+    this.clock = clock;
+    this.lastHeartbeatTime = clock.millis();
     lastKnownLayoutVersion = toLayoutVersionProto(
         layoutInfo != null ? layoutInfo.getMetadataLayoutVersion() : 0,
         layoutInfo != null ? layoutInfo.getSoftwareLayoutVersion() : 0);
@@ -86,7 +95,7 @@ public class DatanodeInfo extends DatanodeDetails {
    * Updates the last heartbeat time with current time.
    */
   public void updateLastHeartbeatTime() {
-    updateLastHeartbeatTime(Time.monotonicNow());
+    updateLastHeartbeatTime(clock.millis());
   }
 
   /**
@@ -162,7 +171,7 @@ public class DatanodeInfo extends DatanodeDetails {
 
     try {
       lock.writeLock().lock();
-      lastStatsUpdatedTime = Time.monotonicNow();
+      lastStatsUpdatedTime = clock.millis();
       failedVolumeCount = failedCount;
       storageReports = reports;
     } finally {
@@ -179,7 +188,7 @@ public class DatanodeInfo extends DatanodeDetails {
       List<MetadataStorageReportProto> reports) {
     try {
       lock.writeLock().lock();
-      lastStatsUpdatedTime = Time.monotonicNow();
+      lastStatsUpdatedTime = clock.millis();
       metadataStorageReports = reports;
     } finally {
       lock.writeLock().unlock();

@@ -616,10 +616,14 @@ public final class HddsTestUtils {
    */
   public static StorageContainerManager getScm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
+    return getScm(conf, getScmConfigurator());
+  }
+
+  public static SCMConfigurator getScmConfigurator() {
     SCMConfigurator configurator = new SCMConfigurator();
     configurator.setSCMHAManager(SCMHAManagerStub.getInstance(true));
     configurator.setScmContext(SCMContext.emptyContext());
-    return getScm(conf, configurator);
+    return configurator;
   }
 
   /**
