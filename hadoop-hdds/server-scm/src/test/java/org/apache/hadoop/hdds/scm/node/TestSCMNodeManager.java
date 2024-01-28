@@ -1126,11 +1126,6 @@ public class TestSCMNodeManager {
    * issues. This test is replicated below with the use of threads. Avoiding
    * threads make it easy to debug the state machine.
    *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-  /**
    * These values are very important. Here is what it means so you don't
    * have to look it up while reading this code.
    *
@@ -1174,7 +1169,7 @@ public class TestSCMNodeManager {
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
 
-    /**
+    /*
      * Cluster state: Healthy: All nodes are heartbeat-ing like normal.
      */
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
@@ -1200,7 +1195,7 @@ public class TestSCMNodeManager {
       assertEquals(3, nodeManager.getAllNodes().size());
       assertEquals(3, nodeManager.getNodeCount(NodeStatus.inServiceHealthy()));
 
-      /**
+      /*
        * Cluster state: Quiesced: We are going to sleep for 3 seconds. Which
        * means that no node is heartbeating. All nodes should move to Stale.
        */
@@ -1209,7 +1204,7 @@ public class TestSCMNodeManager {
       assertEquals(3, nodeManager.getNodeCount(NodeStatus.inServiceStale()));
 
 
-      /**
+      /*
        * Cluster State : Move healthy node back to healthy state, move other 2
        * nodes to Stale State.
        *
@@ -1238,7 +1233,7 @@ public class TestSCMNodeManager {
 
       assertEquals(2, nodeManager.getNodeCount(NodeStatus.inServiceStale()));
 
-      /**
+      /*
        * Cluster State: Allow healthyNode to remain in healthy state and
        * staleNode to move to stale state and deadNode to move to dead state.
        */
@@ -1274,7 +1269,7 @@ public class TestSCMNodeManager {
       assertEquals(1, deadList.size(), "Expected one dead node");
       assertEquals(deadNode.getUuid(), deadList.get(0).getUuid(),
           "Dead node is not the expected ID");
-      /**
+      /*
        * Cluster State : let us heartbeat all the nodes and verify that we get
        * back all the nodes in healthy state.
        */
