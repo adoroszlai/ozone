@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.SortedMap;
@@ -36,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -73,8 +73,8 @@ abstract class AbstractCommitWatcher<BUFFER> {
     return commitIndexMap;
   }
 
-  synchronized void updateCommitInfoMap(long index, List<BUFFER> buffers) {
-    commitIndexMap.computeIfAbsent(index, k -> new LinkedList<>())
+  void updateCommitInfoMap(long index, List<BUFFER> buffers) {
+    commitIndexMap.computeIfAbsent(index, k -> new CopyOnWriteArrayList<>())
         .addAll(buffers);
   }
 
