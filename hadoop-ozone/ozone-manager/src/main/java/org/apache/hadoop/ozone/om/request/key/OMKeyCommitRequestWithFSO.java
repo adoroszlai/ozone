@@ -22,6 +22,8 @@ import java.nio.file.InvalidPathException;
 import java.util.HashMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditLogger;
@@ -94,7 +96,6 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
 
     Exception exception = null;
     OmKeyInfo omKeyInfo = null;
-    OmBucketInfo omBucketInfo = null;
     OMClientResponse omClientResponse = null;
     boolean bucketLockAcquired = false;
     Result result;
@@ -123,7 +124,10 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
       bucketLockAcquired = getOmLockDetails().isLockAcquired();
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       String errMsg = "Cannot create file : " + keyName
               + " as parent directory doesn't exist";
@@ -224,7 +228,7 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
         checkBucketQuotaInNamespace(omBucketInfo, 1L);
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
-        omBucketInfo.incrUsedNamespace(1L);
+        bucketUpdate.incrUsedNamespace(1L);
       }
 
       // let the uncommitted blocks pretend as key's old version blocks
@@ -256,10 +260,15 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
       OMFileRequest.addFileTableCacheEntry(omMetadataManager, dbFileKey,
               omKeyInfo, fileName, trxnLogIndex);
 
-      omBucketInfo.incrUsedBytes(correctedSpace);
+      bucketUpdate.incrUsedBytes(correctedSpace);
+      OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       omClientResponse = new OMKeyCommitResponseWithFSO(omResponse.build(),
-              omKeyInfo, dbFileKey, dbOpenFileKey, omBucketInfo.copyObject(),
+              omKeyInfo, dbFileKey, dbOpenFileKey, updatedBucket.copyObject(),
           oldKeyVersionsToDeleteMap, volumeId, isHSync);
 
       result = Result.SUCCESS;

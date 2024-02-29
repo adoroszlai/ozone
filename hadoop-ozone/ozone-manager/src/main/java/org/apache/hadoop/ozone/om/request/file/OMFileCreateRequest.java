@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -200,7 +202,6 @@ public class OMFileCreateRequest extends OMKeyRequest {
     boolean acquiredLock = false;
 
     OmKeyInfo omKeyInfo = null;
-    OmBucketInfo omBucketInfo = null;
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
     List<OmKeyInfo> missingParentInfos;
 
@@ -242,8 +243,9 @@ public class OMFileCreateRequest extends OMKeyRequest {
       }
 
       // do open key
-      omBucketInfo =
-          getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
       final ReplicationConfig repConfig = OzoneConfigUtil
           .resolveReplicationConfigPreference(keyArgs.getType(),
               keyArgs.getFactor(), keyArgs.getEcReplicationConfig(),
@@ -280,7 +282,13 @@ public class OMFileCreateRequest extends OMKeyRequest {
           preAllocatedSpace);
       numMissingParents = missingParentInfos.size();
       checkBucketQuotaInNamespace(omBucketInfo, numMissingParents + 1L);
-      omBucketInfo.incrUsedNamespace(numMissingParents);
+      OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+          .incrUsedNamespace(numMissingParents)
+          .build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       // Add to cache entry can be done outside of lock for this openKey.
       // Even if bucket gets deleted, when commitKey we shall identify if
@@ -302,7 +310,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
           .setOpenVersion(openVersion).build())
           .setCmdType(CreateFile);
       omClientResponse = new OMFileCreateResponse(omResponse.build(),
-          omKeyInfo, missingParentInfos, clientID, omBucketInfo.copyObject());
+          omKeyInfo, missingParentInfos, clientID, updatedBucket.copyObject());
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

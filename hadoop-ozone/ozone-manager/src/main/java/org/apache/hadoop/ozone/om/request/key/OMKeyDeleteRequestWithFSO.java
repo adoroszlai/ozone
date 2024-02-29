@@ -94,7 +94,6 @@ public class OMKeyDeleteRequestWithFSO extends OMKeyDeleteRequest {
     boolean acquiredLock = false;
     OMClientResponse omClientResponse = null;
     Result result = null;
-    OmBucketInfo omBucketInfo = null;
     try {
       mergeOmLockDetails(omMetadataManager.getLock()
           .acquireWriteLock(BUCKET_LOCK, volumeName, bucketName));
@@ -147,12 +146,20 @@ public class OMKeyDeleteRequestWithFSO extends OMKeyDeleteRequest {
                 CacheValue.get(trxnLogIndex));
       }
 
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       // TODO: HDDS-4565: consider all the sub-paths if the path is a dir.
       long quotaReleased = sumBlockLengths(omKeyInfo);
-      omBucketInfo.incrUsedBytes(-quotaReleased);
-      omBucketInfo.incrUsedNamespace(-1L);
+      bucketUpdate.incrUsedBytes(-quotaReleased);
+      bucketUpdate.incrUsedNamespace(-1L);
+      final OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       // No need to add cache entries to delete table. As delete table will
       // be used by DeleteKeyService only, not used for any client response
@@ -162,7 +169,7 @@ public class OMKeyDeleteRequestWithFSO extends OMKeyDeleteRequest {
       omClientResponse = new OMKeyDeleteResponseWithFSO(omResponse
           .setDeleteKeyResponse(DeleteKeyResponse.newBuilder()).build(),
           keyName, omKeyInfo, ozoneManager.isRatisEnabled(),
-          omBucketInfo.copyObject(), keyStatus.isDirectory(), volumeId);
+          updatedBucket.copyObject(), keyStatus.isDirectory(), volumeId);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

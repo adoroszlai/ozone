@@ -89,8 +89,7 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
 
   private void updateBlockInfo(OmKeyInfo omKeyInfo) throws IOException {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
+    final OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(bucketKey);
     List<OmKeyLocationInfoGroup> locationList = new ArrayList<>();
     List<OmKeyLocationInfo> locList = new ArrayList<>();
     OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder();
@@ -98,11 +97,13 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
     locList.add(builder.build());
     locationList.add(new OmKeyLocationInfoGroup(1, locList, false));
     omKeyInfo.setKeyLocationVersions(locationList);
-    omBucketInfo.incrUsedBytes(omKeyInfo.getDataSize());
-    omBucketInfo.incrUsedNamespace(1L);
+    OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+        .incrUsedBytes(omKeyInfo.getDataSize())
+        .incrUsedNamespace(1L)
+        .build();
     omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        CacheValue.get(1L, omBucketInfo));
-    omMetadataManager.getBucketTable().put(bucketKey, omBucketInfo);
+        CacheValue.get(1L, updatedBucket));
+    omMetadataManager.getBucketTable().put(bucketKey, updatedBucket);
   }
 
   /**
@@ -200,7 +201,7 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
         .validateAndUpdateCache(ozoneManager, 100L);
     omBucketInfo = omMetadataManager.getBucketTable().get(
         bucketKey);
-    assertEquals(0L * deletedKeyNames.size(), omBucketInfo.getUsedBytes());
+    assertEquals(0, omBucketInfo.getUsedBytes());
 
     performBatchOperationCommit(omClientResponse);
 
@@ -230,15 +231,16 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
     omMetadataManager.getBucketTable().delete(bucketKey);
     OMRequestTestUtils.addBucketToDB(volumeName, bucketName,
         omMetadataManager);
-    omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
+    omBucketInfo = omMetadataManager.getBucketTable().get(bucketKey);
     final long bucketInitialUsedBytes = omBucketInfo.getUsedBytes();
+    OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+        .incrUsedBytes(1000L)
+        .incrUsedNamespace(100L)
+        .build();
 
-    omBucketInfo.incrUsedBytes(1000L);
-    omBucketInfo.incrUsedNamespace(100L);
     omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        CacheValue.get(1L, omBucketInfo));
-    omMetadataManager.getBucketTable().put(bucketKey, omBucketInfo);
+        CacheValue.get(1L, updatedBucket));
+    omMetadataManager.getBucketTable().put(bucketKey, updatedBucket);
 
     // prevalidate bucket
     omBucketInfo = omMetadataManager.getBucketTable().get(bucketKey);

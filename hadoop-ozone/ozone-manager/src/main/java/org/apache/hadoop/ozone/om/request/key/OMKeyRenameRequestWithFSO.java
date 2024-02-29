@@ -371,12 +371,14 @@ public class OMKeyRenameRequestWithFSO extends OMKeyRenameRequest {
         throw new OMException("Bucket not found",
             OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
-      bucketInfo.setModificationTime(modificationTime);
       String bucketKey = omMetadataManager.getBucketKey(
           bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+      OmBucketInfo updatedBucket = bucketInfo.toBuilder()
+          .setModificationTime(modificationTime)
+          .build();
       omMetadataManager.getBucketTable().addCacheEntry(
           new CacheKey<>(bucketKey),
-          CacheValue.get(trxnLogIndex, bucketInfo));
+          CacheValue.get(trxnLogIndex, updatedBucket));
     }
   }
 

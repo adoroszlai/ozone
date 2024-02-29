@@ -133,7 +133,6 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
     String multipartKey = null;
     OmMultipartKeyInfo multipartKeyInfo = null;
     Result result = null;
-    OmBucketInfo omBucketInfo = null;
     OmBucketInfo copyBucketInfo = null;
     try {
       long clientID = multipartCommitUploadPartRequest.getClientID();
@@ -226,7 +225,9 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
           new CacheKey<>(openKey),
           CacheValue.get(trxnLogIndex));
 
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
 
       long correctedSpace = omKeyInfo.getReplicatedSize();
       if (null != oldPartKeyInfo) {
@@ -236,7 +237,13 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       }
       checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
           correctedSpace);
-      omBucketInfo.incrUsedBytes(correctedSpace);
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
+      bucketUpdate.incrUsedBytes(correctedSpace);
+      final OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       MultipartCommitUploadPartResponse.Builder commitResponseBuilder = MultipartCommitUploadPartResponse.newBuilder()
           .setPartName(partName);
@@ -248,7 +255,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       omClientResponse =
           getOmClientResponse(ozoneManager, oldPartKeyInfo, openKey,
               omKeyInfo, multipartKey, multipartKeyInfo, omResponse.build(),
-              omBucketInfo.copyObject());
+              updatedBucket.copyObject());
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

@@ -81,7 +81,7 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
   /**
    * modification time of bucket.
    */
-  private long modificationTime;
+  private final long modificationTime;
 
   /**
    * Bucket encryption key info if encryption is enabled.
@@ -97,17 +97,17 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
 
   private final String sourceBucket;
 
-  private long usedBytes;
-  private long usedNamespace;
+  private final long usedBytes;
+  private final long usedNamespace;
   private final long quotaInBytes;
   private final long quotaInNamespace;
 
   /**
    * Bucket Layout.
    */
-  private BucketLayout bucketLayout;
+  private final BucketLayout bucketLayout;
 
-  private String owner;
+  private final String owner;
 
   private OmBucketInfo(Builder b) {
     setMetadata(b.metadata);
@@ -262,14 +262,6 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
     return usedNamespace;
   }
 
-  public void incrUsedBytes(long bytes) {
-    this.usedBytes += bytes;
-  }
-
-  public void incrUsedNamespace(long namespaceToUse) {
-    this.usedNamespace += namespaceToUse;
-  }
-
   public long getQuotaInBytes() {
     return quotaInBytes;
   }
@@ -284,14 +276,6 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
 
   public String getOwner() {
     return owner;
-  }
-
-  public void setModificationTime(long modificationTime) {
-    this.modificationTime = modificationTime;
-  }
-
-  public void setOwner(String ownerName) {
-    this.owner = ownerName;
   }
 
   /**
@@ -508,9 +492,19 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
       return this;
     }
 
+    public Builder incrUsedBytes(long diff) {
+      this.usedBytes += diff;
+      return this;
+    }
+
     /** @param quotaUsage - Bucket Quota Usage in counts. */
     public Builder setUsedNamespace(long quotaUsage) {
       this.usedNamespace = quotaUsage;
+      return this;
+    }
+
+    public Builder incrUsedNamespace(long diff) {
+      this.usedNamespace += diff;
       return this;
     }
 
@@ -553,6 +547,22 @@ public final class OmBucketInfo extends WithObjectID implements Auditable {
       Preconditions.checkNotNull(isVersionEnabled);
       Preconditions.checkNotNull(storageType);
       return new OmBucketInfo(this);
+    }
+
+    public String getVolumeName() {
+      return volumeName;
+    }
+
+    public String getBucketName() {
+      return bucketName;
+    }
+
+    public long getQuotaInBytes() {
+      return quotaInBytes;
+    }
+
+    public long getQuotaInNamespace() {
+      return quotaInNamespace;
     }
   }
 

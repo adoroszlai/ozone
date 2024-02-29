@@ -24,6 +24,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -88,14 +90,16 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
             lockSet.add(volBucketPair);
           }
           omMetrics.decNumKeys();
-          OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
-              volumeName, bucketName);
+          final OmBucketInfo omBucketInfo = volBucketInfoMap.computeIfAbsent(volBucketPair,
+              k -> getBucketInfo(omMetadataManager, volumeName, bucketName));
           // bucketInfo can be null in case of delete volume or bucket
           // or key does not belong to bucket as bucket is recreated
           if (null != omBucketInfo
               && omBucketInfo.getObjectID() == path.getBucketId()) {
-            omBucketInfo.incrUsedNamespace(-1L);
-            volBucketInfoMap.putIfAbsent(volBucketPair, omBucketInfo);
+            OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+                .incrUsedNamespace(-1L)
+                .build();
+            volBucketInfoMap.putIfAbsent(volBucketPair, updatedBucket);
           }
         }
 
@@ -111,17 +115,30 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
             lockSet.add(volBucketPair);
           }
           omMetrics.decNumKeys();
-          OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
-              volumeName, bucketName);
+          final OmBucketInfo omBucketInfo = volBucketInfoMap.computeIfAbsent(volBucketPair,
+              k -> getBucketInfo(omMetadataManager, volumeName, bucketName));
           // bucketInfo can be null in case of delete volume or bucket
           // or key does not belong to bucket as bucket is recreated
           if (null != omBucketInfo
               && omBucketInfo.getObjectID() == path.getBucketId()) {
-            omBucketInfo.incrUsedBytes(-sumBlockLengths(keyInfo));
-            omBucketInfo.incrUsedNamespace(-1L);
-            volBucketInfoMap.putIfAbsent(volBucketPair, omBucketInfo);
+            OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+                .incrUsedBytes(-sumBlockLengths(keyInfo))
+                .incrUsedNamespace(-1L)
+                .build();
+            volBucketInfoMap.put(volBucketPair, updatedBucket);
           }
         }
+      }
+
+      for (Map.Entry<Pair<String, String>, OmBucketInfo> entry :
+          volBucketInfoMap.entrySet()) {
+
+        OmBucketInfo omBucketInfo = entry.getValue();
+        String dbBucketKey = omMetadataManager.getBucketKey(
+            omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+        omMetadataManager.getBucketTable().addCacheEntry(
+            new CacheKey<>(dbBucketKey),
+            CacheValue.get(termIndex.getIndex(), omBucketInfo));
       }
     } catch (IOException ex) {
       // Case of IOException for fromProtobuf will not happen
@@ -132,10 +149,6 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
       lockSet.stream().forEach(e -> omMetadataManager.getLock()
           .releaseWriteLock(BUCKET_LOCK, e.getKey(),
               e.getValue()));
-      for (Map.Entry<Pair<String, String>, OmBucketInfo> entry :
-          volBucketInfoMap.entrySet()) {
-        entry.setValue(entry.getValue().copyObject());
-      }
     }
 
     OMResponse.Builder omResponse = OmResponseUtil.getOMResponseBuilder(

@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.om.request.file;
 
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -97,7 +99,6 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
 
     boolean acquiredLock = false;
 
-    OmBucketInfo omBucketInfo = null;
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
     List<OmDirectoryInfo> missingParentInfos;
     int numKeysCreated = 0;
@@ -187,7 +188,9 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
           .collect(Collectors.toList());
       omFileInfo.appendNewBlocks(newLocationList, false);
 
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
       // check bucket and volume quota
       long preAllocatedSpace =
           newLocationList.size() * ozoneManager.getScmBlockSize() * repConfig
@@ -195,7 +198,13 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
       checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
           preAllocatedSpace);
       checkBucketQuotaInNamespace(omBucketInfo, numKeysCreated + 1L);
-      omBucketInfo.incrUsedNamespace(numKeysCreated);
+      OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+          .incrUsedNamespace(numKeysCreated)
+          .build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       // Add to cache entry can be done outside of lock for this openKey.
       // Even if bucket gets deleted, when commitKey we shall identify if
@@ -220,7 +229,7 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
           .setCmdType(Type.CreateFile);
       omClientResponse = new OMFileCreateResponseWithFSO(omResponse.build(),
               omFileInfo, missingParentInfos, clientID,
-              omBucketInfo.copyObject(), volumeId);
+              updatedBucket.copyObject(), volumeId);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

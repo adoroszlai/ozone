@@ -169,20 +169,28 @@ public class OMKeysDeleteRequest extends OMKeyRequest {
       }
 
       long quotaReleased = 0;
-      OmBucketInfo omBucketInfo =
+      final OmBucketInfo omBucketInfo =
           getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+      final OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       // Mark all keys which can be deleted, in cache as deleted.
       quotaReleased =
           markKeysAsDeletedInCache(ozoneManager, trxnLogIndex, omKeyInfoList,
               dirList, omMetadataManager, quotaReleased);
-      omBucketInfo.incrUsedBytes(-quotaReleased);
-      omBucketInfo.incrUsedNamespace(-1L * omKeyInfoList.size());
+      bucketUpdate.incrUsedBytes(-quotaReleased);
+      bucketUpdate.incrUsedNamespace(-1L * omKeyInfoList.size());
+      final OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       final long volumeId = omMetadataManager.getVolumeId(volumeName);
       omClientResponse =
           getOmClientResponse(ozoneManager, omKeyInfoList, dirList, omResponse,
-              unDeletedKeys, deleteStatus, omBucketInfo, volumeId);
+              unDeletedKeys, deleteStatus, updatedBucket, volumeId);
 
       result = Result.SUCCESS;
 

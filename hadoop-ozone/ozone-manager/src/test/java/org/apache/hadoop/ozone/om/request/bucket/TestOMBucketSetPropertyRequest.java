@@ -383,8 +383,15 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
     CacheValue<OmBucketInfo> cacheValue = omMetadataManager.getBucketTable()
         .getCacheValue(new CacheKey<>(bucketKey));
-    cacheValue.getCacheValue().incrUsedBytes(5 * GB);
-    cacheValue.getCacheValue().incrUsedNamespace(10);
+    OmBucketInfo updatedBucket = cacheValue.getCacheValue()
+        .toBuilder()
+        .incrUsedBytes(5 * GB)
+        .incrUsedNamespace(10)
+        .build();
+    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
+        CacheValue.get(1L, updatedBucket));
+    omMetadataManager.getBucketTable()
+        .put(bucketKey, updatedBucket);
     OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true, GB);
 
@@ -415,8 +422,15 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
     CacheValue<OmBucketInfo> cacheValue = omMetadataManager.getBucketTable()
         .getCacheValue(new CacheKey<>(bucketKey));
-    cacheValue.getCacheValue().incrUsedBytes(5 * GB);
-    cacheValue.getCacheValue().incrUsedNamespace(2000);
+    OmBucketInfo updatedBucket = cacheValue.getCacheValue()
+        .toBuilder()
+        .incrUsedBytes(5 * GB)
+        .incrUsedNamespace(2000)
+        .build();
+    omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
+        CacheValue.get(1L, updatedBucket));
+    omMetadataManager.getBucketTable()
+        .put(bucketKey, updatedBucket);
     OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true, 9 * GB);
 

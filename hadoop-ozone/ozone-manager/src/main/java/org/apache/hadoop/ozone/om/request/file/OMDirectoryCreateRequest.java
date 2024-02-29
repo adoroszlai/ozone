@@ -31,6 +31,8 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -197,8 +199,10 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
           omDirectoryResult == NONE) {
         List<String> missingParents = omPathInfo.getMissingParents();
         long baseObjId = ozoneManager.getObjectIdFromTxId(trxnLogIndex);
-        OmBucketInfo omBucketInfo =
+        final OmBucketInfo omBucketInfo =
             getBucketInfo(omMetadataManager, volumeName, bucketName);
+        final String dbBucketKey = omMetadataManager.getBucketKey(
+            omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
 
         dirKeyInfo = createDirectoryKeyInfoWithACL(keyName, keyArgs, baseObjId,
             omBucketInfo, omPathInfo, trxnLogIndex,
@@ -209,7 +213,13 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
 
         numMissingParents = missingParentInfos.size();
         checkBucketQuotaInNamespace(omBucketInfo, numMissingParents + 1L);
-        omBucketInfo.incrUsedNamespace(numMissingParents + 1L);
+        final OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+            .incrUsedNamespace(numMissingParents + 1L)
+            .build();
+
+        omMetadataManager.getBucketTable().addCacheEntry(
+            new CacheKey<>(dbBucketKey),
+            CacheValue.get(trxnLogIndex, updatedBucket));
 
         OMFileRequest.addKeyTableCacheEntries(omMetadataManager, volumeName,
             bucketName, omBucketInfo.getBucketLayout(),
@@ -218,7 +228,7 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
         result = Result.SUCCESS;
         omClientResponse = new OMDirectoryCreateResponse(omResponse.build(),
             dirKeyInfo, missingParentInfos, result, getBucketLayout(),
-            omBucketInfo.copyObject());
+            updatedBucket.copyObject());
       } else {
         // omDirectoryResult == DIRECTORY_EXITS
         result = Result.DIRECTORY_ALREADY_EXISTS;

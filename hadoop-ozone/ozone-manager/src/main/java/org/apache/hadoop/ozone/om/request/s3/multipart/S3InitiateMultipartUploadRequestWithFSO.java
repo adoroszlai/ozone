@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.om.request.s3.multipart;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneConfigUtil;
@@ -117,6 +119,9 @@ public class S3InitiateMultipartUploadRequestWithFSO
       final OmBucketInfo bucketInfo = getBucketInfo(omMetadataManager,
           volumeName, bucketName);
 
+      String dbBucketKey = omMetadataManager.getBucketKey(
+          bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+
       // add all missing parents to dir table
       missingParentInfos = OMDirectoryCreateRequestWithFSO
           .getAllMissingParentDirInfo(ozoneManager, keyArgs, bucketInfo,
@@ -158,9 +163,7 @@ public class S3InitiateMultipartUploadRequestWithFSO
       final ReplicationConfig replicationConfig = OzoneConfigUtil
           .resolveReplicationConfigPreference(keyArgs.getType(),
               keyArgs.getFactor(), keyArgs.getEcReplicationConfig(),
-              bucketInfo != null ?
-                  bucketInfo.getDefaultReplicationConfig() :
-                  null, ozoneManager);
+              bucketInfo.getDefaultReplicationConfig(), ozoneManager);
 
       multipartKeyInfo = new OmMultipartKeyInfo.Builder()
           .setUploadID(keyArgs.getMultipartUploadID())
@@ -188,12 +191,12 @@ public class S3InitiateMultipartUploadRequestWithFSO
               OMPBHelper.convert(keyArgs.getFileEncryptionInfo()) : null)
           .setParentObjectID(pathInfoFSO.getLastKnownParentId())
           .build();
-      
+
+      OmBucketInfo.Builder bucketUpdate = bucketInfo.toBuilder();
+
       // validate and update namespace for missing parent directory
-      if (null != missingParentInfos) {
-        checkBucketQuotaInNamespace(bucketInfo, missingParentInfos.size());
-        bucketInfo.incrUsedNamespace(missingParentInfos.size());
-      }
+      checkBucketQuotaInNamespace(bucketInfo, missingParentInfos.size());
+      bucketUpdate.incrUsedNamespace(missingParentInfos.size());
 
       // Add cache entries for the prefix directories.
       // Skip adding for the file key itself, until Key Commit.
@@ -209,6 +212,12 @@ public class S3InitiateMultipartUploadRequestWithFSO
       omMetadataManager.getMultipartInfoTable().addCacheEntry(
           multipartKey, multipartKeyInfo, transactionLogIndex);
 
+      OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(transactionLogIndex, updatedBucket));
+
       omClientResponse =
           new S3InitiateMultipartUploadResponseWithFSO(
               omResponse.setInitiateMultiPartUploadResponse(
@@ -219,7 +228,7 @@ public class S3InitiateMultipartUploadRequestWithFSO
                       .setMultipartUploadID(keyArgs.getMultipartUploadID()))
                   .build(), multipartKeyInfo, omKeyInfo, multipartKey,
               missingParentInfos, getBucketLayout(), volumeId, bucketId,
-              bucketInfo.copyObject());
+              updatedBucket.copyObject());
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

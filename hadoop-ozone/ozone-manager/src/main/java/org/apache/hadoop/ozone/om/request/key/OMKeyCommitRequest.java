@@ -28,6 +28,8 @@ import java.util.Map;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -153,7 +155,6 @@ public class OMKeyCommitRequest extends OMKeyRequest {
 
     Exception exception = null;
     OmKeyInfo omKeyInfo = null;
-    OmBucketInfo omBucketInfo = null;
     OMClientResponse omClientResponse = null;
     boolean bucketLockAcquired = false;
     Result result;
@@ -188,7 +189,11 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       bucketLockAcquired = getOmLockDetails().isLockAcquired();
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       // Check for directory exists with same name, if it exists throw error.
       if (LOG.isDebugEnabled()) {
@@ -291,7 +296,7 @@ public class OMKeyCommitRequest extends OMKeyRequest {
         checkBucketQuotaInNamespace(omBucketInfo, 1L);
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
-        omBucketInfo.incrUsedNamespace(1L);
+        bucketUpdate.incrUsedNamespace(1L);
       }
 
       // let the uncommitted blocks pretend as key's old version blocks
@@ -321,10 +326,15 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       omMetadataManager.getKeyTable(getBucketLayout()).addCacheEntry(
           dbOzoneKey, omKeyInfo, trxnLogIndex);
 
-      omBucketInfo.incrUsedBytes(correctedSpace);
+      bucketUpdate.incrUsedBytes(correctedSpace);
+      OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       omClientResponse = new OMKeyCommitResponse(omResponse.build(),
-          omKeyInfo, dbOzoneKey, dbOpenKey, omBucketInfo.copyObject(),
+          omKeyInfo, dbOzoneKey, dbOpenKey, updatedBucket.copyObject(),
           oldKeyVersionsToDeleteMap, isHSync);
 
       result = Result.SUCCESS;

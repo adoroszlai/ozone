@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.om.request.file;
 
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
@@ -142,8 +144,10 @@ public class OMDirectoryCreateRequestWithFSO extends OMDirectoryCreateRequest {
       } else if (omDirectoryResult == DIRECTORY_EXISTS_IN_GIVENPATH ||
           omDirectoryResult == NONE) {
 
-        OmBucketInfo omBucketInfo =
+        final OmBucketInfo omBucketInfo =
             getBucketInfo(omMetadataManager, volumeName, bucketName);
+        final String dbBucketKey = omMetadataManager.getBucketKey(
+            omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
         // prepare all missing parents
         missingParentInfos =
             OMDirectoryCreateRequestWithFSO.getAllMissingParentDirInfo(
@@ -156,14 +160,20 @@ public class OMDirectoryCreateRequestWithFSO extends OMDirectoryCreateRequest {
         // total number of keys created.
         numKeysCreated = missingParentInfos.size() + 1;
         checkBucketQuotaInNamespace(omBucketInfo, numKeysCreated);
-        omBucketInfo.incrUsedNamespace(numKeysCreated);
+        OmBucketInfo updatedBucket = omBucketInfo.toBuilder()
+            .incrUsedNamespace(numKeysCreated)
+            .build();
+
+        omMetadataManager.getBucketTable().addCacheEntry(
+            new CacheKey<>(dbBucketKey),
+            CacheValue.get(trxnLogIndex, updatedBucket));
 
         // prepare leafNode dir
         OmDirectoryInfo dirInfo = createDirectoryInfoWithACL(
             omPathInfo.getLeafNodeName(),
             keyArgs, omPathInfo.getLeafNodeObjectId(),
             omPathInfo.getLastKnownParentId(), trxnLogIndex,
-            omBucketInfo, omPathInfo);
+            updatedBucket, omPathInfo);
         OMFileRequest.addDirectoryTableCacheEntries(omMetadataManager,
             volumeId, bucketId, trxnLogIndex,
             missingParentInfos, dirInfo);
@@ -172,7 +182,7 @@ public class OMDirectoryCreateRequestWithFSO extends OMDirectoryCreateRequest {
         omClientResponse =
             new OMDirectoryCreateResponseWithFSO(omResponse.build(),
                 volumeId, bucketId, dirInfo, missingParentInfos, result,
-                getBucketLayout(), omBucketInfo.copyObject());
+                getBucketLayout(), updatedBucket.copyObject());
       } else {
         result = Result.DIRECTORY_ALREADY_EXISTS;
         omResponse.setStatus(Status.DIRECTORY_ALREADY_EXISTS);

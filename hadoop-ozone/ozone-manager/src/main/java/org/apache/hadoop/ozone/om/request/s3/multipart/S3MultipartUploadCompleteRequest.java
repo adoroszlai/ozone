@@ -173,7 +173,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
       acquiredLock = getOmLockDetails().isLockAcquired();
 
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
-      OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
           volumeName, bucketName);
 
       String ozoneKey = omMetadataManager.getOzoneKey(
@@ -199,6 +199,8 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
             failureMessage(requestedVolume, requestedBucket, keyName),
             OMException.ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       }
+
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       if (partsList.size() > 0) {
         final OmMultipartKeyInfo.PartKeyInfoMap partKeyInfoMap
@@ -255,21 +257,23 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
           usedBytesDiff -= keyToDelete.getReplicatedSize();
         } else {
           checkBucketQuotaInNamespace(omBucketInfo, 1L);
-          omBucketInfo.incrUsedNamespace(1L);
+          bucketUpdate.incrUsedNamespace(1L);
           isNamespaceUpdate = true;
         }
 
         String dbBucketKey = omMetadataManager.getBucketKey(
             omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
         if (usedBytesDiff != 0) {
-          omBucketInfo.incrUsedBytes(usedBytesDiff);
+          bucketUpdate.incrUsedBytes(usedBytesDiff);
         } else if (!isNamespaceUpdate) {
           // If no bucket size and Namespace changed, prevent from updating
           // bucket object.
-          omBucketInfo = null;
+          bucketUpdate = null;
         }
 
-        updateCache(omMetadataManager, dbBucketKey, omBucketInfo, dbOzoneKey,
+        OmBucketInfo updatedBucket = bucketUpdate != null ? bucketUpdate.build() : null;
+
+        updateCache(omMetadataManager, dbBucketKey, updatedBucket, dbOzoneKey,
             dbMultipartOpenKey, multipartKey, omKeyInfo, trxnLogIndex);
 
         omResponse.setCompleteMultiPartUploadResponse(
@@ -283,7 +287,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         long bucketId = omMetadataManager.getBucketId(volumeName, bucketName);
         omClientResponse =
             getOmClientResponse(multipartKey, omResponse, dbMultipartOpenKey,
-                omKeyInfo, allKeyInfoToRemove, omBucketInfo,
+                omKeyInfo, allKeyInfoToRemove, updatedBucket,
                 volumeId, bucketId);
 
         result = Result.SUCCESS;
@@ -601,7 +605,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
 
     // Here, omBucketInfo can be null if its size has not changed. No need to
     // update the bucket info unless its size has changed. We never want to
-    // delete the bucket info here, but just avoiding unnecessary update.
+    // delete the bucket info here, but just avoiding unnecessary bucketUpdate.
     if (omBucketInfo != null) {
       omMetadataManager.getBucketTable().addCacheEntry(
           new CacheKey<>(dbBucketKey),

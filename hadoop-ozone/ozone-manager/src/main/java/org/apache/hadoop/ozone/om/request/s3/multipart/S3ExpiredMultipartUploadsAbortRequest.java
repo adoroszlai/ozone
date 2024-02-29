@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.ozone.om.request.s3.multipart;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
@@ -102,10 +103,12 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
     IOException exception = null;
     OMClientResponse omClientResponse = null;
     Result result = null;
-    Map<OmBucketInfo, List<OmMultipartAbortInfo>>
-        abortedMultipartUploads = new HashMap<>();
+    Map<OmBucketInfo, List<OmMultipartAbortInfo>> aborts = new HashMap<>();
 
     try {
+      Map<Long, Pair<OmBucketInfo.Builder, List<OmMultipartAbortInfo>>>
+          abortedMultipartUploads = new HashMap<>();
+
       for (ExpiredMultipartUploadsBucket mpuByBucket:
           submittedExpiredMPUsPerBucket) {
         // For each bucket where the MPU will be aborted from,
@@ -114,8 +117,12 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
             abortedMultipartUploads);
       }
 
+      for (Pair<OmBucketInfo.Builder, List<OmMultipartAbortInfo>> pair : abortedMultipartUploads.values()) {
+        aborts.put(pair.getKey().build(), pair.getValue());
+      }
+
       omClientResponse = new S3ExpiredMultipartUploadsAbortResponse(
-          omResponse.build(), abortedMultipartUploads,
+          omResponse.build(), aborts,
           ozoneManager.isRatisEnabled());
 
       result = Result.SUCCESS;
@@ -132,10 +139,10 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
     }
 
     // Only successfully aborted MPUs are included in the audit.
-    auditAbortedMPUs(ozoneManager, abortedMultipartUploads);
+    auditAbortedMPUs(ozoneManager, aborts);
 
     processResults(omMetrics, numSubmittedMPUs,
-        abortedMultipartUploads.size(),
+        aborts.size(),
         multipartUploadsExpiredAbortRequest, result);
 
     return omClientResponse;
@@ -189,14 +196,13 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
 
   private void updateTableCache(OzoneManager ozoneManager,
         long trxnLogIndex, ExpiredMultipartUploadsBucket mpusPerBucket,
-        Map<OmBucketInfo, List<OmMultipartAbortInfo>> abortedMultipartUploads)
+        Map<Long, Pair<OmBucketInfo.Builder, List<OmMultipartAbortInfo>>> abortedMultipartUploads)
       throws IOException {
 
     boolean acquiredLock = false;
     String volumeName = mpusPerBucket.getVolumeName();
     String bucketName = mpusPerBucket.getBucketName();
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    OmBucketInfo omBucketInfo = null;
     BucketLayout bucketLayout = null;
     OMLockDetails omLockDetails = null;
     try {
@@ -204,13 +210,15 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
           .acquireWriteLock(BUCKET_LOCK, volumeName, bucketName);
       acquiredLock = omLockDetails.isLockAcquired();
 
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
 
       if (omBucketInfo == null) {
         LOG.warn("Volume: {}, Bucket: {} does not exist, skipping deletion.",
             volumeName, bucketName);
         return;
       }
+
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       // Do not use getBucketLayout since the expired MPUs request might
       // contains MPUs from all kind of buckets
@@ -282,7 +290,7 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
             quotaReleased +=
                 iterPartKeyInfo.getPartKeyInfo().getDataSize() * keyFactor;
           }
-          omBucketInfo.incrUsedBytes(-quotaReleased);
+          bucketUpdate.incrUsedBytes(-quotaReleased);
 
           OmMultipartAbortInfo omMultipartAbortInfo =
               new OmMultipartAbortInfo.Builder()
@@ -292,8 +300,10 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
                   .setBucketLayout(omBucketInfo.getBucketLayout())
                   .build();
 
-          abortedMultipartUploads.computeIfAbsent(omBucketInfo,
-              k -> new ArrayList<>()).add(omMultipartAbortInfo);
+          abortedMultipartUploads
+              .computeIfAbsent(omBucketInfo.getObjectID(), k -> Pair.of(bucketUpdate, new ArrayList<>()))
+              .getRight()
+              .add(omMultipartAbortInfo);
 
           // Update cache of openKeyTable and multipartInfo table.
           // No need to add the cache entries to delete table, as the entries

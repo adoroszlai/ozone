@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -232,8 +234,10 @@ public class OMKeyCreateRequest extends OMKeyRequest {
       OmKeyInfo dbKeyInfo = omMetadataManager.getKeyTable(getBucketLayout())
           .getIfExist(dbKeyName);
 
-      OmBucketInfo bucketInfo =
+      final OmBucketInfo bucketInfo =
           getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          bucketInfo.getVolumeName(), bucketInfo.getBucketName());
 
       // If FILE_EXISTS we just override like how we used to do for Key Create.
       if (LOG.isDebugEnabled()) {
@@ -308,7 +312,13 @@ public class OMKeyCreateRequest extends OMKeyRequest {
       checkBucketQuotaInBytes(omMetadataManager, bucketInfo,
           preAllocatedSpace);
       checkBucketQuotaInNamespace(bucketInfo, numMissingParents + 1L);
-      bucketInfo.incrUsedNamespace(numMissingParents);
+      OmBucketInfo updatedBucket = bucketInfo.toBuilder()
+          .incrUsedNamespace(numMissingParents)
+          .build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       if (numMissingParents > 0) {
         // Add cache entries for the prefix directories.
@@ -332,7 +342,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
           .setOpenVersion(openVersion).build())
           .setCmdType(Type.CreateKey);
       omClientResponse = new OMKeyCreateResponse(omResponse.build(),
-          omKeyInfo, missingParentInfos, clientID, bucketInfo.copyObject());
+          omKeyInfo, missingParentInfos, clientID, updatedBucket.copyObject());
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

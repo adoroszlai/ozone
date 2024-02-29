@@ -107,7 +107,6 @@ public class OMAllocateBlockRequestWithFSO extends OMAllocateBlockRequest {
 
     OmKeyInfo openKeyInfo = null;
     Exception exception = null;
-    OmBucketInfo omBucketInfo = null;
     boolean acquiredLock = false;
 
     try {
@@ -133,7 +132,7 @@ public class OMAllocateBlockRequestWithFSO extends OMAllocateBlockRequest {
           omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
               volumeName, bucketName));
       acquiredLock = getOmLockDetails().isLockAcquired();
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
       // check bucket and volume quota
       long preAllocatedKeySize = newLocationList.size()
           * ozoneManager.getScmBlockSize();

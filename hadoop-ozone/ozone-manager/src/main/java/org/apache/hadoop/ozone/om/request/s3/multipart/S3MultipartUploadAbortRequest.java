@@ -124,7 +124,6 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
         getOmRequest());
     OMClientResponse omClientResponse = null;
     Result result = null;
-    OmBucketInfo omBucketInfo = null;
     try {
       mergeOmLockDetails(
           omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK, volumeName,
@@ -150,7 +149,6 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
 
       OmKeyInfo omKeyInfo = omMetadataManager.getOpenKeyTable(getBucketLayout())
           .get(multipartOpenKey);
-      omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
 
       // If there is no entry in openKeyTable, then there is no multipart
       // upload initiated for this key.
@@ -159,6 +157,11 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
             requestedVolume + "bucket: " + requestedBucket + "key: " + keyName,
             OMException.ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
       }
+
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+      final String dbBucketKey = omMetadataManager.getBucketKey(
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
+      OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
 
       multipartKeyInfo = omMetadataManager.getMultipartInfoTable()
           .get(multipartKey);
@@ -172,7 +175,12 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
             iterPartKeyInfo.getPartKeyInfo().getDataSize(),
             omKeyInfo.getReplicationConfig());
       }
-      omBucketInfo.incrUsedBytes(-quotaReleased);
+      bucketUpdate.incrUsedBytes(-quotaReleased);
+      final OmBucketInfo updatedBucket = bucketUpdate.build();
+
+      omMetadataManager.getBucketTable().addCacheEntry(
+          new CacheKey<>(dbBucketKey),
+          CacheValue.get(trxnLogIndex, updatedBucket));
 
       // Update cache of openKeyTable and multipartInfo table.
       // No need to add the cache entries to delete table, as the entries
@@ -185,7 +193,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
               CacheValue.get(trxnLogIndex));
 
       omClientResponse = getOmClientResponse(ozoneManager, multipartKeyInfo,
-          multipartKey, multipartOpenKey, omResponse, omBucketInfo);
+          multipartKey, multipartOpenKey, omResponse, updatedBucket);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {
