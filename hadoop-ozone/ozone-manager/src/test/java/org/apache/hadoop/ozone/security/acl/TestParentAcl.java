@@ -40,7 +40,6 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.ozone.test.tag.Unhealthy;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -117,7 +116,6 @@ public class TestParentAcl {
   }
 
   @Test
-  @Unhealthy("HDDS-6335")
   public void testKeyAcl()
       throws IOException {
     OzoneObj keyObj;
@@ -132,7 +130,7 @@ public class TestParentAcl {
 
     List<OzoneAcl> originalVolAcls = getVolumeAcls(vol);
     List<OzoneAcl> originalBuckAcls = getBucketAcls(vol, buck);
-    List<OzoneAcl> originalKeyAcls = getBucketAcls(vol, buck);
+    List<OzoneAcl> originalKeyAcls = getKeyAcls(vol, buck, key);
 
     testParentChild(keyObj, READ, WRITE_ACL);
     resetAcl(vol, originalVolAcls, buck, originalBuckAcls,
