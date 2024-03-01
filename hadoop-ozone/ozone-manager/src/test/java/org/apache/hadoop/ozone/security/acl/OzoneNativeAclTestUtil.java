@@ -131,6 +131,7 @@ final class OzoneNativeAclTestUtil {
     keyTable.addCacheEntry(
         new CacheKey<>(objKey),
         CacheValue.get(1L, omKeyInfo));
+    keyTable.put(objKey, omKeyInfo);
   }
 
   public static List<OzoneAcl> getVolumeAcls(
