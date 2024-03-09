@@ -54,7 +54,9 @@ jobs:
 
       - name: Fetch dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
-        run: mvn -B -fn -ntp -V -Dtest=void -Dskip.npx -Dskip.installnpx -DskipDocs -Pdist -Dmaven.javadoc.skip=true clean verify
+        run: |
+          mvn -B -fn -ntp -V -Dtest=void -Dskip.npx -Dskip.installnpx -DskipDocs -Pdist -Dmaven.javadoc.skip=true -DskipShade clean install
+          mvn -B -fn -ntp -V -Dtest=void -Dmaven.shade.skip=true -pl :ozone-filesystem-shaded,:ozone-filesystem-hadoop2 package
 
       - name: Delete Ozone jars from repo
         if: steps.restore-cache.outputs.cache-hit != 'true'
