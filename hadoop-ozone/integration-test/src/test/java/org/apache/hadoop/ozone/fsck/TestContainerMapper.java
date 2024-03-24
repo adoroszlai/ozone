@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.ozone.fsck;
 
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -33,7 +32,6 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.util.FileUtils;
@@ -44,13 +42,11 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
@@ -59,23 +55,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Test cases for ContainerMapper.
  */
-@Timeout(value = 300, unit = TimeUnit.SECONDS)
-public class TestContainerMapper {
+@Timeout(value = 300)
+class TestContainerMapper {
   private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
-  private static ObjectStore store = null;
-  private static OzoneManager ozoneManager;
-  private static StorageContainerLocationProtocolClientSideTranslatorPB
-      storageContainerLocationClient;
-  private static String volName = UUID.randomUUID().toString();
-  private static String bucketName = UUID.randomUUID().toString();
+  private static final String VOLUME_NAME = UUID.randomUUID().toString();
+  private static final String BUCKET_NAME = UUID.randomUUID().toString();
   private static OzoneConfiguration conf;
-  private static List<String> keyList = new ArrayList<>();
   private static String dbPath;
 
 
   @BeforeAll
-  public static void init() throws Exception {
+  static void init() throws Exception {
     conf = new OzoneConfiguration();
     dbPath = GenericTestUtils.getRandomizedTempPath();
     conf.set(OZONE_OM_DB_DIRS, dbPath);
@@ -90,26 +81,22 @@ public class TestContainerMapper {
         .build();
     cluster.waitForClusterToBeReady();
     ozClient = OzoneClientFactory.getRpcClient(conf);
-    store = ozClient.getObjectStore();
-    storageContainerLocationClient =
-        cluster.getStorageContainerLocationClient();
-    ozoneManager = cluster.getOzoneManager();
-    store.createVolume(volName);
-    OzoneVolume volume = store.getVolume(volName);
+    ObjectStore store = ozClient.getObjectStore();
+    store.createVolume(VOLUME_NAME);
+    OzoneVolume volume = store.getVolume(VOLUME_NAME);
     // TODO: HDDS-5463
     //  Recon's container ID to key mapping does not yet support FSO buckets.
-    volume.createBucket(bucketName, BucketArgs.newBuilder()
+    volume.createBucket(BUCKET_NAME, BucketArgs.newBuilder()
             .setBucketLayout(BucketLayout.OBJECT_STORE)
             .build());
-    OzoneBucket bucket = volume.getBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(BUCKET_NAME);
     byte[] data = generateData(10 * 1024 * 1024, (byte)98);
 
     for (int i = 0; i < 20; i++) {
       String key = UUID.randomUUID().toString();
-      keyList.add(key);
       try (OzoneOutputStream out = bucket.createKey(key, data.length,
-          ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
-          new HashMap<String, String>())) {
+          StandaloneReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE),
+          new HashMap<>())) {
         out.write(data, 0, data.length);
       }
     }
@@ -117,7 +104,7 @@ public class TestContainerMapper {
   }
 
   @Test
-  public void testContainerMapper() throws Exception {
+  void testContainerMapper() throws Exception {
     ContainerMapper containerMapper = new ContainerMapper();
     Map<Long, List<Map<Long, BlockIdDetails>>> dataMap =
         containerMapper.parseOmDB(conf);
@@ -134,7 +121,7 @@ public class TestContainerMapper {
   }
 
   @AfterAll
-  public static void shutdown() throws IOException {
+  static void shutdown() throws IOException {
     IOUtils.closeQuietly(ozClient);
     cluster.shutdown();
     FileUtils.deleteFully(new File(dbPath));
