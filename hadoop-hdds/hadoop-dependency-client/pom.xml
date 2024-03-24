@@ -200,10 +200,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
           <artifactId>*</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.apache.curator</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>javax.servlet.jsp</groupId>
           <artifactId>*</artifactId>
         </exclusion>

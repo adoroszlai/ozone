@@ -30,8 +30,6 @@ share/ozone/lib/commons-net.jar
 share/ozone/lib/commons-text.jar
 share/ozone/lib/commons-validator.jar
 share/ozone/lib/commons-fileupload.jar
-share/ozone/lib/curator-client.jar
-share/ozone/lib/curator-framework.jar
 share/ozone/lib/derby.jar
 share/ozone/lib/disruptor.jar
 share/ozone/lib/dnsjava.jar
@@ -266,6 +264,4 @@ share/ozone/lib/txw2.jar
 share/ozone/lib/vault-java-driver.jar
 share/ozone/lib/weld-servlet-shaded.Final.jar
 share/ozone/lib/woodstox-core.jar
-share/ozone/lib/zookeeper.jar
-share/ozone/lib/zookeeper-jute.jar
 share/ozone/lib/zstd-jni.jar
