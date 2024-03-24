@@ -107,11 +107,11 @@ public class TestContainerMapper {
     for (int i = 0; i < 20; i++) {
       String key = UUID.randomUUID().toString();
       keyList.add(key);
-      OzoneOutputStream out = bucket.createKey(key, data.length,
+      try (OzoneOutputStream out = bucket.createKey(key, data.length,
           ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
-          new HashMap<String, String>());
-      out.write(data, 0, data.length);
-      out.close();
+          new HashMap<String, String>())) {
+        out.write(data, 0, data.length);
+      }
     }
     cluster.stop();
   }
