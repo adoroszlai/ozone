@@ -195,7 +195,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <!-- define the protobuf JAR version                               -->
     <proto2.hadooprpc.protobuf.version>2.5.0</proto2.hadooprpc.protobuf.version>
     <proto3.hadooprpc.protobuf.version>3.7.1</proto3.hadooprpc.protobuf.version>
-    <hadoop-thirdparty.version>1.1.1</hadoop-thirdparty.version>
+    <hadoop-thirdparty.version>1.2.0</hadoop-thirdparty.version>
 
     <spotbugs.version>3.1.12</spotbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
@@ -303,7 +303,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <properties.maven.plugin.version>1.2.1</properties.maven.plugin.version>
     <maven.core.version>3.9.6</maven.core.version>
     <snappy-java.version>1.1.10.5</snappy-java.version>
-    <hadoop-shaded-guava.version>1.2.0</hadoop-shaded-guava.version>
   </properties>
 
   <dependencyManagement>
@@ -1298,13 +1297,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
-        <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
         <version>${hadoop-thirdparty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
         <artifactId>hadoop-shaded-guava</artifactId>
-        <version>${hadoop-shaded-guava.version}</version>
+        <version>${hadoop-thirdparty.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-daemon</groupId>
