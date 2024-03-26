@@ -49,7 +49,6 @@
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-guava</artifactId>
-      <version>${hadoop-shaded-guava.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
