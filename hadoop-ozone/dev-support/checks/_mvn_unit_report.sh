@@ -29,11 +29,6 @@ _realpath() {
 tempfile="${REPORT_DIR}/summary.tmp"
 
 ## generate summary txt file
-find "." -not -path '*/iteration*' -name 'TEST*.xml' -print0 \
-    | xargs -n1 -0 "grep" -l -E "<failure|<error" \
-    | awk -F/ '{sub("'"TEST-"'",""); sub(".xml",""); print $NF}' \
-    > "${tempfile}"
-
 if [[ "${CHECK:-unit}" == "integration" ]]; then
   find hadoop-ozone/integration-test -not -path '*/iteration*' -name '*-output.txt' -print0 \
       | xargs -n1 -0 "grep" -l -E "not closed properly|was not shutdown properly" \
