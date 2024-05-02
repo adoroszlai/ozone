@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.ozone.client.io;
 
-import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 
 import java.io.IOException;
@@ -32,6 +32,7 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
     implements  KeyMetadataAware {
 
   private final ByteBufferStreamOutput byteBufferStreamOutput;
+  private final OutputStream outputStream;
 
   /**
    * Constructs OzoneDataStreamOutput with KeyDataStreamOutput.
@@ -40,6 +41,7 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
    */
   public OzoneDataStreamOutput(ByteBufferStreamOutput byteBufferStreamOutput) {
     this.byteBufferStreamOutput = byteBufferStreamOutput;
+    this.outputStream = byteBufferStreamOutput instanceof OutputStream ? (OutputStream) byteBufferStreamOutput : null;
   }
 
   @Override
@@ -67,30 +69,12 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
     return null;
   }
 
-  public KeyDataStreamOutput getKeyDataStreamOutput() {
-    if (byteBufferStreamOutput instanceof OzoneOutputStream) {
-      OutputStream outputStream =
-          ((OzoneOutputStream) byteBufferStreamOutput).getOutputStream();
-      if (outputStream instanceof KeyDataStreamOutput) {
-        return ((KeyDataStreamOutput) outputStream);
-      } else if (outputStream instanceof CryptoOutputStream) {
-        OutputStream wrappedStream =
-            ((CryptoOutputStream) outputStream).getWrappedStream();
-        if (wrappedStream instanceof KeyDataStreamOutput) {
-          return ((KeyDataStreamOutput) wrappedStream);
-        }
-      } else if (outputStream instanceof CipherOutputStreamOzone) {
-        OutputStream wrappedStream =
-            ((CipherOutputStreamOzone) outputStream).getWrappedStream();
-        if (wrappedStream instanceof KeyDataStreamOutput) {
-          return ((KeyDataStreamOutput) wrappedStream);
-        }
-      }
-    } else if (byteBufferStreamOutput instanceof KeyDataStreamOutput) {
-      return ((KeyDataStreamOutput) byteBufferStreamOutput);
-    }
-    // Otherwise return null.
-    return null;
+  public OutputStream getOutputStream() {
+    return outputStream;
+  }
+
+  private KeyDataStreamOutput getKeyDataStreamOutput() {
+    return RpcClient.unwrap(getOutputStream(), KeyDataStreamOutput.class);
   }
 
   public ByteBufferStreamOutput getByteBufStreamOutput() {

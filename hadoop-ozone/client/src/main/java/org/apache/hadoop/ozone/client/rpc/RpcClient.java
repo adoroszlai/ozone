@@ -329,6 +329,25 @@ public class RpcClient implements ClientProtocol {
     TracingUtil.initTracing("client", conf);
   }
 
+  public static OutputStream unwrap(OutputStream wrapper) {
+    OutputStream wrapped = null;
+    if (wrapper instanceof OzoneOutputStream) {
+      wrapped = ((OzoneOutputStream) wrapper).getOutputStream();
+    } else if (wrapper instanceof OzoneDataStreamOutput) {
+      wrapped = ((OzoneDataStreamOutput) wrapper).getOutputStream();
+    } else if (wrapper instanceof CipherOutputStreamOzone) {
+      wrapped = ((CipherOutputStreamOzone) wrapper).getWrappedStream();
+    } else if (wrapper instanceof CryptoOutputStream) {
+      wrapped = ((CryptoOutputStream) wrapper).getWrappedStream();
+    }
+    return wrapped != null ? unwrap(wrapped) : wrapper;
+  }
+
+  public static <T> T unwrap(OutputStream wrapper, Class<T> clazz) {
+    OutputStream wrappedStream = unwrap(wrapper);
+    return clazz.isInstance(wrappedStream) ? clazz.cast(wrappedStream) : null;
+  }
+
   public XceiverClientFactory getXceiverClientManager() {
     return xceiverClientManager;
   }

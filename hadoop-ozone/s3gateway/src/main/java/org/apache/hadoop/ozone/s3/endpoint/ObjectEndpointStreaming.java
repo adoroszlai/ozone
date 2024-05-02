@@ -23,7 +23,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.io.KeyMetadataAware;
 import org.apache.hadoop.ozone.client.io.OzoneDataStreamOutput;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
@@ -109,7 +108,7 @@ final class ObjectEndpointStreaming {
       eTag = DatatypeConverter.printHexBinary(body.getMessageDigest().digest())
           .toLowerCase();
       perf.appendMetaLatencyNanos(metadataLatencyNs);
-      ((KeyMetadataAware)streamOutput).getMetadata().put(OzoneConsts.ETAG, eTag);
+      streamOutput.getMetadata().put(OzoneConsts.ETAG, eTag);
     }
     return Pair.of(eTag, writeLen);
   }
@@ -133,7 +132,7 @@ final class ObjectEndpointStreaming {
       String eTag = DatatypeConverter.printHexBinary(body.getMessageDigest().digest())
           .toLowerCase();
       perf.appendMetaLatencyNanos(metadataLatencyNs);
-      ((KeyMetadataAware)streamOutput).getMetadata().put(OzoneConsts.ETAG, eTag);
+      streamOutput.getMetadata().put(OzoneConsts.ETAG, eTag);
     }
     return writeLen;
   }
@@ -171,7 +170,7 @@ final class ObjectEndpointStreaming {
             writeToStreamOutput(streamOutput, body, chunkSize, length);
         eTag = DatatypeConverter.printHexBinary(
             body.getMessageDigest().digest()).toLowerCase();
-        ((KeyMetadataAware)streamOutput).getMetadata().put(OzoneConsts.ETAG, eTag);
+        streamOutput.getMetadata().put(OzoneConsts.ETAG, eTag);
         METRICS.incPutKeySuccessLength(putLength);
         perf.appendMetaLatencyNanos(metadataLatencyNs);
         perf.appendSizeBytes(putLength);

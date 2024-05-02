@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.ozone.client.io;
 
-import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class OzoneOutputStream extends ByteArrayStreamOutput
 
   private final OutputStream outputStream;
   private final Syncable syncable;
-  private boolean enableHsync;
+  private final boolean enableHsync;
 
   /**
    * Constructs an instance with a {@link Syncable} {@link OutputStream}.
@@ -123,47 +123,17 @@ public class OzoneOutputStream extends ByteArrayStreamOutput
   }
 
   public OmMultipartCommitUploadPartInfo getCommitUploadPartInfo() {
-    KeyOutputStream keyOutputStream = getKeyOutputStream();
-    if (keyOutputStream != null) {
-      return keyOutputStream.getCommitUploadPartInfo();
-    }
-    // Otherwise return null.
-    return null;
+    KeyOutputStream keyOutputStream = RpcClient.unwrap(getOutputStream(), KeyOutputStream.class);
+    return keyOutputStream != null ? keyOutputStream.getCommitUploadPartInfo() : null;
   }
 
   public OutputStream getOutputStream() {
     return outputStream;
   }
 
-  public KeyOutputStream getKeyOutputStream() {
-    if (outputStream instanceof KeyOutputStream) {
-      return ((KeyOutputStream) outputStream);
-    } else  if (outputStream instanceof CryptoOutputStream) {
-      OutputStream wrappedStream =
-          ((CryptoOutputStream) outputStream).getWrappedStream();
-      if (wrappedStream instanceof KeyOutputStream) {
-        return ((KeyOutputStream) wrappedStream);
-      }
-    } else if (outputStream instanceof CipherOutputStreamOzone) {
-      OutputStream wrappedStream =
-          ((CipherOutputStreamOzone) outputStream).getWrappedStream();
-      if (wrappedStream instanceof KeyOutputStream) {
-        return ((KeyOutputStream)wrappedStream);
-      }
-    }
-    // Otherwise return null.
-    return null;
-  }
-
   @Override
   public Map<String, String> getMetadata() {
-    if (outputStream instanceof CryptoOutputStream) {
-      return ((KeyMetadataAware)((CryptoOutputStream) outputStream)
-          .getWrappedStream()).getMetadata();
-    } else if (outputStream instanceof CipherOutputStreamOzone) {
-      return ((KeyMetadataAware)((CipherOutputStreamOzone) outputStream)
-          .getWrappedStream()).getMetadata();
-    }
-    return ((KeyMetadataAware) outputStream).getMetadata();
+    KeyMetadataAware metadataAware = RpcClient.unwrap(getOutputStream(), KeyMetadataAware.class);
+    return metadataAware != null ? metadataAware.getMetadata() : null;
   }
 }
