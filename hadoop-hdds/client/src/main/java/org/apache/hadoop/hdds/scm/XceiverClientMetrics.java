@@ -33,6 +33,8 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.util.PerformanceMetrics;
 import org.apache.hadoop.util.PerformanceMetricsInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The client metrics for the Storage Container protocol.
@@ -42,6 +44,8 @@ import org.apache.hadoop.util.PerformanceMetricsInitializer;
 public class XceiverClientMetrics implements MetricsSource {
   public static final String SOURCE_NAME = XceiverClientMetrics.class
       .getSimpleName();
+
+  private static final Logger LOG = LoggerFactory.getLogger(XceiverClientMetrics.class);
 
   private @Metric MutableCounterLong pendingOps;
   private @Metric MutableCounterLong totalOps;
@@ -91,6 +95,7 @@ public class XceiverClientMetrics implements MetricsSource {
   }
 
   public void incrPendingContainerOpsMetrics(ContainerProtos.Type type) {
+    LOG.debug("pending ops++ {}", type);
     pendingOps.incr();
     totalOps.incr();
     opsArray[type.ordinal()].incr();
@@ -98,6 +103,7 @@ public class XceiverClientMetrics implements MetricsSource {
   }
 
   public void decrPendingContainerOpsMetrics(ContainerProtos.Type type) {
+    LOG.debug("pending ops-- {}", type);
     pendingOps.incr(-1);
     pendingOpsArray[type.ordinal()].incr(-1);
   }
