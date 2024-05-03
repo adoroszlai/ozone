@@ -53,6 +53,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type.PutBlock;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type.WriteChunk;
@@ -68,6 +70,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(300)
 class TestBlockOutputStream {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockOutputStream.class);
 
   static final int CHUNK_SIZE = 100;
   static final int FLUSH_SIZE = 2 * CHUNK_SIZE;
@@ -269,81 +273,94 @@ class TestBlockOutputStream {
           metrics.getPendingContainerOpCountMetrics(PutBlock);
       final long totalOpCount = metrics.getTotalOpCount();
 
-      String keyName = getKeyName();
-      OzoneOutputStream key = createKey(client, keyName);
       // write data equal to 2 chunks
       int dataLength = FLUSH_SIZE;
       byte[] data1 = RandomUtils.nextBytes(dataLength);
-      key.write(data1);
 
-      assertEquals(pendingWriteChunkCount + 2,
-          metrics.getPendingContainerOpCountMetrics(WriteChunk));
-      assertEquals(pendingPutBlockCount + 1,
-          metrics.getPendingContainerOpCountMetrics(PutBlock));
-      KeyOutputStream keyOutputStream =
-          assertInstanceOf(KeyOutputStream.class, key.getOutputStream());
-      assertEquals(1, keyOutputStream.getStreamEntries().size());
-      RatisBlockOutputStream blockOutputStream =
-          assertInstanceOf(RatisBlockOutputStream.class,
-              keyOutputStream.getStreamEntries().get(0).getOutputStream());
+      String keyName = getKeyName();
+      OzoneOutputStream key = createKey(client, keyName);
+      KeyOutputStream keyOutputStream = null;
+      RatisBlockOutputStream blockOutputStream = null;
+      try {
+        LOG.info("ZZZ {} writing {} bytes, metrics: {}/{}", keyName, dataLength, pendingWriteChunkCount, pendingPutBlockCount);
+        key.write(data1);
+        long pendingWriteChunkCount2 = metrics.getPendingContainerOpCountMetrics(WriteChunk);
+        long pendingPutBlockCount2 = metrics.getPendingContainerOpCountMetrics(PutBlock);
+        LOG.info("ZZZ {} written {} bytes, metrics: {}/{}", keyName, dataLength, pendingWriteChunkCount2, pendingPutBlockCount2);
 
-      // we have just written data equal flush Size = 2 chunks, at this time
-      // buffer pool will have 2 buffers allocated worth of chunk size
+        assertEquals(pendingWriteChunkCount + 2, pendingWriteChunkCount2);
+        assertEquals(pendingPutBlockCount + 1, pendingPutBlockCount2);
+        keyOutputStream =
+            assertInstanceOf(KeyOutputStream.class, key.getOutputStream());
+        assertEquals(1, keyOutputStream.getStreamEntries().size());
+        blockOutputStream =
+            assertInstanceOf(RatisBlockOutputStream.class,
+                keyOutputStream.getStreamEntries().get(0).getOutputStream());
 
-      assertEquals(2, blockOutputStream.getBufferPool().getSize());
-      // writtenDataLength as well flushedDataLength will be updated here
-      assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
+        // we have just written data equal flush Size = 2 chunks, at this time
+        // buffer pool will have 2 buffers allocated worth of chunk size
 
-      assertEquals(dataLength, blockOutputStream.getTotalDataFlushedLength());
-      assertEquals(0, blockOutputStream.getTotalAckDataLength());
+        assertEquals(2, blockOutputStream.getBufferPool().getSize());
+        // writtenDataLength as well flushedDataLength will be updated here
+        assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
 
-      assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
+        assertEquals(dataLength, blockOutputStream.getTotalDataFlushedLength());
+        assertEquals(0, blockOutputStream.getTotalAckDataLength());
 
-      // Now do a flush.
-      key.flush();
+        assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
 
-      assertEquals(1, keyOutputStream.getStreamEntries().size());
-      // The previously written data is equal to flushSize, so no action is
-      // triggered when execute flush, if flushDelay is enabled.
-      assertEquals(pendingWriteChunkCount + (flushDelay ? 2 : 0),
-          metrics.getPendingContainerOpCountMetrics(WriteChunk));
-      assertEquals(pendingPutBlockCount + (flushDelay ? 1 : 0),
-          metrics.getPendingContainerOpCountMetrics(PutBlock));
+        // Now do a flush.
+        LOG.info("ZZZ {} about to flush", keyName);
+        key.flush();
+        long pendingWriteChunkCount3 = metrics.getPendingContainerOpCountMetrics(WriteChunk);
+        long pendingPutBlockCount3 = metrics.getPendingContainerOpCountMetrics(PutBlock);
+        LOG.info("ZZZ {} flushed, metrics: {}/{}", keyName, pendingWriteChunkCount3, pendingPutBlockCount3);
 
-      // Since the data in the buffer is already flushed, flush here will have
-      // no impact on the counters and data structures
-      assertEquals(2, blockOutputStream.getBufferPool().getSize());
+        assertEquals(1, keyOutputStream.getStreamEntries().size());
+        // The previously written data is equal to flushSize, so no action is
+        // triggered when execute flush, if flushDelay is enabled.
+        assertEquals(pendingWriteChunkCount + (flushDelay ? 2 : 0), pendingWriteChunkCount3);
+        assertEquals(pendingPutBlockCount + (flushDelay ? 1 : 0), pendingPutBlockCount3);
 
-      // No action is triggered when execute flush, BlockOutputStream will not
-      // be updated.
-      assertEquals(flushDelay ? dataLength : 0,
-          blockOutputStream.getBufferPool().computeBufferData());
-      assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
-      assertEquals(dataLength, blockOutputStream.getTotalDataFlushedLength());
-      assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
-      assertEquals(flushDelay ? 0 : dataLength,
-          blockOutputStream.getTotalAckDataLength());
+        // Since the data in the buffer is already flushed, flush here will have
+        // no impact on the counters and data structures
+        assertEquals(2, blockOutputStream.getBufferPool().getSize());
 
-      // now close the stream, It will update ack length after watchForCommit
-      key.close();
+        // No action is triggered when execute flush, BlockOutputStream will not
+        // be updated.
+        assertEquals(flushDelay ? dataLength : 0,
+            blockOutputStream.getBufferPool().computeBufferData());
+        assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
+        assertEquals(dataLength, blockOutputStream.getTotalDataFlushedLength());
+        assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
+        assertEquals(flushDelay ? 0 : dataLength,
+            blockOutputStream.getTotalAckDataLength());
+      } finally {
 
-      assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
-      // make sure the bufferPool is empty
-      assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
-      assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
-      assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
-      assertEquals(pendingWriteChunkCount,
-          metrics.getPendingContainerOpCountMetrics(WriteChunk));
-      assertEquals(pendingPutBlockCount,
-          metrics.getPendingContainerOpCountMetrics(PutBlock));
-      assertEquals(writeChunkCount + 2,
-          metrics.getContainerOpCountMetrics(WriteChunk));
-      assertEquals(putBlockCount + 2,
-          metrics.getContainerOpCountMetrics(PutBlock));
-      assertEquals(totalOpCount + 4, metrics.getTotalOpCount());
-      assertEquals(0, keyOutputStream.getStreamEntries().size());
+        // now close the stream, It will update ack length after watchForCommit
+        LOG.info("ZZZ {} about to close", keyName);
+        key.close();
+        long pendingWriteChunkCount4 = metrics.getPendingContainerOpCountMetrics(WriteChunk);
+        long pendingPutBlockCount4 = metrics.getPendingContainerOpCountMetrics(PutBlock);
+        LOG.info("ZZZ {} closed, metrics: {}/{}", keyName, pendingWriteChunkCount4, pendingPutBlockCount4);
 
-      validateData(keyName, data1, client.getObjectStore(), VOLUME, BUCKET);
+        if (blockOutputStream != null) {
+          assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
+          // make sure the bufferPool is empty
+          assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
+          assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
+          assertEquals(0, blockOutputStream.getCommitIndex2flushedDataMap().size());
+          assertEquals(pendingWriteChunkCount, pendingWriteChunkCount4);
+          assertEquals(pendingPutBlockCount, pendingPutBlockCount4);
+          assertEquals(writeChunkCount + 2,
+              metrics.getContainerOpCountMetrics(WriteChunk));
+          assertEquals(putBlockCount + 2,
+              metrics.getContainerOpCountMetrics(PutBlock));
+          assertEquals(totalOpCount + 4, metrics.getTotalOpCount());
+          assertEquals(0, keyOutputStream.getStreamEntries().size());
+          validateData(keyName, data1, client.getObjectStore(), VOLUME, BUCKET);
+        }
+      }
     }
   }
 
