@@ -471,7 +471,7 @@ public class DatanodeDetails extends NodeImpl implements
           }
         }
       }
-      if (requiredPorts.isEmpty() && builder.getPortsCount() == requiredPorts.size()) {
+      if (!requiredPorts.isEmpty() && builder.getPortsCount() == requiredPorts.size()) {
         break;
       }
     }
