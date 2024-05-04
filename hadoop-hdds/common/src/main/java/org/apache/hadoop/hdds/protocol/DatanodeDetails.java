@@ -325,8 +325,7 @@ public class DatanodeDetails extends NodeImpl implements
       HddsProtos.UUID uuid = datanodeDetailsProto.getUuid128();
       builder.setUuid(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
     } else if (datanodeDetailsProto.hasUuid()) {
-      throw new RuntimeException("");
-//      builder.setUuid(UUID.fromString(datanodeDetailsProto.getUuid()));
+      builder.setUuid(UUID.fromString(datanodeDetailsProto.getUuid()));
     }
 
     if (datanodeDetailsProto.hasIpAddress()) {
