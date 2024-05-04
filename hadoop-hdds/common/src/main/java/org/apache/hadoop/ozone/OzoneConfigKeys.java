@@ -575,6 +575,11 @@ public final class OzoneConfigKeys {
   public static final boolean OZONE_CLIENT_KEY_LATEST_VERSION_LOCATION_DEFAULT =
       true;
 
+  public static final String OZONE_CLIENT_LIMIT_PORT_ENABLE =
+      "ozone.client.limit.port.enable";
+  public static final boolean OZONE_CLIENT_LIMIT_PORT_ENABLE_DEFAULT =
+      false;
+
   public static final String OZONE_FLEXIBLE_FQDN_RESOLUTION_ENABLED =
           "ozone.network.flexible.fqdn.resolution.enabled";
   public static final boolean OZONE_FLEXIBLE_FQDN_RESOLUTION_ENABLED_DEFAULT =

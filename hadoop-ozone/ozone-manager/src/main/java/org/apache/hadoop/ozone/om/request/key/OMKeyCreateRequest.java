@@ -152,7 +152,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
               ozoneManager.getOMServiceId(),
               ozoneManager.getMetrics(),
               keyArgs.getSortDatanodes(),
-              userInfo);
+              userInfo, keyArgs.getRequiredPortsList());
 
       newKeyArgs = keyArgs.toBuilder().setModificationTime(Time.now())
               .setType(type).setFactor(factor)

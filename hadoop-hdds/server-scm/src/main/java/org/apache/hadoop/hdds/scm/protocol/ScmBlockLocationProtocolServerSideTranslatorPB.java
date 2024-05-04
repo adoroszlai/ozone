@@ -203,7 +203,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
                 request.getEcReplicationConfig()),
             request.getOwner(),
             ExcludeList.getFromProtoBuf(request.getExcludeList()),
-            request.getClient());
+            request.getClient(), request.getRequiredPortsList());
 
     AllocateScmBlockResponseProto.Builder builder =
         AllocateScmBlockResponseProto.newBuilder();
@@ -216,7 +216,10 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     for (AllocatedBlock block : allocatedBlocks) {
       builder.addBlocks(AllocateBlockResponse.newBuilder()
           .setContainerBlockID(block.getBlockID().getProtobuf())
-          .setPipeline(block.getPipeline().getProtobufMessage(clientVersion)));
+          .setPipeline(block.getPipeline().getProtobufMessage(clientVersion,
+              request.getRequiredPortsList().stream()
+              .map(DatanodeDetails.Port::getFromPortName)
+              .collect(Collectors.toList()))));
     }
 
     return builder.build();

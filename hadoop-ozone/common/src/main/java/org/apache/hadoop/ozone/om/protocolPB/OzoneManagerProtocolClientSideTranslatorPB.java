@@ -694,6 +694,10 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
           OzoneAcl.toProtobuf(a)).collect(Collectors.toList()));
     }
 
+    if (args.getRequiredPorts() != null) {
+      keyArgs.addAllRequiredPorts(args.getRequiredPorts());
+    }
+
     if (args.getReplicationConfig() != null) {
       if (args.getReplicationConfig() instanceof ECReplicationConfig) {
         keyArgs.setEcReplicationConfig(
@@ -2232,6 +2236,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
             ReplicationConfig.getLegacyFactor(args.getReplicationConfig()));
       }
       keyArgsBuilder.setType(args.getReplicationConfig().getReplicationType());
+    }
+    if (args.getRequiredPorts() != null) {
+      keyArgsBuilder.addAllRequiredPorts(args.getRequiredPorts());
     }
     CreateFileRequest createFileRequest = CreateFileRequest.newBuilder()
             .setKeyArgs(keyArgsBuilder.build())

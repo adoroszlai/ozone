@@ -24,6 +24,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import jakarta.annotation.Nonnull;
 import javax.crypto.Cipher;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.PortName;
 import org.apache.hadoop.hdds.scm.ContainerClientMetrics;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.StreamBufferArgs;
@@ -220,7 +222,9 @@ public class RpcClient implements ClientProtocol {
   private final ContainerClientMetrics clientMetrics;
   private final MemoizedSupplier<ExecutorService> writeExecutor;
   private final AtomicBoolean isS3GRequest = new AtomicBoolean(false);
-
+  private final boolean limitPortEnable;
+  private static final List<PortName> IO_PORTS =
+      ImmutableList.of(PortName.PORTNAME_STANDALONE, PortName.PORTNAME_RATIS);
   /**
    * Creates RpcClient instance with the given configuration.
    *
@@ -302,6 +306,9 @@ public class RpcClient implements ClientProtocol {
     getLatestVersionLocation = conf.getBoolean(
         OzoneConfigKeys.OZONE_CLIENT_KEY_LATEST_VERSION_LOCATION,
         OzoneConfigKeys.OZONE_CLIENT_KEY_LATEST_VERSION_LOCATION_DEFAULT);
+    limitPortEnable = conf.getBoolean(
+        OzoneConfigKeys.OZONE_CLIENT_LIMIT_PORT_ENABLE,
+        OzoneConfigKeys.OZONE_CLIENT_LIMIT_PORT_ENABLE_DEFAULT);
 
     long keyProviderCacheExpiryMs = conf.getTimeDuration(
         OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY,
@@ -331,6 +338,11 @@ public class RpcClient implements ClientProtocol {
 
   public XceiverClientFactory getXceiverClientManager() {
     return xceiverClientManager;
+  }
+
+  @VisibleForTesting
+  public List<PortName> getIOPorts() {
+    return IO_PORTS;
   }
 
   private OzoneManagerVersion getOmVersion(ServiceInfoEx info) {
@@ -1420,6 +1432,10 @@ public class RpcClient implements ClientProtocol {
         .setLatestVersionLocation(getLatestVersionLocation)
         .setOwnerName(ownerName);
 
+    if (limitPortEnable) {
+      builder.setRequiredPorts(IO_PORTS);
+    }
+
     OpenKeySession openKey = ozoneManagerClient.openKey(builder.build());
     // For bucket with layout OBJECT_STORE, when create an empty file (size=0),
     // OM will set DataSize to OzoneConfigKeys#OZONE_SCM_BLOCK_SIZE,
@@ -1455,7 +1471,9 @@ public class RpcClient implements ClientProtocol {
         .setSortDatanodesInPipeline(true)
         .setAcls(getAclList())
         .setOwnerName(ownerName);
-
+    if (limitPortEnable) {
+      builder.setRequiredPorts(IO_PORTS);
+    }
     OpenKeySession openKey = ozoneManagerClient.openKey(builder.build());
     return createDataStreamOutput(openKey);
   }
@@ -2142,7 +2160,7 @@ public class RpcClient implements ClientProtocol {
       }
     }
     String ownerName = getRealUserInfo().getShortUserName();
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+    OmKeyArgs.Builder builder = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -2150,10 +2168,13 @@ public class RpcClient implements ClientProtocol {
         .setReplicationConfig(replicationConfig)
         .setAcls(getAclList())
         .setLatestVersionLocation(getLatestVersionLocation)
-        .setOwnerName(ownerName)
-        .build();
+        .setOwnerName(ownerName);
+
+    if (limitPortEnable) {
+      builder.setRequiredPorts(IO_PORTS);
+    }
     OpenKeySession keySession =
-        ozoneManagerClient.createFile(keyArgs, overWrite, recursive);
+        ozoneManagerClient.createFile(builder.build(), overWrite, recursive);
     return createOutputStream(keySession);
   }
 
@@ -2174,7 +2195,7 @@ public class RpcClient implements ClientProtocol {
       ReplicationConfig replicationConfig, boolean overWrite, boolean recursive)
       throws IOException {
     String ownerName = getRealUserInfo().getShortUserName();
-    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+    OmKeyArgs.Builder builder = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -2183,10 +2204,12 @@ public class RpcClient implements ClientProtocol {
         .setAcls(getAclList())
         .setLatestVersionLocation(getLatestVersionLocation)
         .setSortDatanodesInPipeline(true)
-        .setOwnerName(ownerName)
-        .build();
+        .setOwnerName(ownerName);
+    if (limitPortEnable) {
+      builder.setRequiredPorts(IO_PORTS);
+    }
     OpenKeySession keySession =
-        ozoneManagerClient.createFile(keyArgs, overWrite, recursive);
+        ozoneManagerClient.createFile(builder.build(), overWrite, recursive);
     return createDataStreamOutput(keySession);
   }
 

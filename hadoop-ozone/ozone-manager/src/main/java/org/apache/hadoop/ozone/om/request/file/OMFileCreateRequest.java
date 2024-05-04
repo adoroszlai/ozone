@@ -144,7 +144,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
               ozoneManager.getOMServiceId(),
               ozoneManager.getMetrics(),
               keyArgs.getSortDatanodes(),
-              userInfo);
+              userInfo, keyArgs.getRequiredPortsList());
 
     KeyArgs.Builder newKeyArgs = keyArgs.toBuilder()
         .setModificationTime(Time.now()).setType(type).setFactor(factor)

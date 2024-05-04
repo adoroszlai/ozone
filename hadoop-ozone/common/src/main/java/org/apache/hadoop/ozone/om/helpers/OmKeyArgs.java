@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.PortName;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
@@ -49,6 +50,7 @@ public final class OmKeyArgs implements Auditable {
   private final Map<String, String> metadata;
   private final boolean sortDatanodesInPipeline;
   private final List<OzoneAcl> acls;
+  private final List<PortName> requiredPorts;
   private final boolean latestVersionLocation;
   private final boolean recursive;
   private final boolean headOp;
@@ -72,6 +74,7 @@ public final class OmKeyArgs implements Auditable {
     this.headOp = b.headOp;
     this.forceUpdateContainerCacheFromSCM = b.forceUpdateContainerCacheFromSCM;
     this.ownerName = b.ownerName;
+    this.requiredPorts = b.requiredPorts;
   }
 
   public boolean getIsMultipartKey() {
@@ -92,6 +95,10 @@ public final class OmKeyArgs implements Auditable {
 
   public List<OzoneAcl> getAcls() {
     return acls;
+  }
+
+  public List<PortName> getRequiredPorts() {
+    return requiredPorts;
   }
 
   public String getVolumeName() {
@@ -189,7 +196,8 @@ public final class OmKeyArgs implements Auditable {
         .setHeadOp(headOp)
         .setLatestVersionLocation(latestVersionLocation)
         .setAcls(acls)
-        .setForceUpdateContainerCacheFromSCM(forceUpdateContainerCacheFromSCM);
+        .setForceUpdateContainerCacheFromSCM(forceUpdateContainerCacheFromSCM)
+        .setRequiredPorts(requiredPorts);
   }
 
   @Nonnull
@@ -225,6 +233,7 @@ public final class OmKeyArgs implements Auditable {
     private boolean sortDatanodesInPipeline;
     private boolean latestVersionLocation;
     private List<OzoneAcl> acls;
+    private List<PortName> requiredPorts;
     private boolean recursive;
     private boolean headOp;
     private boolean forceUpdateContainerCacheFromSCM;
@@ -266,6 +275,11 @@ public final class OmKeyArgs implements Auditable {
 
     public Builder setAcls(List<OzoneAcl> listOfAcls) {
       this.acls = listOfAcls;
+      return this;
+    }
+
+    public Builder setRequiredPorts(List<PortName> requiredPorts) {
+      this.requiredPorts = requiredPorts;
       return this;
     }
 

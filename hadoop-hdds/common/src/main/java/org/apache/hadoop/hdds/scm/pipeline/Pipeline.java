@@ -353,12 +353,17 @@ public final class Pipeline {
 
   public HddsProtos.Pipeline getProtobufMessage(int clientVersion)
       throws UnknownPipelineStateException {
+    return getProtobufMessage(clientVersion, Collections.emptyList());
+  }
+
+  public HddsProtos.Pipeline getProtobufMessage(int clientVersion, List<DatanodeDetails.Port.Name> requiredPorts)
+      throws UnknownPipelineStateException {
 
     List<HddsProtos.DatanodeDetailsProto> members = new ArrayList<>();
     List<Integer> memberReplicaIndexes = new ArrayList<>();
 
     for (DatanodeDetails dn : nodeStatus.keySet()) {
-      members.add(dn.toProto(clientVersion));
+      members.add(dn.toProto(clientVersion, requiredPorts));
       memberReplicaIndexes.add(replicaIndexes.getOrDefault(dn, 0));
     }
 
