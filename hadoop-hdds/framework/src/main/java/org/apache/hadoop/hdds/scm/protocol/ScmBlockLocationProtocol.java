@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -89,14 +90,14 @@ public interface ScmBlockLocationProtocol extends Closeable {
        ReplicationConfig replicationConfig, String owner,
        ExcludeList excludeList) throws IOException {
     return allocateBlock(size, numBlocks, replicationConfig, owner,
-        excludeList, null, null);
+        excludeList, null, Collections.emptyList());
   }
 
   default List<AllocatedBlock> allocateBlock(long size, int numBlocks,
       ReplicationConfig replicationConfig, String owner,
       ExcludeList excludeList, String clientMachine) throws IOException {
     return allocateBlock(size, numBlocks, replicationConfig, owner,
-        excludeList, clientMachine, null);
+        excludeList, clientMachine, Collections.emptyList());
   }
 
   /**
