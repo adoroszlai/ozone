@@ -105,6 +105,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BL
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -635,7 +636,7 @@ public class TestOmContainerLocationCache {
             any(ReplicationConfig.class),
             anyString(),
             any(ExcludeList.class),
-            anyString()))
+            anyString(), anyList()))
         .thenReturn(Collections.singletonList(block));
   }
 

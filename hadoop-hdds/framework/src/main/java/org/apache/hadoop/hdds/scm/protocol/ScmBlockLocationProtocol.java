@@ -93,13 +93,6 @@ public interface ScmBlockLocationProtocol extends Closeable {
         excludeList, null, Collections.emptyList());
   }
 
-  default List<AllocatedBlock> allocateBlock(long size, int numBlocks,
-      ReplicationConfig replicationConfig, String owner,
-      ExcludeList excludeList, String clientMachine) throws IOException {
-    return allocateBlock(size, numBlocks, replicationConfig, owner,
-        excludeList, clientMachine, Collections.emptyList());
-  }
-
   /**
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block, sorted
