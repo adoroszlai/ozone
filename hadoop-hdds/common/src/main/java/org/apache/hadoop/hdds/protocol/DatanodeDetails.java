@@ -21,11 +21,14 @@ package org.apache.hadoop.hdds.protocol;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.DatanodeVersion;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
@@ -46,6 +49,8 @@ import org.apache.hadoop.ozone.ClientVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.HADOOP_PRC_PORTS_IN_DATANODEDETAILS;
 import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.WEBUI_PORTS_IN_DATANODEDETAILS;
 import static org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature.RATIS_DATASTREAM_PORT_IN_DATANODEDETAILS;
@@ -836,6 +841,23 @@ public class DatanodeDetails extends NodeImpl implements
           Name.values());
       public static final Set<Name> V0_PORTS = ImmutableSet.copyOf(
           EnumSet.of(STANDALONE, RATIS, REST));
+
+      private static final Map<ByteString, Name> BY_NAME_BYTES =
+          ImmutableMap.copyOf(ALL_PORTS.stream().collect(toMap(Name::nameBytes, n -> n)));
+
+      public static Name forNameBytes(ByteString bytes) {
+        Name result = BY_NAME_BYTES.get(bytes);
+        if (result == null) {
+          throw new IllegalArgumentException("No enum constant Name." + bytes.toStringUtf8());
+        }
+        return result;
+      }
+
+      private final ByteString nameBytes = ByteString.copyFrom(name().getBytes(UTF_8));
+
+      public ByteString nameBytes() {
+        return nameBytes;
+      }
     }
 
     private final Name name;
@@ -899,13 +921,13 @@ public class DatanodeDetails extends NodeImpl implements
 
     public HddsProtos.Port toProto() {
       return HddsProtos.Port.newBuilder()
-          .setName(name.name())
+          .setNameBytes(name.nameBytes())
           .setValue(value)
           .build();
     }
 
     public static Port fromProto(HddsProtos.Port proto) {
-      Port.Name name = Port.Name.valueOf(proto.getName().toUpperCase());
+      Port.Name name = Port.Name.forNameBytes(proto.getNameBytes());
       return new Port(name, proto.getValue());
     }
   }
