@@ -3541,13 +3541,6 @@
   </property>
 
   <property>
-    <name>ozone.client.limit.port.enable</name>
-    <tag>OZONE, CLIENT</tag>
-    <value>true</value>
-    <description>Enables the client to request and receive only the specified ports from the server.</description>
-  </property>
-
-  <property>
     <name>ozone.network.flexible.fqdn.resolution.enabled</name>
     <tag>OZONE, SCM, OM</tag>
     <value>false</value>

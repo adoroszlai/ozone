@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.protocol;
 
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.PortName;
 import org.apache.hadoop.hdds.scm.AddSCMRequest;
 import org.apache.hadoop.hdds.scm.ScmConfig;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -34,7 +33,6 @@ import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -90,7 +88,7 @@ public interface ScmBlockLocationProtocol extends Closeable {
        ReplicationConfig replicationConfig, String owner,
        ExcludeList excludeList) throws IOException {
     return allocateBlock(size, numBlocks, replicationConfig, owner,
-        excludeList, null, Collections.emptyList());
+        excludeList, null);
   }
 
   /**
@@ -107,14 +105,12 @@ public interface ScmBlockLocationProtocol extends Closeable {
    *                          allocation.
    * @param clientMachine client address, depends, can be hostname or
    *                      ipaddress.
-   * @param requiredPorts list of port names that the client requires for communication with the
-   *                      datanodes, if it is an empty list, all ports will be returned.
    * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
   List<AllocatedBlock> allocateBlock(long size, int numBlocks,
       ReplicationConfig replicationConfig, String owner,
-      ExcludeList excludeList, String clientMachine, List<PortName> requiredPorts) throws IOException;
+      ExcludeList excludeList, String clientMachine) throws IOException;
 
   /**
    * Delete blocks for a set of object keys.

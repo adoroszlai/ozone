@@ -92,20 +92,6 @@ message NodeDetailsProto {
     required NodeType nodeType = 4;
 }
 
-enum PortName {
-    PORTNAME_UNSPECIFIED = 0;
-    PORTNAME_STANDALONE = 1;
-    PORTNAME_RATIS = 2;
-    PORTNAME_REST = 3;
-    PORTNAME_REPLICATION = 4;
-    PORTNAME_RATIS_ADMIN = 5;
-    PORTNAME_RATIS_SERVER = 6;
-    PORTNAME_RATIS_DATASTREAM = 7;
-    PORTNAME_HTTP = 8;
-    PORTNAME_HTTPS = 9;
-    PORTNAME_CLIENT_RPC = 10;
-}
-
 message Port {
     required string name = 1;
     required uint32 value = 2;

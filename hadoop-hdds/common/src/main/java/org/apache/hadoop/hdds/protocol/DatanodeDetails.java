@@ -34,7 +34,6 @@ import org.apache.hadoop.hdds.annotation.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ExtendedDatanodeDetailsProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.PortName;
 import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NodeImpl;
 
@@ -413,15 +412,11 @@ public class DatanodeDetails extends NodeImpl implements
   }
 
   public HddsProtos.DatanodeDetailsProto toProto(int clientVersion) {
-    return toProtoBuilder(clientVersion, Collections.emptyList()).build();
-  }
-
-  public HddsProtos.DatanodeDetailsProto toProto(int clientVersion, List<Port.Name> requiredPorts) {
-    return toProtoBuilder(clientVersion, requiredPorts).build();
+    return toProtoBuilder(clientVersion, Collections.emptySet()).build();
   }
 
   public HddsProtos.DatanodeDetailsProto.Builder toProtoBuilder(
-      int clientVersion, List<Port.Name> requiredPorts) {
+      int clientVersion, Set<Port.Name> requiredPorts) {
 
     HddsProtos.UUID uuid128 = HddsProtos.UUID.newBuilder()
         .setMostSigBits(uuid.getMostSignificantBits())
@@ -460,18 +455,23 @@ public class DatanodeDetails extends NodeImpl implements
     final boolean handlesUnknownPorts =
         ClientVersion.fromProtoValue(clientVersion)
         .compareTo(VERSION_HANDLES_UNKNOWN_DN_PORTS) >= 0;
+    final int requestedPortCount = requiredPorts.size();
+    final boolean maySkip = requestedPortCount > 0;
     for (Port port : ports) {
-      if (requiredPorts.isEmpty() || requiredPorts.contains(port.name)) {
-        if (handlesUnknownPorts || Name.V0_PORTS.contains(port.getName())) {
-          builder.addPorts(port.toProto());
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skip adding {} port {} to proto message for client v{}",
-                port.getName(), port.getValue(), clientVersion);
-          }
+      if (maySkip && !requiredPorts.contains(port.getName())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skip adding {} port {} to proto message",
+              port.getName(), port.getValue());
+        }
+      } else if (handlesUnknownPorts || Name.V0_PORTS.contains(port.getName())) {
+        builder.addPorts(port.toProto());
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skip adding {} port {} to proto message for client v{}",
+              port.getName(), port.getValue(), clientVersion);
         }
       }
-      if (!requiredPorts.isEmpty() && builder.getPortsCount() == requiredPorts.size()) {
+      if (maySkip && builder.getPortsCount() == requestedPortCount) {
         break;
       }
     }
@@ -847,6 +847,8 @@ public class DatanodeDetails extends NodeImpl implements
           Name.values());
       public static final Set<Name> V0_PORTS = ImmutableSet.copyOf(
           EnumSet.of(STANDALONE, RATIS, REST));
+      public static final Set<Name> DATA_PORTS = ImmutableSet.copyOf(
+          EnumSet.of(STANDALONE, RATIS, RATIS_DATASTREAM));
     }
 
     private final Name name;
@@ -918,34 +920,6 @@ public class DatanodeDetails extends NodeImpl implements
     public static Port fromProto(HddsProtos.Port proto) {
       Port.Name name = Port.Name.valueOf(proto.getName().toUpperCase());
       return new Port(name, proto.getValue());
-    }
-
-    public static Name getFromPortName(PortName portName) {
-      switch (portName) {
-      case PORTNAME_STANDALONE:
-        return Name.STANDALONE;
-      case PORTNAME_RATIS:
-        return Name.RATIS;
-      case PORTNAME_REST:
-        return Name.REST;
-      case PORTNAME_REPLICATION:
-        return Name.REPLICATION;
-      case PORTNAME_RATIS_ADMIN:
-        return Name.RATIS_ADMIN;
-      case PORTNAME_RATIS_SERVER:
-        return Name.RATIS_SERVER;
-      case PORTNAME_RATIS_DATASTREAM:
-        return Name.RATIS_DATASTREAM;
-      case PORTNAME_HTTP:
-        return Name.HTTP;
-      case PORTNAME_HTTPS:
-        return Name.HTTPS;
-      case PORTNAME_CLIENT_RPC:
-        return Name.CLIENT_RPC;
-      default:
-        throw new UnsupportedOperationException(
-            "Not supported port type: " + portName);
-      }
     }
   }
 
@@ -1042,7 +1016,7 @@ public class DatanodeDetails extends NodeImpl implements
   public HddsProtos.NetworkNode toProtobuf(
       int clientVersion) {
     return HddsProtos.NetworkNode.newBuilder()
-        .setDatanodeDetails(toProtoBuilder(clientVersion, Collections.emptyList()).build())
+        .setDatanodeDetails(toProto(clientVersion))
         .build();
   }
 }

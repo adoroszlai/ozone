@@ -311,7 +311,7 @@ public class TestSCMBlockProtocolServer {
 
     List<AllocatedBlock> allocatedBlocks = server.allocateBlock(
         blockSize, numOfBlocks, replicationConfig, "o",
-        new ExcludeList(), clientAddress, Collections.emptyList());
+        new ExcludeList(), clientAddress);
     assertEquals(numOfBlocks, allocatedBlocks.size());
     for (AllocatedBlock allocatedBlock: allocatedBlocks) {
       List<DatanodeDetails> nodesInOrder =

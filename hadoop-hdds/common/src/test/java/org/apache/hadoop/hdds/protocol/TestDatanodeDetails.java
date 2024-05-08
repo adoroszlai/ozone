@@ -23,8 +23,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.ALL_PORTS;
@@ -51,13 +49,14 @@ public class TestDatanodeDetails {
         subject.toProto(VERSION_HANDLES_UNKNOWN_DN_PORTS.toProtoValue());
     assertPorts(protoV1, ALL_PORTS);
   }
+
   @Test
   void testRequiredPortsProto() {
     DatanodeDetails subject = MockDatanodeDetails.randomDatanodeDetails();
-    List<Port.Name> requiredPorts = Arrays.asList(Port.Name.STANDALONE, Name.RATIS);
+    Set<Port.Name> requiredPorts = ImmutableSet.of(Port.Name.HTTP, Name.CLIENT_RPC);
     HddsProtos.DatanodeDetailsProto proto =
-        subject.toProto(subject.getCurrentVersion(), requiredPorts);
-    assertPorts(proto, ImmutableSet.copyOf(requiredPorts));
+        subject.toProtoBuilder(subject.getCurrentVersion(), requiredPorts).build();
+    assertPorts(proto, requiredPorts);
   }
 
   public static void assertPorts(HddsProtos.DatanodeDetailsProto dn,
