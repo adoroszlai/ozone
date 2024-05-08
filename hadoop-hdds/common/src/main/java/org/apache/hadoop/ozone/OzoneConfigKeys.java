@@ -578,7 +578,7 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_LIMIT_PORT_ENABLE =
       "ozone.client.limit.port.enable";
   public static final boolean OZONE_CLIENT_LIMIT_PORT_ENABLE_DEFAULT =
-      false;
+      true;
 
   public static final String OZONE_FLEXIBLE_FQDN_RESOLUTION_ENABLED =
           "ozone.network.flexible.fqdn.resolution.enabled";
