@@ -28,6 +28,13 @@ if [[ -n "${OM_SERVICE_ID}" ]] && [[ "${OM_SERVICE_ID}" != "om" ]]; then
   OM_HA_PARAM="--om-service-id=${OM_SERVICE_ID}"
 fi
 
+# use Docker Compose v2 if available
+if docker compose version > /dev/null 2>&1; then
+  alias docker-compose='docker compose --ansi never --progress plain'
+else
+  alias docker-compose='docker-compose --ansi never'
+fi
+
 : ${SCM:=scm}
 
 ## @description create results directory, purging any prior data
@@ -138,11 +145,17 @@ start_docker_env(){
   create_results_dir
   export OZONE_SAFEMODE_MIN_DATANODES="${datanode_count}"
 
-  docker-compose --ansi never down
+  docker-compose down
 
   trap stop_docker_env EXIT HUP INT TERM
 
-  docker-compose --ansi never up -d --scale datanode="${datanode_count}"
+  opts=""
+  if grep -q '^\s*datanode:' docker-compose.yaml; then
+    opts="--scale datanode=${datanode_count}"
+  fi
+
+  docker-compose up -d $opts
+
   wait_for_safemode_exit
   wait_for_om_leader
 }
@@ -189,7 +202,7 @@ execute_robot_test(){
       "$SMOKETEST_DIR_INSIDE/$TEST"
   local -i rc=$?
 
-  FULL_CONTAINER_NAME=$(docker-compose ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
+  FULL_CONTAINER_NAME=$(docker-compose ps | grep "[-_]${CONTAINER}[-_]" | head -n 1 | awk '{print $1}')
   docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
 
   if [[ ${rc} -gt 0 ]] && [[ ${rc} -le 250 ]]; then
@@ -228,7 +241,7 @@ create_stack_dumps() {
 ## @description Copy any 'out' files for daemon processes to the result dir
 copy_daemon_logs() {
   local c f
-  for c in $(docker-compose ps | grep "^${COMPOSE_ENV_NAME}_" | awk '{print $1}'); do
+  for c in $(docker-compose ps | grep "^${COMPOSE_ENV_NAME}[_-]" | awk '{print $1}'); do
     for f in $(docker exec "${c}" ls -1 /var/log/hadoop 2> /dev/null | grep -F -e '.out' -e audit); do
       docker cp "${c}:/var/log/hadoop/${f}" "$RESULT_DIR/"
     done
@@ -259,18 +272,18 @@ execute_commands_in_container(){
 ## @description Stop a list of named containers
 ## @param       List of container names, eg datanode_1 datanode_2
 stop_containers() {
-  docker-compose --ansi never stop $@
+  docker-compose stop $@
 }
 
 
 ## @description Start a list of named containers
 ## @param       List of container names, eg datanode_1 datanode_2
 start_containers() {
-  docker-compose --ansi never start $@
+  docker-compose start $@
 }
 
 create_containers() {
-  docker-compose --ansi never up -d $@
+  docker-compose up -d $@
 }
 
 get_output_name() {
@@ -345,7 +358,7 @@ stop_docker_env(){
     down_repeats=3
     for i in $(seq 1 $down_repeats)
     do
-      if docker-compose --ansi never down; then
+      if docker-compose down; then
         return
       fi
       if [[ ${i} -eq 1 ]]; then
