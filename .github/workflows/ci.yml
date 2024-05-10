@@ -22,53 +22,8 @@ env:
 jobs:
   build-info:
     runs-on: ubuntu-20.04
-    env:
-      GITHUB_CONTEXT: ${{ toJson(github) }}
-    outputs:
-      acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
-      basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
     steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Fetch incoming commit ${{ github.sha }} with its parent
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 2
-          persist-credentials: false
-        if: github.event_name  == 'pull_request'
-      - name: Selective checks
-        id: selective-checks
-        env:
-          PR_LABELS: "${{ toJSON(github.event.pull_request.labels.*.name) }}"
-          PR_DRAFT: "${{ github.event.pull_request.draft }}"
+      - name: Docker debug
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            # Run selective checks
-            dev-support/ci/selective_ci_checks.sh "${GITHUB_SHA}"
-          else
-            # Run all checks
-            dev-support/ci/selective_ci_checks.sh
-          fi
-      - name: Acceptance suites
-        id: acceptance-suites
-        run: dev-support/ci/acceptance_suites.sh
-      - name: Categorize Basic Checks
-        id: categorize-basic-checks
-        env:
-          ALL_BASIC_CHECKS: "${{ steps.selective-checks.outputs.basic-checks }}"
-        run: dev-support/ci/categorize_basic_checks.sh
-      - name: Docker v1
-        run: docker-compose version
-      - name: Docker v2
-        run: docker compose version
+          sudo rm -fv /usr/local/bin/docker-compose
+          docker-compose version
