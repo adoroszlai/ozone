@@ -98,7 +98,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <shell-executable>bash</shell-executable>
 
     <!-- Set the Release year during release -->
-    <release-year>2019</release-year>
+    <release-year>2024</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
