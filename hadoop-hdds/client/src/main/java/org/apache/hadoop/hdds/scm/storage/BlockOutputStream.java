@@ -535,7 +535,9 @@ public class BlockOutputStream extends OutputStream {
       bufferList = new ArrayList<>();
     }
     bufferList.add(buffer);
-    writeChunkToContainer(buffer.duplicate(0, buffer.position()));
+    try (ChunkBuffer duplicate = buffer.duplicate(0, buffer.position())) {
+      writeChunkToContainer(duplicate);
+    }
   }
 
   /**

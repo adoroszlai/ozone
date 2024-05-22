@@ -700,7 +700,6 @@ public class KeyValueHandler extends Handler {
       return malformedRequest(request);
     }
 
-    ChunkBuffer data;
     try {
       BlockID blockID = BlockID.getFromProtobuf(
           request.getReadChunk().getBlockID());
@@ -723,17 +722,21 @@ public class KeyValueHandler extends Handler {
         chunkInfo.setReadDataIntoSingleBuffer(true);
       }
 
-      data = chunkManager.readChunk(kvContainer, blockID, chunkInfo,
-          dispatcherContext);
-      // Validate data only if the read chunk is issued by Ratis for its
-      // internal logic.
-      //  For client reads, the client is expected to validate.
-      if (DispatcherContext.op(dispatcherContext).readFromTmpFile()) {
-        validateChunkChecksumData(data, chunkInfo);
-        metrics.incBytesReadStateMachine(chunkInfo.getLen());
-        metrics.incNumReadStateMachine();
+      try (ChunkBuffer data = chunkManager.readChunk(kvContainer, blockID, chunkInfo, dispatcherContext)) {
+        // Validate data only if the read chunk is issued by Ratis for its
+        // internal logic.
+        //  For client reads, the client is expected to validate.
+        if (DispatcherContext.op(dispatcherContext).readFromTmpFile()) {
+          validateChunkChecksumData(data, chunkInfo);
+          metrics.incBytesReadStateMachine(chunkInfo.getLen());
+          metrics.incNumReadStateMachine();
+        }
+        metrics.incContainerBytesStats(Type.ReadChunk, chunkInfo.getLen());
+
+        Preconditions.checkNotNull(data, "Chunk data is null");
+
+        return getReadChunkResponse(request, data, byteBufferToByteString);
       }
-      metrics.incContainerBytesStats(Type.ReadChunk, chunkInfo.getLen());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -741,10 +744,6 @@ public class KeyValueHandler extends Handler {
           new StorageContainerException("Read Chunk failed", ex, IO_EXCEPTION),
           request);
     }
-
-    Preconditions.checkNotNull(data, "Chunk data is null");
-
-    return getReadChunkResponse(request, data, byteBufferToByteString);
   }
 
   /**
@@ -796,18 +795,18 @@ public class KeyValueHandler extends Handler {
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
       Preconditions.checkNotNull(chunkInfo);
 
-      ChunkBuffer data = null;
       if (dispatcherContext == null) {
         dispatcherContext = DispatcherContext.getHandleWriteChunk();
       }
       final boolean isWrite = dispatcherContext.getStage().isWrite();
       if (isWrite) {
-        data =
-            ChunkBuffer.wrap(writeChunk.getData().asReadOnlyByteBufferList());
-        validateChunkChecksumData(data, chunkInfo);
+        try (ChunkBuffer data = ChunkBuffer.wrap(writeChunk.getData().asReadOnlyByteBufferList())) {
+          validateChunkChecksumData(data, chunkInfo);
+          chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
+        }
+      } else {
+        chunkManager.writeChunk(kvContainer, blockID, chunkInfo, (ChunkBuffer) null, dispatcherContext);
       }
-      chunkManager
-          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
 
       // We should increment stats after writeChunk
       if (isWrite) {
@@ -855,19 +854,17 @@ public class KeyValueHandler extends Handler {
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
       Preconditions.checkNotNull(chunkInfo);
 
-      ChunkBuffer data = ChunkBuffer.wrap(
-          putSmallFileReq.getData().asReadOnlyByteBufferList());
       if (dispatcherContext == null) {
         dispatcherContext = DispatcherContext.getHandlePutSmallFile();
       }
-
       BlockID blockID = blockData.getBlockID();
 
-      // chunks will be committed as a part of handling putSmallFile
-      // here. There is no need to maintain this info in openContainerBlockMap.
-      validateChunkChecksumData(data, chunkInfo);
-      chunkManager
-          .writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
+      try (ChunkBuffer data = ChunkBuffer.wrap(putSmallFileReq.getData().asReadOnlyByteBufferList())) {
+        // chunks will be committed as a part of handling putSmallFile
+        // here. There is no need to maintain this info in openContainerBlockMap.
+        validateChunkChecksumData(data, chunkInfo);
+        chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data, dispatcherContext);
+      }
       chunkManager.finishWriteChunks(kvContainer, blockData);
 
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
@@ -930,9 +927,9 @@ public class KeyValueHandler extends Handler {
           // of ByteStrings.
           chunkInfo.setReadDataIntoSingleBuffer(true);
         }
-        ChunkBuffer data = chunkManager.readChunk(kvContainer, blockID,
-            chunkInfo, dispatcherContext);
-        dataBuffers.addAll(data.toByteStringList(byteBufferToByteString));
+        try (ChunkBuffer data = chunkManager.readChunk(kvContainer, blockID, chunkInfo, dispatcherContext)) {
+          dataBuffers.addAll(data.toByteStringList(byteBufferToByteString));
+        }
         chunkInfoProto = chunk;
       }
       metrics.incContainerBytesStats(Type.GetSmallFile,

@@ -144,14 +144,18 @@ public class Checksum {
     if (!data.isReadOnly()) {
       data = data.asReadOnlyBuffer();
     }
-    return computeChecksum(ChunkBuffer.wrap(data));
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(data)) {
+      return computeChecksum(chunkBuffer);
+    }
   }
 
   public ChecksumData computeChecksum(List<ByteString> byteStrings)
       throws OzoneChecksumException {
     final List<ByteBuffer> buffers =
         BufferUtils.getReadOnlyByteBuffers(byteStrings);
-    return computeChecksum(ChunkBuffer.wrap(buffers));
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(buffers)) {
+      return computeChecksum(chunkBuffer);
+    }
   }
 
   public ChecksumData computeChecksum(ChunkBuffer data)
