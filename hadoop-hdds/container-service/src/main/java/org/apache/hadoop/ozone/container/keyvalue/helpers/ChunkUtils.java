@@ -40,8 +40,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.ToLongFunction;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
@@ -124,13 +124,14 @@ public final class ChunkUtils {
 
   private static void writeData(ChunkBuffer data, String filename,
       long offset, long len, HddsVolume volume,
-      Consumer<ChunkBuffer> writer) throws StorageContainerException {
+      ToLongFunction<ChunkBuffer> writer) throws StorageContainerException {
 
     validateBufferSize(len, data.remaining());
 
     final long startTime = Time.monotonicNow();
+    final long bytesWritten;
     try {
-      writer.accept(data);
+      bytesWritten = writer.applyAsLong(data);
     } catch (UncheckedIOException e) {
       if (!(e.getCause() instanceof InterruptedIOException)) {
         onFailure(volume);
@@ -143,11 +144,13 @@ public final class ChunkUtils {
     if (volume != null) {
       volume.getVolumeIOStats().incWriteTime(elapsed);
       volume.getVolumeIOStats().incWriteOpCount();
-      volume.getVolumeIOStats().incWriteBytes(len);
+      volume.getVolumeIOStats().incWriteBytes(bytesWritten);
     }
 
     LOG.debug("Written {} bytes at offset {} to {} in {} ms",
-        len, offset, filename, elapsed);
+        bytesWritten, offset, filename, elapsed);
+
+    validateWriteSize(len, bytesWritten);
   }
 
   private static long writeDataToFile(File file, ChunkBuffer data,
@@ -160,9 +163,7 @@ public final class ChunkUtils {
           channel = open(path, WRITE_OPTIONS, NO_ATTRIBUTES);
 
           try (FileLock ignored = channel.lock()) {
-            int len = data.remaining();
-            writeDataToChannel(channel, data, offset);
-            return len;
+            return writeDataToChannel(channel, data, offset);
           }
         } catch (IOException e) {
           throw new UncheckedIOException(e);
@@ -176,10 +177,11 @@ public final class ChunkUtils {
     }
   }
 
-  private static void writeDataToChannel(FileChannel channel, ChunkBuffer data, long offset) {
+  private static long writeDataToChannel(FileChannel channel, ChunkBuffer data,
+      long offset) {
     try {
       channel.position(offset);
-      data.writeFully(channel);
+      return data.writeTo(channel);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -429,6 +431,11 @@ public final class ChunkUtils {
   private static void validateReadSize(long expected, long actual)
       throws StorageContainerException {
     checkSize("read", expected, actual, CONTAINER_INTERNAL_ERROR);
+  }
+
+  private static void validateWriteSize(long expected, long actual)
+      throws StorageContainerException {
+    checkSize("write", expected, actual, INVALID_WRITE_SIZE);
   }
 
   public static void validateBufferSize(long expected, long actual)

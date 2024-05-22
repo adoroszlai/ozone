@@ -59,7 +59,18 @@ public class MockGatheringChannel implements GatheringByteChannel {
 
   @Override
   public int write(ByteBuffer src) throws IOException {
-    return delegate.write(src);
+    final int adjustment = 1;
+    final boolean limitWrite = src.remaining() > adjustment && Math.random() > 0.5;
+    if (limitWrite) {
+      src.limit(src.limit() - adjustment);
+    }
+    try {
+      return delegate.write(src);
+    } finally {
+      if (limitWrite) {
+        src.limit(src.limit() + adjustment);
+      }
+    }
   }
 
   @Override
