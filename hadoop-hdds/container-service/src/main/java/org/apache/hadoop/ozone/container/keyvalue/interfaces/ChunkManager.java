@@ -58,8 +58,9 @@ public interface ChunkManager {
   default void writeChunk(Container container, BlockID blockID, ChunkInfo info,
       ByteBuffer data, DispatcherContext dispatcherContext)
       throws StorageContainerException {
-    ChunkBuffer wrapper = ChunkBuffer.wrap(data);
-    writeChunk(container, blockID, info, wrapper, dispatcherContext);
+    try (ChunkBuffer wrapper = ChunkBuffer.wrap(data)) {
+      writeChunk(container, blockID, info, wrapper, dispatcherContext);
+    }
   }
 
   /**

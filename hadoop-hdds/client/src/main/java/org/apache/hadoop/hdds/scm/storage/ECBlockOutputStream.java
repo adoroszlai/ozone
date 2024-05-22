@@ -88,14 +88,17 @@ public class ECBlockOutputStream extends BlockOutputStream {
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
-    this.currentChunkRspFuture =
-        writeChunkToContainer(ChunkBuffer.wrap(ByteBuffer.wrap(b, off, len)));
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(ByteBuffer.wrap(b, off, len))) {
+      this.currentChunkRspFuture = writeChunkToContainer(chunkBuffer);
+    }
     updateWrittenDataLength(len);
   }
 
   public CompletableFuture<ContainerProtos.ContainerCommandResponseProto> write(
       ByteBuffer buff) throws IOException {
-    return writeChunkToContainer(ChunkBuffer.wrap(buff));
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(buff)) {
+      return writeChunkToContainer(chunkBuffer);
+    }
   }
 
   public CompletableFuture<ContainerProtos.

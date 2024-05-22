@@ -233,7 +233,9 @@ public class Checksum {
 
   private static boolean verifyChecksum(ByteBuffer data,
       ChecksumData checksumData, int startIndex) throws OzoneChecksumException {
-    return verifyChecksum(ChunkBuffer.wrap(data), checksumData, startIndex);
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(data)) {
+      return verifyChecksum(chunkBuffer, checksumData, startIndex);
+    }
   }
 
   /**
@@ -295,9 +297,10 @@ public class Checksum {
 
     int bytesPerChecksum = checksumData.getBytesPerChecksum();
     Checksum checksum = new Checksum(checksumType, bytesPerChecksum);
-    final ChecksumData computed = checksum.computeChecksum(
-        ChunkBuffer.wrap(buffers));
-    return checksumData.verifyChecksumDataMatches(computed, startIndex);
+    try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(buffers)) {
+      final ChecksumData computed = checksum.computeChecksum(chunkBuffer);
+      return checksumData.verifyChecksumDataMatches(computed, startIndex);
+    }
   }
 
   /**
