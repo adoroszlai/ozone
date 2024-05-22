@@ -22,12 +22,23 @@ import com.google.common.base.Preconditions;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.annotation.Nullable;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.utils.LeakDetector;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.UncheckedAutoCloseable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilities for buffers.
  */
 public final class BufferUtils {
+
+  private static final LeakDetector LEAK_DETECTOR = new LeakDetector("ChunkBuffer");
+
+  private static final Logger LOG = LoggerFactory.getLogger(BufferUtils.class);
 
   /** Utility classes should not be constructed. **/
   private BufferUtils() {
@@ -135,5 +146,28 @@ public final class BufferUtils {
           + ", maxElementsPerBin = " + maxElementsPerBin);
     }
     return Math.toIntExact(n);
+  }
+
+  public static UncheckedAutoCloseable track(AutoCloseable object) {
+    final Class<?> clazz = object.getClass();
+    final StackTraceElement[] stackTrace = getStackTrace();
+    return LEAK_DETECTOR.track(object, () -> reportLeak(clazz, formatStackTrace(stackTrace)));
+  }
+
+  private static void reportLeak(Class<?> clazz, String stackTrace) {
+    String warning = String.format("%s is not closed properly", clazz.getSimpleName());
+    if (stackTrace != null && LOG.isDebugEnabled()) {
+      String debugMessage = String.format("%nStackTrace for unclosed instance: %s", stackTrace);
+      warning = warning.concat(debugMessage);
+    }
+    LOG.warn(warning);
+  }
+
+  private static @Nullable StackTraceElement[] getStackTrace() {
+    return HddsUtils.getStackTrace(LOG);
+  }
+
+  private static String formatStackTrace(@Nullable StackTraceElement[] elements) {
+    return HddsUtils.formatStackTrace(elements, 4);
   }
 }

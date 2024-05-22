@@ -24,7 +24,10 @@ import java.nio.MappedByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+
+import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.UncheckedAutoCloseable;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
@@ -33,8 +36,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 
 /**
  * {@link ChunkBuffer} implementation using a list of {@link ByteBuffer}s.
@@ -48,21 +51,13 @@ public class ChunkBufferImplWithByteBufferList implements ChunkBuffer {
   /** Buffer list backing the ChunkBuffer. */
   private final List<ByteBuffer> buffers;
   private final int limit;
-  private final Consumer<Integer> releaseCallback;
+  private final IntConsumer releaseCallback;
+  private final UncheckedAutoCloseable leakTracker = BufferUtils.track(this);
 
   private int limitPrecedingCurrent;
   private int currentIndex;
 
-  ChunkBufferImplWithByteBufferList(List<ByteBuffer> buffers) {
-    Objects.requireNonNull(buffers, "buffers == null");
-    this.buffers = !buffers.isEmpty() ? ImmutableList.copyOf(buffers) :
-        EMPTY_BUFFER;
-    this.limit = buffers.stream().mapToInt(ByteBuffer::limit).sum();
-    this.releaseCallback = null;
-    findCurrent();
-  }
-
-  ChunkBufferImplWithByteBufferList(List<ByteBuffer> buffers, Consumer<Integer> releaseFunction) {
+  ChunkBufferImplWithByteBufferList(List<ByteBuffer> buffers, IntConsumer releaseFunction) {
     Objects.requireNonNull(buffers, "buffers == null");
     this.buffers = !buffers.isEmpty() ? ImmutableList.copyOf(buffers) :
         EMPTY_BUFFER;
@@ -189,7 +184,7 @@ public class ChunkBufferImplWithByteBufferList implements ChunkBuffer {
       min = max;
     }
 
-    return new ChunkBufferImplWithByteBufferList(duplicates);
+    return new ChunkBufferImplWithByteBufferList(duplicates, null);
   }
 
   /**
@@ -258,12 +253,15 @@ public class ChunkBufferImplWithByteBufferList implements ChunkBuffer {
   }
 
   @Override
-  protected void finalize() throws Throwable {
-    // The assumption here is all the buffers in buffers list are of same buffer type, so only check the first buffer
-    if (releaseCallback != null && !buffers.isEmpty() && buffers.get(0) instanceof MappedByteBuffer) {
-      releaseCallback.accept(buffers.size());
+  public void close() {
+    try {
+      // The assumption here is all the buffers in buffers list are of same buffer type, so only check the first buffer
+      if (releaseCallback != null && !buffers.isEmpty() && buffers.get(0) instanceof MappedByteBuffer) {
+        releaseCallback.accept(buffers.size());
+      }
+    } finally {
+      leakTracker.close();
     }
-    super.finalize();
   }
 
   private static int relativeToRange(int value, int min, int max) {

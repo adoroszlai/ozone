@@ -19,7 +19,9 @@ package org.apache.hadoop.ozone.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.utils.db.CodecBuffer;
+import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.UncheckedAutoCloseable;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
@@ -54,6 +56,7 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
   private final boolean isDuplicated;
   /** The index of the first non-full buffer. */
   private int firstNonFullIndex = 0;
+  private final UncheckedAutoCloseable leakTracker = BufferUtils.track(this);
 
   IncrementalChunkBuffer(int limit, int increment, boolean isDuplicated) {
     Preconditions.checkArgument(limit >= 0);
@@ -69,8 +72,12 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
 
   @Override
   public void close() {
-    underlying.forEach(CodecBuffer::release);
-    underlying.clear();
+    try {
+      underlying.forEach(CodecBuffer::release);
+      underlying.clear();
+    } finally {
+      leakTracker.close();
+    }
   }
 
   /** @return the capacity for the buffer at the given index. */

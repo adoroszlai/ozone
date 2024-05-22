@@ -22,8 +22,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hdds.scm.ByteStringConversion;
@@ -62,7 +62,7 @@ public interface ChunkBuffer extends UncheckedAutoCloseable {
   }
 
   /** Wrap the given {@link ByteBuffer} as a {@link ChunkBuffer}, with a function called when buffer is released. */
-  static ChunkBuffer wrap(ByteBuffer buffer, Consumer<Integer> function) {
+  static ChunkBuffer wrap(ByteBuffer buffer, IntConsumer function) {
     return new ChunkBufferImplWithByteBuffer(buffer, function);
   }
 
@@ -73,7 +73,7 @@ public interface ChunkBuffer extends UncheckedAutoCloseable {
 
   /** Wrap the given list of {@link ByteBuffer}s as a {@link ChunkBuffer},
    * with a function called when buffers are released.*/
-  static ChunkBuffer wrap(List<ByteBuffer> buffers, Consumer<Integer> function) {
+  static ChunkBuffer wrap(List<ByteBuffer> buffers, IntConsumer function) {
     Objects.requireNonNull(buffers, "buffers == null");
     if (buffers.size() == 1) {
       return wrap(buffers.get(0), function);

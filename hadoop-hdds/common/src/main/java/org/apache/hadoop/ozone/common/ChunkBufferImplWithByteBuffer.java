@@ -26,9 +26,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 
+import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.ratis.util.UncheckedAutoCloseable;
 
@@ -36,7 +37,8 @@ import org.apache.ratis.util.UncheckedAutoCloseable;
 final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
   private final ByteBuffer buffer;
   private final UncheckedAutoCloseable underlying;
-  private final Consumer<Integer> releaseCallback;
+  private final IntConsumer releaseCallback;
+  private final UncheckedAutoCloseable leakTracker = BufferUtils.track(this);
 
   ChunkBufferImplWithByteBuffer(ByteBuffer buffer) {
     this.buffer = Objects.requireNonNull(buffer, "buffer == null");
@@ -44,7 +46,7 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
     this.underlying = null;
   }
 
-  ChunkBufferImplWithByteBuffer(ByteBuffer buffer, Consumer<Integer> releaseFunction) {
+  ChunkBufferImplWithByteBuffer(ByteBuffer buffer, IntConsumer releaseFunction) {
     this.buffer = Objects.requireNonNull(buffer, "buffer == null");
     this.releaseCallback = releaseFunction;
     this.underlying = null;
@@ -58,8 +60,15 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
 
   @Override
   public void close() {
-    if (underlying != null) {
-      underlying.close();
+    try {
+      if (underlying != null) {
+        underlying.close();
+      }
+      if (releaseCallback != null && buffer instanceof MappedByteBuffer) {
+        releaseCallback.accept(1);
+      }
+    } finally {
+      leakTracker.close();
     }
   }
 
@@ -174,13 +183,5 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
   public String toString() {
     return getClass().getSimpleName() + ":limit=" + buffer.limit()
         + "@" + Integer.toHexString(hashCode());
-  }
-
-  @Override
-  protected void finalize() throws Throwable {
-    if (releaseCallback != null && buffer instanceof MappedByteBuffer) {
-      releaseCallback.accept(1);
-    }
-    super.finalize();
   }
 }
