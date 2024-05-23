@@ -158,8 +158,9 @@ public final class ContainerTestHelper {
 
   public static Builder newWriteChunkRequestBuilder(Pipeline pipeline,
       BlockID blockID, int datalen) throws IOException {
-    ChunkBuffer data = getData(datalen);
-    return newWriteChunkRequestBuilder(pipeline, blockID, data, 0);
+    try (ChunkBuffer data = getData(datalen)) {
+      return newWriteChunkRequestBuilder(pipeline, blockID, data, 0);
+    }
   }
 
   public static Builder newWriteChunkRequestBuilder(

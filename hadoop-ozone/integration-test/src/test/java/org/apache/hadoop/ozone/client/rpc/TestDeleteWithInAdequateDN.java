@@ -49,6 +49,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -56,6 +57,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.DatanodeConfigurati
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.ContainerStateMachine;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
+import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -291,11 +293,7 @@ public class TestDeleteWithInAdequateDN {
     // make sure the chunk was never deleted on the leader even though
     // deleteBlock handler is invoked
 
-    for (ContainerProtos.ChunkInfo chunkInfo : blockData.getChunks()) {
-      keyValueHandler.getChunkManager()
-          .readChunk(container, blockID, ChunkInfo.getFromProtoBuf(chunkInfo),
-              null);
-    }
+    readChunks(keyValueHandler, blockData, container, blockID);
     long numReadStateMachineOps =
         stateMachine.getMetrics().getNumReadStateMachineOps();
     assertEquals(0, stateMachine.getMetrics().getNumReadStateMachineFails());
@@ -319,12 +317,21 @@ public class TestDeleteWithInAdequateDN {
       // make sure the chunk is now deleted on the all dns
       KeyValueHandler finalKeyValueHandler = keyValueHandler;
       StorageContainerException e = assertThrows(StorageContainerException.class, () -> {
-        for (ContainerProtos.ChunkInfo chunkInfo : blockData.getChunks()) {
-          finalKeyValueHandler.getChunkManager().readChunk(container, blockID,
-                  ChunkInfo.getFromProtoBuf(chunkInfo), null);
-        }
+        readChunks(finalKeyValueHandler, blockData, container, blockID);
       });
       assertSame(ContainerProtos.Result.UNABLE_TO_FIND_CHUNK, e.getResult());
+    }
+  }
+
+  private static void readChunks(
+      KeyValueHandler keyValueHandler, BlockData blockData, Container container, BlockID blockID
+  ) throws IOException {
+    ChunkManager chunkManager = keyValueHandler.getChunkManager();
+    for (ContainerProtos.ChunkInfo chunkInfoProto : blockData.getChunks()) {
+      ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
+      try (ChunkBuffer chunk = chunkManager.readChunk(container, blockID, chunkInfo, null)) {
+        assertEquals(chunkInfo.getLen(), chunk.remaining());
+      }
     }
   }
 }

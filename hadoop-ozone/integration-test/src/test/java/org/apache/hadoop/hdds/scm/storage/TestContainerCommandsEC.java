@@ -478,12 +478,13 @@ public class TestContainerCommandsEC {
             blockTokenGenerator.generateToken(ANY_USER, blockID,
                 EnumSet.of(READ, WRITE), Long.MAX_VALUE);
         byte[] data = "TestData".getBytes(UTF_8);
-        ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
-            newWriteChunkRequestBuilder(newPipeline, blockID,
-                    ChunkBuffer.wrap(ByteBuffer.wrap(data)), 0)
-                .setEncodedToken(blockToken.encodeToUrlString())
-                .build();
-        dnClient.sendCommand(writeChunkRequest);
+        ContainerProtos.ContainerCommandRequestProto writeChunkRequest;
+        try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(ByteBuffer.wrap(data))) {
+          writeChunkRequest = newWriteChunkRequestBuilder(newPipeline, blockID, chunkBuffer, 0)
+              .setEncodedToken(blockToken.encodeToUrlString())
+              .build();
+          dnClient.sendCommand(writeChunkRequest);
+        }
 
         // Now, explicitly make a putKey request for the block.
         ContainerProtos.ContainerCommandRequestProto putKeyRequest =
@@ -582,11 +583,12 @@ public class TestContainerCommandsEC {
             blockTokenGenerator.generateToken(ANY_USER, blockID,
                 EnumSet.of(READ, WRITE), Long.MAX_VALUE);
         byte[] data = "TestData".getBytes(UTF_8);
-        ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
-            newWriteChunkRequestBuilder(newPipeline, blockID,
-                ChunkBuffer.wrap(ByteBuffer.wrap(data)), 0)
-                .setEncodedToken(blockToken.encodeToUrlString())
-                .build();
+        ContainerProtos.ContainerCommandRequestProto writeChunkRequest;
+        try (ChunkBuffer chunkBuffer = ChunkBuffer.wrap(ByteBuffer.wrap(data))) {
+          writeChunkRequest = newWriteChunkRequestBuilder(newPipeline, blockID, chunkBuffer, 0)
+              .setEncodedToken(blockToken.encodeToUrlString())
+              .build();
+        }
         scm.getPipelineManager().activatePipeline(newPipeline.getId());
 
         try {
