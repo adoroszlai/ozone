@@ -203,10 +203,11 @@ public final class ContainerTestHelper {
       throws Exception {
     ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.PutSmallFileRequestProto.newBuilder();
-    ChunkBuffer data = getData(dataLen);
     ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, dataLen);
-    setDataChecksum(info, data);
-
+    try (ChunkBuffer data = getData(dataLen)) {
+      setDataChecksum(info, data);
+      smallFileRequest.setData(data.toByteString());
+    }
 
     ContainerProtos.PutBlockRequestProto.Builder putRequest =
         ContainerProtos.PutBlockRequestProto.newBuilder();
@@ -218,7 +219,6 @@ public final class ContainerTestHelper {
     putRequest.setBlockData(blockData.getProtoBufMessage());
 
     smallFileRequest.setChunkInfo(info.getProtoBufMessage());
-    smallFileRequest.setData(data.toByteString());
     smallFileRequest.setBlock(putRequest);
 
     Builder request =
