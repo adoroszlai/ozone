@@ -37,11 +37,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.IntFunction;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
 import static org.apache.hadoop.hdds.HddsUtils.formatStackTrace;
@@ -53,6 +56,14 @@ import static org.apache.hadoop.hdds.HddsUtils.getStackTrace;
  */
 public class CodecBuffer implements UncheckedAutoCloseable {
   public static final Logger LOG = LoggerFactory.getLogger(CodecBuffer.class);
+  private static final Supplier<Map<String, String>> TRACE_MAP = MemoizedSupplier.valueOf(ConcurrentHashMap::new);
+
+  private static String getFirstTrace(Throwable t) {
+    final String trace = org.apache.ratis.util.StringUtils.stringifyException(t);
+    final String returned = TRACE_MAP.get().putIfAbsent(trace, trace);
+    // print only if the returned is the same object as trace, i.e. ==
+    return trace == returned ? trace : "";
+  }
 
   /** To create {@link CodecBuffer} instances. */
   private static class Factory {
@@ -326,8 +337,11 @@ public class CodecBuffer implements UncheckedAutoCloseable {
       throw new IllegalArgumentException(
           "newCapacity = " + newCapacity + " < 0");
     }
-    LOG.debug("setCapacity: {} -> {}, max={}",
-        buf.capacity(), newCapacity, buf.maxCapacity());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("setCapacity({}): {} -> {}, max={} {}",
+          isDirect() ? "direct" : "heap", buf.capacity(), newCapacity, buf.maxCapacity(),
+          getFirstTrace(new Throwable("TRACE")));
+    }
     if (newCapacity <= buf.maxCapacity()) {
       final ByteBuf returned = buf.capacity(newCapacity);
       Preconditions.assertSame(buf, returned, "buf");
