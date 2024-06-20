@@ -48,9 +48,9 @@ function ozone_debug
 ## @replaceable yes
 function ozone_validate_classpath_usage
 {
-  description=$'The --validate flag validates if all jars as indicated in the corresponding OZONE_RUN_ARTIFACT_NAME classpath file are present\n\n'
-  usage_text=$'Usage I: ozone --validate classpath <ARTIFACTNAME>\nUsage II: ozone --validate [OPTIONS] --daemon start|status|stop csi|datanode|om|recon|s3g|scm\n\n'
-  options=$'  OPTIONS is none or any of:\n\ncontinue\tcommand execution shall continue even if validation fails'
+  local description=$'The --validate flag validates if all jars as indicated in the corresponding OZONE_RUN_ARTIFACT_NAME classpath file are present\n\n'
+  local usage_text=$'Usage I: ozone --validate classpath <ARTIFACTNAME>\nUsage II: ozone --validate [OPTIONS] --daemon start|status|stop csi|datanode|om|recon|s3g|scm\n\n'
+  local options=$'  OPTIONS is none or any of:\n\ncontinue\tcommand execution shall continue even if validation fails'
   ozone_error "${description}${usage_text}${options}"
   exit 1
 }
