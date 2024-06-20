@@ -37,8 +37,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,13 +56,12 @@ import static org.apache.hadoop.hdds.HddsUtils.getStackTrace;
  */
 public class CodecBuffer implements UncheckedAutoCloseable {
   public static final Logger LOG = LoggerFactory.getLogger(CodecBuffer.class);
-  private static final Supplier<Map<String, String>> TRACE_MAP = MemoizedSupplier.valueOf(ConcurrentHashMap::new);
+  private static final Supplier<Set<String>> TRACES = MemoizedSupplier.valueOf(ConcurrentHashMap::newKeySet);
 
   private static String getFirstTrace(Throwable t) {
     final String trace = org.apache.ratis.util.StringUtils.stringifyException(t);
-    final Object returned = TRACE_MAP.get().putIfAbsent(trace, trace);
-    // print only if the returned is the same object as trace, i.e. ==
-    return trace == returned ? trace : "";
+    // print only if not yet seen
+    return TRACES.get().add(trace) ? trace : "";
   }
 
   /** To create {@link CodecBuffer} instances. */
