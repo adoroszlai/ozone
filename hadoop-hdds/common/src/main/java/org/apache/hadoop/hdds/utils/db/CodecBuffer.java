@@ -60,7 +60,7 @@ public class CodecBuffer implements UncheckedAutoCloseable {
 
   private static String getFirstTrace(Throwable t) {
     final String trace = org.apache.ratis.util.StringUtils.stringifyException(t);
-    final String returned = TRACE_MAP.get().putIfAbsent(trace, trace);
+    final Object returned = TRACE_MAP.get().putIfAbsent(trace, trace);
     // print only if the returned is the same object as trace, i.e. ==
     return trace == returned ? trace : "";
   }
