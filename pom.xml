@@ -48,9 +48,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
     <repository>
-      <id>ratis-310-rc1</id>
-      <name>Apache Ratis 3.1.0-rc1</name>
-      <url>https://repository.apache.org/content/repositories/orgapacheratis-1146</url>
+      <id>ratis-310-rc2</id>
+      <name>Apache Ratis 3.1.0-rc2</name>
+      <url>https://repository.apache.org/content/repositories/orgapacheratis-1147</url>
     </repository>
   </repositories>
 
