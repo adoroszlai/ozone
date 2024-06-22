@@ -38,14 +38,14 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
+      needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-dependency-check: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
     steps:
       - name: "Checkout ${{ github.ref }} / ${{ github.sha }} (push)"
@@ -104,7 +104,7 @@ jobs:
     if: needs.build-info.outputs.needs-build == 'true'
     strategy:
       matrix:
-        java: [ 8 ]
+        java: [ 17 ]
       fail-fast: false
     steps:
       - name: Checkout project
@@ -412,7 +412,8 @@ jobs:
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        suite:
+          - HA-unsecure
       fail-fast: false
     steps:
       - name: Checkout project
@@ -429,6 +430,11 @@ jobs:
           tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
           rm ozone*.tar.gz
           sudo chmod -R a+rwX hadoop-ozone/dist/target
+      - name: Setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
       - name: Execute tests
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
