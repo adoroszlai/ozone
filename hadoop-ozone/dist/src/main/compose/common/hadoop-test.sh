@@ -53,6 +53,8 @@ export OZONE_DIR=/opt/ozone
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
+set -x
+
 for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
   export HADOOP_VERSION
   export HADOOP_MAJOR_VERSION=${HADOOP_VERSION%%.*}
