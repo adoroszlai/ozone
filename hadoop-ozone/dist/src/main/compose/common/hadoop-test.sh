@@ -25,6 +25,17 @@ export HADOOP_MAJOR_VERSION=3
 export HADOOP_VERSION=unused # will be set for each test version below
 export OZONE_REPLICATION_FACTOR=3
 
+for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
+  export HADOOP_VERSION
+  export HADOOP_MAJOR_VERSION=${HADOOP_VERSION%%.*}
+  if [[ "${HADOOP_VERSION}" == "${hadoop2.version}" ]] || [[ "${HADOOP_VERSION}" == "${hadoop.version}" ]]; then
+    export HADOOP_IMAGE=apache/hadoop
+  else
+    export HADOOP_IMAGE=flokkr/hadoop
+  fi
+  docker-compose --ansi never build rm
+done
+
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
@@ -51,7 +62,6 @@ for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
     export HADOOP_IMAGE=flokkr/hadoop
   fi
 
-  docker-compose --ansi never build rm
   docker-compose --ansi never --profile hadoop up -d nm rm
 
   execute_command_in_container rm hadoop version
