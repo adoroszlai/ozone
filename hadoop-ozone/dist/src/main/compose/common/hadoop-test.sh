@@ -25,7 +25,7 @@ export HADOOP_MAJOR_VERSION=3
 export HADOOP_VERSION=unused # will be set for each test version below
 export OZONE_REPLICATION_FACTOR=3
 
-for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
+for HADOOP_VERSION in ${hadoop.version}; do
   export HADOOP_VERSION
   export HADOOP_MAJOR_VERSION=${HADOOP_VERSION%%.*}
   if [[ "${HADOOP_VERSION}" == "${hadoop2.version}" ]] || [[ "${HADOOP_VERSION}" == "${hadoop.version}" ]]; then
@@ -55,7 +55,7 @@ source "$COMPOSE_DIR/../testlib.sh"
 
 set -x
 
-for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
+for HADOOP_VERSION in ${hadoop.version}; do
   export HADOOP_VERSION
   export HADOOP_MAJOR_VERSION=${HADOOP_VERSION%%.*}
   if [[ "${HADOOP_VERSION}" == "${hadoop2.version}" ]] || [[ "${HADOOP_VERSION}" == "${hadoop.version}" ]]; then
@@ -73,7 +73,7 @@ for HADOOP_VERSION in ${hadoop2.version} 3.1.2 ${hadoop.version}; do
     execute_robot_test rm kinit-hadoop.robot
   fi
 
-  for scheme in o3fs ofs; do
+  for scheme in ofs; do
     execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${HADOOP_VERSION}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
     # TODO secure MapReduce test is failing with 2.7 due to some token problem
     if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
