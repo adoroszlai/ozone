@@ -17,7 +17,13 @@
 version: "3.8"
 services:
   rm:
-    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
+    build:
+      dockerfile: ../common/hadoop.Dockerfile
+      context: .
+      args:
+        - HADOOP_IMAGE
+        - HADOOP_VERSION
+    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}-jdk17
     hostname: rm
     volumes:
       - ../..:/opt/ozone
@@ -32,7 +38,13 @@ services:
     profiles:
       - hadoop
   nm:
-    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
+    build:
+      dockerfile: ../common/hadoop.Dockerfile
+      context: .
+      args:
+        - HADOOP_IMAGE
+        - HADOOP_VERSION
+    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}-jdk17
     hostname: nm
     volumes:
       - ../..:/opt/ozone
