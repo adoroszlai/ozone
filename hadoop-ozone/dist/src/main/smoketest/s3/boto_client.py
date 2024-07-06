@@ -22,6 +22,7 @@ import logging
 import json
 import unittest
 import boto3
+import tempfile
 from botocore.client import Config
 from botocore.exceptions import ClientError
 import os.path
@@ -71,12 +72,14 @@ class TestBotoClient(unittest.TestCase):
             logging.error(e)
             print(e)
 
-        f = open('multiUpload.gz',"wb")
-        f.seek(10485760)
-        f.write(b"\0")
-        f.close()
-        self.s3.Bucket(str(self.target_bucket)).upload_file('./multiUpload.gz','multiUpload.1.gz')
-        self.s3.Bucket(str(self.target_bucket)).upload_file('./multiUpload.gz','multiUpload.2.gz')
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = temp_dir + '/multiUpload.gz'
+            f = open(path, "wb")
+            f.seek(10485760)
+            f.write(b"\0")
+            f.close()
+            self.s3.Bucket(str(self.target_bucket)).upload_file(path, 'multiUpload.1.gz')
+            self.s3.Bucket(str(self.target_bucket)).upload_file(path, 'multiUpload.2.gz')
 
     def test_create_bucket(self):
         self.assertTrue(self.s3_client is not None)
