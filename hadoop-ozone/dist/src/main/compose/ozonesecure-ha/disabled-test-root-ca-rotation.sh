@@ -95,7 +95,3 @@ execute_robot_test scm1.org scmha/scm-decommission.robot
 
 # check the metrics
 execute_robot_test scm2.org scmha/root-ca-rotation.robot
-
-stop_docker_env
-
-generate_report

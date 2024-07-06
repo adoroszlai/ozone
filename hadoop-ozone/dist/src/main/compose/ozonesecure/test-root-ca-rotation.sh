@@ -63,7 +63,3 @@ wait_for_execute_command scm 60 "! ozone admin cert info 1"
 execute_robot_test scm -v PREFIX:"rootca2" certrotation/root-ca-rotation-client-checks.robot
 # check the metrics
 execute_robot_test scm scmha/root-ca-rotation.robot
-
-stop_docker_env
-
-generate_report
