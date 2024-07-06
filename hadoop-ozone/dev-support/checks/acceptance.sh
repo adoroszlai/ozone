@@ -59,7 +59,10 @@ fi
 
 export OZONE_ACCEPTANCE_SUITE OZONE_ACCEPTANCE_TEST_TYPE
 
-cd "$DIST_DIR/compose" || exit 1
+TEST_DIR="$DIST_DIR/compose"
+export ALL_RESULT_DIR="$TEST_DIR/result"
+
+cd "$TEST_DIR" || exit 1
 ./test-all.sh 2>&1 | tee "${REPORT_DIR}/output.log"
 RES=$?
 
@@ -70,6 +73,9 @@ if [[ "${OZONE_ACCEPTANCE_TEST_TYPE}" == "maven" ]]; then
   cp -rv * "${REPORT_DIR}"/
   popd
 else
+  # does not apply to JUnit tests run via Maven
+  generate_report "acceptance" "${ALL_RESULT_DIR}" "${XUNIT_RESULT_DIR}"
+
   cp -rv result/* "$REPORT_DIR/"
   if [[ -f "${REPORT_DIR}/log.html" ]]; then
     cp "$REPORT_DIR/log.html" "$REPORT_DIR/summary.html"
