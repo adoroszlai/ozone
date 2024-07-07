@@ -1,3 +1,4 @@
+# (the "License"); you may not use this file except in compliance with
 #!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -57,12 +58,13 @@ if [[ "${OZONE_ACCEPTANCE_TEST_TYPE}" == "robot" ]]; then
   install_robot
 fi
 
-export OZONE_ACCEPTANCE_SUITE OZONE_ACCEPTANCE_TEST_TYPE
+export OZONE_ACCEPTANCE_SUITE
 
 TEST_DIR="$DIST_DIR/compose"
 export ALL_RESULT_DIR="$TEST_DIR/result"
 
 cd "$TEST_DIR" || exit 1
+source testlib.sh
 ./test-all.sh 2>&1 | tee "${REPORT_DIR}/output.log"
 RES=$?
 
