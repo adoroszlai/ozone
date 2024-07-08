@@ -38,9 +38,10 @@ Picks up items from OZONE_CLASSPATH
                         Should Contain   ${output}   ${TEMP_DIR}/ozone-classpath.jar
     [teardown]    Remove File         ${TEMP_DIR}/ozone-classpath.jar
 
-Adds optional dir entries
-    [setup]    Create File         %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
-    Set Environment Variable   OZONE_CLASSPATH  ${EMPTY}
-    ${output} =         Execute          ozone classpath ozone-insight
-                        Should Contain   ${output}   %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
-    [teardown]    Remove File    %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
+# disabled: cannot implement with read-only working dir
+# Adds optional dir entries
+#     [setup]    Create File         %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
+#     Set Environment Variable   OZONE_CLASSPATH  ${EMPTY}
+#     ${output} =         Execute          ozone classpath ozone-insight
+#                         Should Contain   ${output}   %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
+#     [teardown]    Remove File    %{HDDS_LIB_JARS_DIR}/ozone-insight/optional.jar
