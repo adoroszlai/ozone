@@ -19,6 +19,7 @@ version: "3.8"
 # reusable fragments (see https://docs.docker.com/compose/compose-file/#extension-fields)
 x-common-config:
   &common-config
+  dns_search: .
   env_file:
     - docker-config
     - ../../../common/security.conf
@@ -70,6 +71,7 @@ services:
   kdc:
     command: ["krb5kdc","-n"]
     hostname: kdc
+    dns_search: .
     image: ${OZONE_TESTKRB5_IMAGE}
     networks:
       net:
@@ -80,6 +82,7 @@ services:
   kms:
     command: ["hadoop", "kms"]
     hostname: kms
+    dns_search: .
     env_file:
       - docker-config
     environment:
