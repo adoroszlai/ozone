@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+version: "3.8"
+
 # reusable fragments (see https://docs.docker.com/compose/compose-file/#extension-fields)
 x-common-config:
   &common-config
@@ -21,12 +23,11 @@ x-common-config:
   image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
   volumes:
     - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
+    - ../_keytabs:/etc/security/keytabs
+    - ./krb5.conf:/etc/krb5.conf
   env_file:
     - docker-config
 
-version: "3.8"
 services:
   kdc:
     image: ${OZONE_TESTKRB5_IMAGE}
