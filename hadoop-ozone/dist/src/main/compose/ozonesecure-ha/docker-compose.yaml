@@ -14,11 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# reusable fragments (see https://docs.docker.com/compose/compose-file/#extension-fields)
+x-common-config:
+  &common-config
+  dns_search: .
+  image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+  volumes:
+    - ../..:/opt/hadoop
+      - ../_keytabs:/etc/security/keytabs
+      - ./krb5.conf:/etc/krb5.conf
+  env_file:
+    - docker-config
+
 version: "3.8"
 services:
   kdc:
     image: ${OZONE_TESTKRB5_IMAGE}
     hostname: kdc
+    dns_search: .
     volumes:
       - ../..:/opt/hadoop
       - ../_keytabs:/etc/security/keytabs
@@ -28,6 +41,7 @@ services:
         ipv4_address: 172.25.0.100
   kms:
     image: apache/hadoop:${HADOOP_VERSION}
+    dns_search: .
     ports:
       - 9600:9600
     env_file:
@@ -43,11 +57,7 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.101
   datanode1:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
+    <<: *common-config
     ports:
       - 19864:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
@@ -56,8 +66,6 @@ services:
       - "scm2.org: 172.25.0.117"
       - "scm3.org: 172.25.0.118"
       - "recon: 172.25.0.115"
-    env_file:
-      - docker-config
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
@@ -65,11 +73,7 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.102
   datanode2:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
+    <<: *common-config
     ports:
       - 9866:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
@@ -78,8 +82,6 @@ services:
       - "scm2.org: 172.25.0.117"
       - "scm3.org: 172.25.0.118"
       - "recon: 172.25.0.115"
-    env_file:
-      - docker-config
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
@@ -87,11 +89,7 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.103
   datanode3:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
+    <<: *common-config
     ports:
       - 9868:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
@@ -100,8 +98,6 @@ services:
       - "scm2.org: 172.25.0.117"
       - "scm3.org: 172.25.0.118"
       - "recon: 172.25.0.115"
-    env_file:
-      - docker-config
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
@@ -109,12 +105,8 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.104
   om1:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: om1
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9880:9874
       - 9890:9872
@@ -123,8 +115,6 @@ services:
       WAITFOR: scm3.org:9894
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS:
-    env_file:
-      - ./docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
       - "scm1.org: 172.25.0.116"
@@ -134,12 +124,8 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.111
   om2:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: om2
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9882:9874
       - 9892:9872
@@ -148,8 +134,6 @@ services:
       WAITFOR: scm3.org:9894
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS:
-    env_file:
-      - ./docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
       - "scm1.org: 172.25.0.116"
@@ -159,12 +143,8 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.112
   om3:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: om3
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9884:9874
       - 9894:9872
@@ -173,8 +153,6 @@ services:
       WAITFOR: scm3.org:9894
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS:
-    env_file:
-      - ./docker-config
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
       - "scm1.org: 172.25.0.116"
@@ -184,16 +162,10 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.113
   httpfs:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: httpfs
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 14000:14000
-    env_file:
-      - ./docker-config
     command: [ "/opt/hadoop/bin/ozone","httpfs" ]
     environment:
       OZONE-SITE.XML_hdds.scm.safemode.min.datanode: ${OZONE_SAFEMODE_MIN_DATANODES:-1}
@@ -202,16 +174,10 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.119
   s3g:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: s3g
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9878:9878
-    env_file:
-      - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
     environment:
       OZONE_OPTS:
@@ -219,17 +185,11 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.114
   scm1.org:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: scm1.org
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9990:9876
       - 9992:9860
-    env_file:
-      - docker-config
     environment:
       ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       OZONE-SITE.XML_hdds.scm.safemode.min.datanode: "${OZONE_SAFEMODE_MIN_DATANODES:-3}"
@@ -246,17 +206,11 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.116
   scm2.org:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: scm2.org
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9994:9876
       - 9996:9860
-    env_file:
-      - docker-config
     environment:
       WAITFOR: scm1.org:9894
       ENSURE_SCM_BOOTSTRAPPED: /data/metadata/scm/current/VERSION
@@ -274,17 +228,11 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.117
   scm3.org:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: scm3.org
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9998:9876
       - 10002:9860
-    env_file:
-      - docker-config
     environment:
       WAITFOR: scm2.org:9894
       ENSURE_SCM_BOOTSTRAPPED: /data/metadata/scm/current/VERSION
@@ -302,16 +250,10 @@ services:
       ozone_net:
         ipv4_address: 172.25.0.118
   recon:
-    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
+    <<: *common-config
     hostname: recon
-    volumes:
-      - ../..:/opt/hadoop
-      - ../_keytabs:/etc/security/keytabs
-      - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9888:9888
-    env_file:
-      - ./docker-config
     environment:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","recon"]
