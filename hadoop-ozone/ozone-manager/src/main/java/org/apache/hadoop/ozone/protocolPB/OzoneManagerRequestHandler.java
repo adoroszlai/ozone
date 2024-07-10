@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.UpgradeFinalizationStatu
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.scm.protocolPB.OzonePBHelper;
 import org.apache.hadoop.hdds.utils.FaultInjector;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.util.PayloadUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -636,6 +637,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowLookupKeyResponseWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasLookupKeyResponse()) {
       return resp;
     }
@@ -663,7 +667,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowLookupKeyWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
-    if (!resp.hasLookupKeyResponse()) {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
+    if (ClientVersion.fromProtoValue(req.getVersion())
+        .compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0 || !resp.hasLookupKeyResponse()) {
       return resp;
     }
     KeyInfo keyInfo = resp.getLookupKeyResponse().getKeyInfo();
@@ -750,6 +758,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListKeysResponseWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListKeysResponse()) {
       return resp;
     }
@@ -777,6 +788,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListKeysWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListKeysResponse()) {
       return resp;
     }
@@ -838,6 +852,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListTrashWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListTrashResponse()) {
       return resp;
     }
@@ -868,6 +885,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListTrashWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListTrashResponse()) {
       return resp;
     }
@@ -1055,6 +1075,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowGetFileStatusWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasGetFileStatusResponse()) {
       return resp;
     }
@@ -1085,6 +1108,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowGetFileStatusWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasGetFileStatusResponse()) {
       return resp;
     }
@@ -1134,6 +1160,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowLookupFileWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasLookupFileResponse()) {
       return resp;
     }
@@ -1162,6 +1191,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowLookupFileWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasLookupFileResponse()) {
       return resp;
     }
@@ -1244,6 +1276,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListStatusResponseWithECReplicationConfig(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.ERASURE_CODING_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListStatusResponse()) {
       return resp;
     }
@@ -1272,6 +1307,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   public static OMResponse disallowListStatusResponseWithBucketLayout(
       OMRequest req, OMResponse resp, ValidationContext ctx)
       throws ServiceException, IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion()).compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return resp;
+    }
     if (!resp.hasListStatusResponse()) {
       return resp;
     }

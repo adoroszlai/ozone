@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -171,6 +172,10 @@ public class OMKeyAddAclRequest extends OMKeyAclRequest {
   )
   public static OMRequest blockAddAclWithBucketLayoutFromOldClient(
       OMRequest req, ValidationContext ctx) throws IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion())
+        .compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return req;
+    }
     if (req.getAddAclRequest().hasObj()) {
       OzoneObj obj = OzoneObjInfo.fromProtobuf(req.getAddAclRequest().getObj());
       String path = obj.getPath();

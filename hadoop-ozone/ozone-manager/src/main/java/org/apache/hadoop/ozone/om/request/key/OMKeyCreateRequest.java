@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -430,6 +431,10 @@ public class OMKeyCreateRequest extends OMKeyRequest {
   )
   public static OMRequest blockCreateKeyWithBucketLayoutFromOldClient(
       OMRequest req, ValidationContext ctx) throws IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion())
+        .compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return req;
+    }
     if (req.getCreateKeyRequest().hasKeyArgs()) {
       KeyArgs keyArgs = req.getCreateKeyRequest().getKeyArgs();
 

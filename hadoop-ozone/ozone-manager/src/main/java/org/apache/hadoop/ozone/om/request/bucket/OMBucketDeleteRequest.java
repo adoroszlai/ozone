@@ -23,6 +23,7 @@ import java.nio.file.InvalidPathException;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
@@ -287,6 +288,10 @@ public class OMBucketDeleteRequest extends OMClientRequest {
   )
   public static OMRequest blockBucketDeleteWithBucketLayoutFromOldClient(
       OMRequest req, ValidationContext ctx) throws IOException {
+    if (ClientVersion.fromProtoValue(req.getVersion())
+        .compareTo(ClientVersion.BUCKET_LAYOUT_SUPPORT) >= 0) {
+      return req;
+    }
     DeleteBucketRequest request = req.getDeleteBucketRequest();
 
     if (request.hasBucketName() && request.hasVolumeName()) {
