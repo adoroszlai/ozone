@@ -17,6 +17,8 @@
 package org.apache.hadoop.ozone.om.request.validation;
 
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneManagerUtils;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
@@ -48,15 +50,24 @@ public interface ValidationContext {
   BucketLayout getBucketLayout(String volumeName, String bucketName)
       throws IOException;
 
+  boolean isTesting();
+
   /**
    * Creates a context object based on the given parameters.
    *
    * @param versionManager the {@link LayoutVersionManager} of the service
    * @return the {@link ValidationContext} specified by the parameters.
    */
-  static ValidationContext of(LayoutVersionManager versionManager,
-                              OMMetadataManager omMetadataManager) {
+  static ValidationContext of(
+      LayoutVersionManager versionManager,
+      OMMetadataManager omMetadataManager) {
+    return of(versionManager, omMetadataManager, new OzoneConfiguration());
+  }
 
+
+  static ValidationContext of(
+      LayoutVersionManager versionManager, OMMetadataManager omMetadataManager, ConfigurationSource conf) {
+    final boolean testing = conf != null && conf.getBoolean("ozone.testing", false);
     return new ValidationContext() {
       @Override
       public LayoutVersionManager versionManager() {
@@ -68,6 +79,11 @@ public interface ValidationContext {
           throws IOException {
         return OzoneManagerUtils.getBucketLayout(omMetadataManager, volumeName,
             bucketName);
+      }
+
+      @Override
+      public boolean isTesting() {
+        return testing;
       }
     };
   }

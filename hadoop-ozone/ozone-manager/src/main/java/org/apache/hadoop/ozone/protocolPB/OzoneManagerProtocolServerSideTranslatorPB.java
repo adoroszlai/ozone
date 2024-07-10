@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.server.OzoneProtocolMessageDispatcher;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.ProtocolMessageMetrics;
@@ -108,11 +109,12 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements OzoneManagerP
     // onwards to ensure unique objectIDs.
     this.transactionIndex = new AtomicLong(lastTransactionIndexForNonRatis);
 
+    ConfigurationSource conf = ozoneManager.getConfiguration();
     // When ratis is enabled, the handler does not require a double-buffer since it only handle read requests.
     this.ozoneManagerDoubleBuffer = enableRatis ? null
         : OzoneManagerDoubleBuffer.newBuilder()
           .setOmMetadataManager(ozoneManager.getMetadataManager())
-          .enableTracing(TracingUtil.isTracingEnabled(ozoneManager.getConfiguration()))
+          .enableTracing(TracingUtil.isTracingEnabled(conf))
           .build()
           .start();
     this.handler = new OzoneManagerRequestHandler(impl);
@@ -123,7 +125,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements OzoneManagerP
     // TODO: make this injectable for testing...
     this.requestValidations = new RequestValidations()
         .fromPackage(OM_REQUESTS_PACKAGE)
-        .withinContext(ValidationContext.of(ozoneManager.getVersionManager(), ozoneManager.getMetadataManager()))
+        .withinContext(ValidationContext.of(ozoneManager.getVersionManager(), ozoneManager.getMetadataManager(), conf))
         .load();
   }
 
