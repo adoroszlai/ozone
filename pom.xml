@@ -1797,6 +1797,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <goals>
                   <goal>jar</goal>
                 </goals>
+                <configuration>
+                  <sourcepath>${project.basedir}/src/main/java</sourcepath>
+                </configuration>
               </execution>
             </executions>
           </plugin>
