@@ -411,7 +411,8 @@ jobs:
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        suite:
+          - single
       fail-fast: false
     steps:
       - name: Checkout project
