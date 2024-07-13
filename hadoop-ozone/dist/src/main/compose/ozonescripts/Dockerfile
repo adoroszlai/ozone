@@ -26,6 +26,7 @@ RUN sudo mkdir -p /run/sshd
 RUN sudo sed -i "s/.*UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config
 RUN sudo sed -i "s/.*PermitUserEnvironment.*/PermitUserEnvironment yes/g" /etc/ssh/sshd_config
 RUN sudo sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN sudo rm -f /etc/nologin /var/run/nologin
 
 #/opt/hadoop is mounted, we can't use it as a home
 RUN sudo usermod -d /opt hadoop
