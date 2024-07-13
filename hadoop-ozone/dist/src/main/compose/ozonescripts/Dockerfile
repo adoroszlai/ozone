@@ -19,7 +19,7 @@ ARG OZONE_RUNNER_VERSION
 
 FROM ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
 
-RUN sudo yum install -y openssh-clients openssh-server
+RUN sudo dnf install -y openssh-clients openssh-server
 
 RUN sudo ssh-keygen -A
 RUN sudo mkdir -p /run/sshd
