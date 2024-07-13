@@ -37,6 +37,8 @@ RUN sudo chmod 600 /opt/.ssh/*
 RUN sudo chmod 700 /opt/.ssh
 
 RUN echo "export JAVA_HOME=$JAVA_HOME" | sudo sh -c 'cat >> /etc/profile'
-RUN echo "JAVA_HOME=$JAVA_HOME" | sh -c 'cat >> /opt/.ssh/environment'
+RUN echo "JAVA_HOME=$JAVA_HOME" >> /opt/.ssh/environment
+RUN echo "OZONE_CONF_DIR=$OZONE_CONF_DIR" >> /opt/.ssh/environment
+RUN echo "OZONE_LOG_DIR=$OZONE_LOG_DIR" >> /opt/.ssh/environment
 
 CMD ["sudo","/usr/sbin/sshd","-D"]
