@@ -57,10 +57,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>
-      <artifactId>hdds-hadoop-dependency-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ozone</groupId>
       <artifactId>hdds-hadoop-dependency-server</artifactId>
     </dependency>
     <dependency>
