@@ -54,8 +54,8 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-client</artifactId>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hdds-hadoop-dependency-client</artifactId>
     </dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
