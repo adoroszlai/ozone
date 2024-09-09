@@ -40,6 +40,9 @@ public enum OzoneManagerVersion implements ComponentVersion {
   LIGHTWEIGHT_LIST_KEYS(4, "OzoneManager version that supports lightweight"
       + " listKeys API."),
 
+  LIGHTWEIGHT_LIST_STATUS(8, "OzoneManager version that supports lightweight"
+      + " listStatus API."),
+
   FUTURE_VERSION(-1, "Used internally in the client when the server side is "
       + " newer and an unknown server version has arrived to the client.");
 
