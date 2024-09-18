@@ -519,7 +519,7 @@ prepare_for_binary_image() {
   local v=$1
 
   export OZONE_DIR=/opt/ozone
-  export OZONE_IMAGE="apache/ozone:${v}"
+  export OZONE_IMAGE="apache/ozone:${v}-rocky"
 }
 
 ## @description Define variables required for using `ozone-runner` docker image
