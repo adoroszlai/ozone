@@ -425,12 +425,12 @@ jobs:
           ref: ${{ needs.build-info.outputs.sha }}
       - name: Download compiled Ozone binaries
         uses: actions/download-artifact@v4
-        if: ${{ matrix.suite }} == 'MR' # until HDDS-11053 is fixed
+        if: ${{ matrix.suite == 'MR' }} # until HDDS-11053 is fixed
         with:
           name: ozone-bin-${{ env.BUILD_JAVA_VERSION }}
       - name: Download compiled Ozone binaries
         uses: actions/download-artifact@v4
-        if: ${{ matrix.suite }} != 'MR'
+        if: ${{ matrix.suite != 'MR' }}
         with:
           name: ozone-bin-${{ env.TEST_JAVA_VERSION }}
       - name: Untar binaries
