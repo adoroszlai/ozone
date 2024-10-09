@@ -40,7 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * It is also flaky because of depending on background processes and environment (other background tasks
  * can create extra managed rocks objects and thus fails the counter assertions).
  */
-@Unhealthy
 public class TestRocksObjectLeakDetector {
 
   private static MiniOzoneCluster cluster;
