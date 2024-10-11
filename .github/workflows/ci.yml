@@ -444,6 +444,7 @@ jobs:
           java-version: ${{ env.TEST_JAVA_VERSION }}
       - name: Install diffoscope
         run: |
+          sudo apt update -q
           sudo apt install -y diffoscope
       - name: Execute tests
         run: |
