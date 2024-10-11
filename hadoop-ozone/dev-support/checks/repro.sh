@@ -24,6 +24,7 @@ REPORT_DIR=${OUTPUT_DIR:-"${BASE_DIR}/target/repro"}
 
 mkdir -p "$REPORT_DIR"
 
+rc=0
 source "${DIR}"/_build.sh verify artifact:compare "$@" | tee "${REPORT_DIR}/output.log"
 
 REPORT_FILE="$REPORT_DIR/summary.txt"
@@ -34,3 +35,5 @@ wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
 if [[ -s "${REPORT_FILE}" ]]; then
    exit 1
 fi
+
+exit $rc # result of mvn
