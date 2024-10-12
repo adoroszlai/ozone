@@ -40,10 +40,12 @@ if type diffoscope; then
     echo "$jar"
     ls -la "$jar"
     find ~/.m2/repository -name "$(basename $jar)" -ls
-    ref=$(find ~/.m2/repository -name "$(basename jar)")
     find target/reference -name "$(basename $jar)" -ls
-    if [[ -f "$jar" ]] && [[ -f "$ref" ]]; then
-      "diffoscope $ref $jar" | tee -a "${REPORT_DIR}/output.log"
+    ref=$(find target/reference -name "$(basename jar)")
+    echo "$ref"
+    ls -la "$ref"
+    if [[ -e "$jar" ]] && [[ -e "$ref" ]]; then
+      diffoscope "$ref" "$jar" | tee -a "${REPORT_DIR}/output.log"
     fi
   fi
 fi
