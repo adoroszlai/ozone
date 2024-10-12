@@ -145,6 +145,7 @@ jobs:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       - name: Store binaries for tests
         uses: actions/upload-artifact@v4
+        if: needs.build-info.outputs.needs-compose-tests == 'true' || needs.build-info.outputs.needs-kubernetes-tests == 'true'
         with:
           name: ozone-bin
           path: |
@@ -153,6 +154,7 @@ jobs:
           retention-days: 1
       - name: Store source tarball for compilation
         uses: actions/upload-artifact@v4
+        if: needs.build-info.outputs.needs-compile == 'true'
         with:
           name: ozone-src
           path: hadoop-ozone/dist/target/ozone-*-src.tar.gz
