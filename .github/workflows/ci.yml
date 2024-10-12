@@ -448,9 +448,14 @@ jobs:
         run: |
           sudo apt update -q
           sudo apt install -y diffoscope
+        continue-on-error: true
       - name: Execute tests
         run: |
           hadoop-ozone/dev-support/checks/${{ github.job }}.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }} -am -pl :hdds-common
+        continue-on-error: true
+      - name: Check artifact differences
+        run: |
+          hadoop-ozone/dev-support/checks/_diffoscope.sh
         continue-on-error: true
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt

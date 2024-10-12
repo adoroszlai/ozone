@@ -14,27 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This check verifies build reproducibility.
+# Helper script to compare jars reported by maven-artifact-plugin
+
+set -e -u -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
 BASE_DIR="$(pwd -P)"
-REPORT_DIR=${OUTPUT_DIR:-"${BASE_DIR}/target/repro"}
+: ${OUTPUT_LOG:="${BASE_DIR}/target/repro/output.log"}
 
-rc=0
-source "${DIR}"/_build.sh verify artifact:compare "$@" | tee output.log
+for item in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUTPUT_LOG}"); do
+  jar=$(echo "$item" | awk '{ print $NF }')
+  jarname=$(basename "$jar")
+  if [[ ! -e "$jar" ]]; then
+    echo "No jar found for: $item"
+    continue
+  fi
 
-mkdir -p "$REPORT_DIR"
-mv output.log "$REPORT_DIR"/
+  ref=$(find target/reference -name "$jarname")
+  if [[ -n "$ref" ]]; then
+    ref=$(find ~/.m2/repository -name "$jarname")
+  fi
 
-REPORT_FILE="$REPORT_DIR/summary.txt"
-grep 'ERROR.*mismatch' "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
+  if [[ -e "$ref" ]]; then
+    echo "Reference not found for: $jar"
+    continue
+  fi
 
-wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
-
-if [[ -s "${REPORT_FILE}" ]]; then
-   exit 1
-fi
-
-exit $rc # result of mvn
+  diffoscope "$ref" "$jar"
+done
