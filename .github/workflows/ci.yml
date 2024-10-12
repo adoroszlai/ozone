@@ -140,7 +140,7 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.TEST_JAVA_VERSION }}
       - name: Run a full build
-        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }}
+        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }} -am -pl :hdds-common
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       - name: Store binaries for tests
@@ -450,7 +450,7 @@ jobs:
           sudo apt install -y diffoscope
       - name: Execute tests
         run: |
-          hadoop-ozone/dev-support/checks/${{ github.job }}.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }}
+          hadoop-ozone/dev-support/checks/${{ github.job }}.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }} -am -pl :hdds-common
         continue-on-error: true
       - name: Summary of failures
         run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
