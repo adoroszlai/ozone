@@ -24,11 +24,10 @@ cd "$DIR/../../.." || exit 1
 BASE_DIR="$(pwd -P)"
 : ${OUTPUT_LOG:="${BASE_DIR}/target/repro/output.log"}
 
-for item in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUTPUT_LOG}"); do
-  jar=$(echo "$item" | awk '{ print $NF }')
+for jar in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUTPUT_LOG}" | awk '{ print $NF }'); do
   jarname=$(basename "$jar")
   if [[ ! -e "$jar" ]]; then
-    echo "No jar found for: $item"
+    echo "$jar does not exist"
     continue
   fi
 
@@ -38,7 +37,7 @@ for item in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUT
   fi
 
   if [[ -e "$ref" ]]; then
-    echo "Reference not found for: $jar"
+    echo "Reference not found for: $jarname"
     continue
   fi
 
