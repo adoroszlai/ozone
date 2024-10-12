@@ -36,13 +36,12 @@ wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
 if type diffoscope; then
   cmd=$(grep -o "diffoscope [^ ]*\.jar [^ ]*\.jar" "${REPORT_DIR}/output.log")
   if [[ -n "$cmd" ]]; then
-    echo "$cmd"
-    jar=$(basename $(echo "$cmd" | awk '{ print $NF }'))
+    jar=$(echo "$cmd" | awk '{ print $NF }')
     echo "$jar"
-    find ~/.m2/repository -name "$jar"
-    ref=$(find ~/.m2/repository -name "$jar")
     ls -la "$jar"
-    ls -la "$ref"
+    find ~/.m2/repository -name "$(basename $jar)" -ls
+    ref=$(find ~/.m2/repository -name "$(basename jar)")
+    find target/reference -name "$(basename $jar)" -ls
     if [[ -f "$jar" ]] && [[ -f "$ref" ]]; then
       "diffoscope $ref $jar" | tee -a "${REPORT_DIR}/output.log"
     fi
