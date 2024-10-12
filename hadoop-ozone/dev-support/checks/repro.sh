@@ -22,19 +22,22 @@ cd "$DIR/../../.." || exit 1
 BASE_DIR="$(pwd -P)"
 REPORT_DIR=${OUTPUT_DIR:-"${BASE_DIR}/target/repro"}
 
-mkdir -p "$REPORT_DIR"
-
 rc=0
-source "${DIR}"/_build.sh verify artifact:compare "$@" | tee "${REPORT_DIR}/output.log"
+source "${DIR}"/_build.sh verify artifact:compare "$@" | tee output.log
+
+mkdir -p "$REPORT_DIR"
+mv output.log "$REPORT_DIR"/
 
 REPORT_FILE="$REPORT_DIR/summary.txt"
 grep 'ERROR.*mismatch' "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
 
 wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
 
-cmd=$(grep -o "diffoscope [^ ]*\.jar [^ ]*\.jar" "${REPORT_DIR}/output.log")
-if [[ -n "$cmd" ]] && type diffoscope; then
-  "$cmd" | tee -a "${REPORT_DIR}/output.log"
+if type diffoscope; then
+  cmd=$(grep -o "diffoscope [^ ]*\.jar [^ ]*\.jar" "${REPORT_DIR}/output.log")
+  if [[ -n "$cmd" ]]; then
+    "$cmd" | tee -a "${REPORT_DIR}/output.log"
+  fi
 fi
 
 if [[ -s "${REPORT_FILE}" ]]; then
