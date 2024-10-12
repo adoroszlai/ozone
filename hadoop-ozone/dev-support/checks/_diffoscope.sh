@@ -36,7 +36,7 @@ for jar in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUTP
     ref=$(find ~/.m2/repository -name "$jarname")
   fi
 
-  if [[ -e "$ref" ]]; then
+  if [[ ! -e "$ref" ]]; then
     echo "Reference not found for: $jarname"
     continue
   fi
