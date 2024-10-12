@@ -39,10 +39,10 @@ if type diffoscope; then
     jar=$(echo "$cmd" | awk '{ print $NF }')
     echo "$jar"
     ls -la "$jar"
-    find ~/.m2/repository -name "$(basename $jar)" -ls
-    find target/reference -name "$(basename $jar)" -ls
-    ref=$(find target/reference -name "$(basename jar)")
-    echo "$ref"
+    jarname=$(basename "$jar")
+    find target/reference -name "$jarname" -ls
+    ref=$(find target/reference -name "$jarname")
+    echo ">$ref<"
     ls -la "$ref"
     if [[ -e "$jar" ]] && [[ -e "$ref" ]]; then
       diffoscope "$ref" "$jar" | tee -a "${REPORT_DIR}/output.log"
