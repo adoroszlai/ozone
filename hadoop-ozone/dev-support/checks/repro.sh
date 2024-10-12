@@ -34,10 +34,15 @@ grep 'ERROR.*mismatch' "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
 wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
 
 if type diffoscope; then
-  cmd=$(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${REPORT_DIR}/output.log")
+  cmd=$(grep -o "diffoscope [^ ]*\.jar [^ ]*\.jar" "${REPORT_DIR}/output.log")
   if [[ -n "$cmd" ]]; then
+    echo "$cmd"
     jar=$(basename $(echo "$cmd" | awk '{ print $NF }'))
+    echo "$jar"
+    find ~/.m2/repository -name "$jar"
     ref=$(find ~/.m2/repository -name "$jar")
+    ls -la "$jar"
+    ls -la "$ref"
     if [[ -f "$jar" ]] && [[ -f "$ref" ]]; then
       "diffoscope $ref $jar" | tee -a "${REPORT_DIR}/output.log"
     fi
