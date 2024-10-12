@@ -32,7 +32,7 @@ for jar in $(grep -o "investigate with diffoscope [^ ]*\.jar [^ ]*\.jar" "${OUTP
   fi
 
   ref=$(find target/reference -name "$jarname")
-  if [[ -n "$ref" ]]; then
+  if [[ -z "$ref" ]]; then
     ref=$(find ~/.m2/repository -name "$jarname")
   fi
 
