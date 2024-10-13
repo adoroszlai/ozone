@@ -145,7 +145,6 @@ jobs:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       - name: Store binaries for tests
         uses: actions/upload-artifact@v4
-        if: needs.build-info.outputs.needs-compose-tests == 'true' || needs.build-info.outputs.needs-kubernetes-tests == 'true'
         with:
           name: ozone-bin
           path: |
