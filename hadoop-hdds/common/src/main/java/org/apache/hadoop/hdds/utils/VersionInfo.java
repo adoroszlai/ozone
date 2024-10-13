@@ -65,6 +65,10 @@ public class VersionInfo {
     return info.getProperty("revision", "Unknown");
   }
 
+  public String getBranch() {
+    return info.getProperty("branch", "Unknown");
+  }
+
   public String getUrl() {
     return info.getProperty("url", "Unknown");
   }
