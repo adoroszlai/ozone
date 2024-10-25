@@ -19,8 +19,11 @@ package org.apache.hadoop.hdds.fs;
 
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
+import org.apache.ratis.util.MemoizedSupplier;
+import org.apache.ratis.util.function.StringSupplier;
 
 import java.io.UncheckedIOException;
+import java.util.function.Supplier;
 
 /**
  * Interface for implementations that can tell how much space
@@ -56,11 +59,17 @@ public interface SpaceUsageSource {
     private final long capacity;
     private final long available;
     private final long used;
+    private final Supplier<String> str;
 
     public Fixed(long capacity, long available, long used) {
       this.capacity = capacity;
       this.available = Math.max(Math.min(available, capacity - used), 0);
       this.used = used;
+      this.str = StringSupplier.get(MemoizedSupplier.valueOf(
+          () -> "capacity=" + this.capacity
+              + ", used=" + this.used
+              + ", available=" + this.available
+      ));
     }
 
     @Override
@@ -81,6 +90,11 @@ public interface SpaceUsageSource {
     @Override
     public SpaceUsageSource snapshot() {
       return this; // immutable
+    }
+
+    @Override
+    public String toString() {
+      return str.get();
     }
   }
 }

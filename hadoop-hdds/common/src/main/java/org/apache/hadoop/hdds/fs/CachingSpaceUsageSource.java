@@ -114,16 +114,27 @@ public class CachingSpaceUsageSource implements SpaceUsageSource {
     }
     Preconditions.assertTrue(usedSpace > 0, () -> usedSpace + " < 0");
     final long current, change;
+    final SpaceUsageSource snapshot;
     try (AutoCloseableLock ignored = lock.writeLock(null, null)) {
       current = cachedAvailable;
       change = Math.min(current, usedSpace);
       cachedAvailable -= change;
       cachedUsedSpace += change;
+
+      snapshot = LOG.isDebugEnabled() ? snapshot() : null;
     }
 
     if (change != usedSpace) {
       LOG.warn("Attempted to decrement available space to a negative value. Current: {}, Decrement: {}, Source: {}",
           current, usedSpace, source);
+    }
+
+    logDebug(snapshot);
+  }
+
+  private void logDebug(SpaceUsageSource snapshot) {
+    if (snapshot != null) {
+      LOG.debug("Updated space usage for {}: {}", source, snapshot);
     }
   }
 
@@ -133,17 +144,22 @@ public class CachingSpaceUsageSource implements SpaceUsageSource {
     }
     Preconditions.assertTrue(reclaimedSpace > 0, () -> reclaimedSpace + " < 0");
     final long current, change;
+    final SpaceUsageSource snapshot;
     try (AutoCloseableLock ignored = lock.writeLock(null, null)) {
       current = cachedUsedSpace;
       change = Math.min(current, reclaimedSpace);
       cachedUsedSpace -= change;
       cachedAvailable += change;
+
+      snapshot = LOG.isDebugEnabled() ? snapshot() : null;
     }
 
     if (change != reclaimedSpace) {
       LOG.warn("Attempted to decrement used space to a negative value. Current: {}, Decrement: {}, Source: {}",
           current, reclaimedSpace, source);
     }
+
+    logDebug(snapshot);
   }
 
   public void start() {
@@ -198,11 +214,16 @@ public class CachingSpaceUsageSource implements SpaceUsageSource {
   private void updateAvailable() {
     final long capacity = source.getCapacity();
     final long available = source.getAvailable();
+    final SpaceUsageSource snapshot;
 
     try (AutoCloseableLock ignored = lock.writeLock(null, null)) {
       cachedAvailable = available;
       cachedCapacity = capacity;
+
+      snapshot = LOG.isDebugEnabled() ? snapshot() : null;
     }
+
+    logDebug(snapshot);
   }
 
   /** Updates {@code available} and {@code capacity} from the {@code source},
@@ -210,12 +231,17 @@ public class CachingSpaceUsageSource implements SpaceUsageSource {
   private void updateCachedValues(long used) {
     final long capacity = source.getCapacity();
     final long available = source.getAvailable();
+    final SpaceUsageSource snapshot;
 
     try (AutoCloseableLock ignored = lock.writeLock(null, null)) {
       cachedAvailable = available;
       cachedCapacity = capacity;
       cachedUsedSpace = used;
+
+      snapshot = LOG.isDebugEnabled() ? snapshot() : null;
     }
+
+    logDebug(snapshot);
   }
 
   /** Refreshes all 3 values. */
