@@ -113,6 +113,7 @@ Create Multiple Keys
             LOG             ${fileName}
             Create Key    ${key}    ${file}    --replication=${REPLICATION} --type=${TYPE}
             Key Should Match Local File    ${key}      ${file}
+            Execute And Ignore Error    ozone admin container close ${INDEX + 1}
     END
 
 Datanode Usageinfo
