@@ -71,8 +71,10 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.utils.InputSubstream;
 import org.apache.ozone.test.OzoneTestBase;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -174,6 +176,21 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
 
   private static MiniOzoneCluster cluster = null;
   private static AmazonS3 s3Client = null;
+
+  @TempDir
+  private static Path classTempDir;
+  private static File file5MB;
+  private static File file20MB;
+
+  @BeforeAll
+  static void createFiles() throws IOException {
+    file5MB = createRandomFile(5 * MB, "5mb.bin");
+
+    // The minimum file size to for TransferManager to initiate multipart upload is 16MB, so create a file
+    // larger than the threshold.
+    // See TransferManagerConfiguration#getMultipartUploadThreshold
+    file20MB = createRandomFile(20 * MB, "20mb.bin");
+  }
 
   /**
    * Create a MiniOzoneCluster with S3G enabled for testing.
@@ -321,20 +338,16 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
   }
 
   @Test
-  public void testDeleteBucketNonEmptyWithIncompleteMultipartUpload(@TempDir Path tempDir) throws Exception {
+  public void testDeleteBucketNonEmptyWithIncompleteMultipartUpload() throws Exception {
     final String bucketName = getBucketName();
     final String keyName = getKeyName();
     s3Client.createBucket(bucketName);
-
-    File multipartUploadFile = Files.createFile(tempDir.resolve("multipartupload.txt")).toFile();
-
-    createFile(multipartUploadFile, (int) (5 * MB));
 
     // Create an incomplete multipart upload by initiating multipart upload,
     // uploading some parts, but not actually completing it.
     String uploadId = initiateMultipartUpload(bucketName, keyName, null, null, null);
 
-    uploadParts(bucketName, keyName, uploadId, multipartUploadFile, 1 * MB);
+    uploadParts(bucketName, keyName, uploadId, file5MB, 1 * MB);
 
     // Bucket deletion should fail if there are still keys in the bucket
     AmazonServiceException ase = assertThrows(AmazonServiceException.class,
@@ -560,28 +573,21 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
     assertEquals("NoSuchBucket", ase.getErrorCode());
   }
 
-  @Test
-  public void testHighLevelMultipartUpload(@TempDir Path tempDir) throws Exception {
+  @org.junit.jupiter.api.RepeatedTest(100)
+  //@Test
+  public void testHighLevelMultipartUpload(TestInfo testInfo) throws Exception {
     TransferManager tm = TransferManagerBuilder.standard()
         .withS3Client(s3Client)
         .build();
 
-    final String bucketName = getBucketName();
+    final String bucketName = getBucketName(testInfo.getDisplayName());
     final String keyName = getKeyName();
 
     s3Client.createBucket(bucketName);
 
-    // The minimum file size to for TransferManager to initiate multipart upload is 16MB, so create a file
-    // larger than the threshold.
-    // See TransferManagerConfiguration#getMultipartUploadThreshold
-    int fileSize = (int) (20 * MB);
-    File multipartUploadFile = Files.createFile(tempDir.resolve("multipartupload.txt")).toFile();
-
-    createFile(multipartUploadFile, fileSize);
-
     // TransferManager processes all transfers asynchronously,
     // so this call returns immediately.
-    Upload upload = tm.upload(bucketName, keyName, multipartUploadFile);
+    Upload upload = tm.upload(bucketName, keyName, file20MB);
 
     upload.waitForCompletion();
     UploadResult uploadResult = upload.waitForUploadResult();
@@ -589,8 +595,14 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
     assertEquals(keyName, uploadResult.getKey());
   }
 
+  private static File createRandomFile(long size, String filename) throws IOException {
+    File file = Files.createFile(classTempDir.resolve(filename)).toFile();
+    createFile(file, Math.toIntExact(size));
+    return file;
+  }
+
   @Test
-  public void testLowLevelMultipartUpload(@TempDir Path tempDir) throws Exception {
+  public void testLowLevelMultipartUpload() throws Exception {
     final String bucketName = getBucketName();
     final String keyName = getKeyName();
     final Map<String, String> userMetadata = new HashMap<>();
@@ -601,9 +613,7 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
 
     s3Client.createBucket(bucketName);
 
-    File multipartUploadFile = Files.createFile(tempDir.resolve("multipartupload.txt")).toFile();
-
-    createFile(multipartUploadFile, (int) (25 * MB));
+    File multipartUploadFile = createRandomFile(25 * MB, "lowlevel.bin");
 
     multipartUpload(bucketName, keyName, multipartUploadFile, 5 * MB, null, userMetadata, tags);
 
@@ -649,10 +659,9 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
   }
 
   @Test
-  public void testListParts(@TempDir Path tempDir) throws Exception {
+  public void testListParts() throws Exception {
     final String bucketName = getBucketName();
     final String keyName = getKeyName();
-    final long fileSize = 5 * MB;
     final long partSize = 1 * MB;
     final int maxParts = 2;
 
@@ -660,11 +669,7 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
 
     String uploadId = initiateMultipartUpload(bucketName, keyName, null, null, null);
 
-    File multipartUploadFile = Files.createFile(tempDir.resolve("multipartupload.txt")).toFile();
-
-    createFile(multipartUploadFile, (int) fileSize);
-
-    List<PartETag> partETags = uploadParts(bucketName, keyName, uploadId, multipartUploadFile, partSize);
+    List<PartETag> partETags = uploadParts(bucketName, keyName, uploadId, file5MB, partSize);
 
     List<PartETag> listPartETags = new ArrayList<>();
     int partNumberMarker = 0;
@@ -718,15 +723,15 @@ public abstract class AbstractS3SDKV1Tests extends OzoneTestBase {
   }
 
   private String getBucketName() {
-    return getBucketName(null);
+    return getBucketName("");
   }
 
   private String getBucketName(String suffix) {
-    return (getTestName() + "bucket" + suffix).toLowerCase(Locale.ROOT);
+    return (getTestName() + "bucket" + suffix).toLowerCase(Locale.ROOT).replace(' ', '-');
   }
 
   private String getKeyName() {
-    return getKeyName(null);
+    return getKeyName("");
   }
 
   private String getKeyName(String suffix) {

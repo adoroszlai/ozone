@@ -99,6 +99,9 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
               .filter(keyValue -> keyValue.getKey().equals(OzoneConsts.ETAG))
               .findFirst().ifPresent(kv -> dbPartETag.set(kv.getValue()));
           dbPartName = partKeyInfo.getPartName();
+          LOG.info("ZZZ OM part {}: name={}, etag={}", part.getPartNumber(), dbPartName, dbPartETag);
+        } else {
+          LOG.info("ZZZ OM has no part {}", part.getPartNumber());
         }
         return new MultipartCommitRequestPart(eTag, partKeyInfo == null ? null :
             dbPartETag.get(), StringUtils.equals(eTag, dbPartETag.get()) || StringUtils.equals(eTag, dbPartName));
