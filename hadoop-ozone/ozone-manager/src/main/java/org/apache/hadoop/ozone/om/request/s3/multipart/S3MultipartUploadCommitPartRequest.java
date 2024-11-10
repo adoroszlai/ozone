@@ -195,6 +195,8 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
 
       oldPartKeyInfo = multipartKeyInfo.getPartKeyInfo(partNumber);
 
+      final int size = multipartKeyInfo.getPartKeyInfoMap().size();
+
       // Build this multipart upload part info.
       OzoneManagerProtocolProtos.PartKeyInfo.Builder partKeyInfo =
           OzoneManagerProtocolProtos.PartKeyInfo.newBuilder();
@@ -209,6 +211,8 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       // Set the UpdateID to current transactionLogIndex
       multipartKeyInfo.setUpdateID(trxnLogIndex,
           ozoneManager.isRatisEnabled());
+
+      LOG.debug("ZZZ Add {} part {}: {} to {} parts, overwrite:{}", keyName, partNumber, partName, size, oldPartKeyInfo != null);
 
       // OldPartKeyInfo will be deleted. Its updateID will be set in
       // S3MultipartUploadCommitPartResponse before being added to
@@ -327,8 +331,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
 
     switch (result) {
     case SUCCESS:
-      LOG.debug("MultipartUpload Commit is successfully for Key:{} in " +
-          "Volume/Bucket {}/{}", keyName, volumeName, bucketName);
+      LOG.debug("MultipartUpload Commit successful {}", auditMap);
       break;
     case FAILURE:
       ozoneManager.getMetrics().incNumCommitMultipartUploadPartFails();
