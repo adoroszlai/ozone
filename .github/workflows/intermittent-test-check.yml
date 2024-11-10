@@ -179,11 +179,17 @@ jobs:
           java-version: 8
       - name: Execute tests
         run: |
+          args="-DexcludedGroups=native|slow|unhealthy"
+
           if [[ -e "${{ steps.download-ozone-repo.outputs.download-path }}" ]]; then
             export OZONE_REPO_CACHED=true
+
+            module=$(hadoop-ozone/dev-support/checks/_find_test.sh "$TEST_CLASS")
+            if [[ -n "$module" ]]; then
+              args="$args -pl :$module"
+            fi
           fi
 
-          args="-DexcludedGroups=native|slow|unhealthy"
           if [[ "${{ github.event.inputs.ratis-ref }}" != "" ]]; then
             args="$args -Dratis.version=${{ needs.ratis.outputs.ratis-version }}"
             args="$args -Dratis.thirdparty.version=${{ needs.ratis.outputs.thirdparty-version }}"
