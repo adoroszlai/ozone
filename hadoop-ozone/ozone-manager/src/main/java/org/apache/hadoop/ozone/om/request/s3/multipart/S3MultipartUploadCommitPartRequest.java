@@ -212,7 +212,8 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       multipartKeyInfo.setUpdateID(trxnLogIndex,
           ozoneManager.isRatisEnabled());
 
-      LOG.debug("ZZZ Add {} part {}: {} to {} parts, overwrite:{}", keyName, partNumber, partName, size, oldPartKeyInfo != null);
+      final int newSize = multipartKeyInfo.getPartKeyInfoMap().size();
+      LOG.debug("ZZZ Add {} part {}: {}, size {}->{}, overwrite:{}", keyName, partNumber, partName, size, newSize, oldPartKeyInfo != null);
 
       // OldPartKeyInfo will be deleted. Its updateID will be set in
       // S3MultipartUploadCommitPartResponse before being added to

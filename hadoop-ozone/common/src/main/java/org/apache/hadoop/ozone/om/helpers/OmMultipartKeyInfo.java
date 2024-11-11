@@ -24,6 +24,8 @@ import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
 import org.apache.hadoop.hdds.utils.db.Proto2Codec;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PartKeyInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +41,9 @@ import java.util.TreeMap;
  * upload part information of the key.
  */
 public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject<OmMultipartKeyInfo> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(OmMultipartKeyInfo.class);
+
   private static final Codec<OmMultipartKeyInfo> CODEC = new DelegatedCodec<>(
       Proto2Codec.get(MultipartKeyInfo.getDefaultInstance()),
       OmMultipartKeyInfo::getFromProto,
@@ -77,9 +82,13 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
       final int i = Collections.binarySearch(sortedList, partKeyInfo,
           Comparator.comparingInt(PartKeyInfo::getPartNumber));
       if (i >= 0) {
-        sortedList.set(i, partKeyInfo);
+        PartKeyInfo old = sortedList.set(i, partKeyInfo);
+        LOG.debug("Overwrite part {}: {} with {}", old.getPartNumber(), old.getPartName(), partKeyInfo.getPartName());
       } else {
-        sortedList.add(-(i + 1), partKeyInfo);
+        int index = -(i + 1);
+        sortedList.add(index, partKeyInfo);
+        LOG.trace("Add part {} at {}: {}, size={}", partKeyInfo.getPartNumber(), index, partKeyInfo.getPartName(),
+            sortedList.size());
       }
     }
 
@@ -113,6 +122,9 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     public PartKeyInfo get(int partNumber) {
       final int i = Collections.binarySearch(
           sorted, partNumber, PART_NUMBER_COMPARATOR);
+      if (i < 0) {
+        LOG.debug("Part {} not found, size={}", partNumber, size());
+      }
       return i >= 0 ? sorted.get(i) : null;
     }
 
