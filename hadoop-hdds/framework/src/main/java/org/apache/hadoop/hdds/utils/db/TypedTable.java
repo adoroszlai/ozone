@@ -40,6 +40,8 @@ import org.apache.hadoop.hdds.utils.db.cache.TableCache.CacheType;
 import org.apache.hadoop.hdds.utils.db.cache.TableCache;
 import org.apache.ratis.util.Preconditions;
 import org.apache.ratis.util.function.CheckedBiFunction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.utils.db.cache.CacheResult.CacheStatus.EXISTS;
 import static org.apache.hadoop.hdds.utils.db.cache.CacheResult.CacheStatus.NOT_EXIST;
@@ -54,6 +56,9 @@ import static org.apache.ratis.util.JavaUtils.getClassSimpleName;
  * @param <VALUE> type of the values in the store.
  */
 public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TypedTable.class);
+
   private static final long EPOCH_DEFAULT = -1L;
   static final int BUFFER_SIZE_DEFAULT = 4 << 10; // 4 KB
 
@@ -230,11 +235,20 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
         cache.lookup(new CacheKey<>(key));
 
     if (cacheResult.getCacheStatus() == EXISTS) {
-      return valueCodec.copyObject(cacheResult.getValue().getCacheValue());
+      VALUE cached = cacheResult.getValue().getCacheValue();
+      VALUE copy = valueCodec.copyObject(cached);
+      LOG.trace("{}: {}={} found in cache, copy as {}", rawTable.getName(), key,
+          Integer.toHexString(System.identityHashCode(cached)),
+          Integer.toHexString(System.identityHashCode(copy)));
+      return copy;
     } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      LOG.trace("{}: {} does not exist", rawTable.getName(), key);
       return null;
     } else {
-      return getFromTable(key);
+      VALUE value = getFromTable(key);
+      LOG.trace("{}: {}={} returned from table", rawTable.getName(), key,
+          Integer.toHexString(System.identityHashCode(value)));
+      return value;
     }
   }
 

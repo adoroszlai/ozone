@@ -228,8 +228,8 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     PartKeyInfoMap newMap = PartKeyInfoMap.put(partKeyInfo, oldMap);
     if (oldMap != newMap) {
       LOG.trace("ZZZ replace map @{} with @{}",
-          Integer.toHexString(oldMap.hashCode()),
-          Integer.toHexString(newMap.hashCode()));
+          Integer.toHexString(System.identityHashCode(oldMap)),
+          Integer.toHexString(System.identityHashCode(newMap)));
     }
     this.partKeyInfoMap = newMap;
   }

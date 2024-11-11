@@ -151,8 +151,10 @@ public class S3MultipartUploadCommitPartResponse extends OmKeyResponse {
     }
 
     OmMultipartKeyInfo.PartKeyInfoMap partKeyInfoMap = omMultipartKeyInfo.getPartKeyInfoMap();
-    LOG.debug("ZZZ {} put {}: {} parts @{}", omMultipartKeyInfo.getUpdateID(), multipartKey, partKeyInfoMap.size(),
-        Integer.toHexString(partKeyInfoMap.hashCode()));
+    LOG.debug("ZZZ {} put {} @{}: {} parts @{}", omMultipartKeyInfo.getUpdateID(), multipartKey,
+        Integer.toHexString(System.identityHashCode(multipartKey)),
+        partKeyInfoMap.size(),
+        Integer.toHexString(System.identityHashCode(partKeyInfoMap)));
     omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
         multipartKey, omMultipartKeyInfo);
 
