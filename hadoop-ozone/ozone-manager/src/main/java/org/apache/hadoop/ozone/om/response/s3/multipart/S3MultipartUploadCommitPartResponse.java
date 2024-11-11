@@ -45,6 +45,8 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Response for S3MultipartUploadCommitPart request.
@@ -52,6 +54,8 @@ import jakarta.annotation.Nullable;
 @CleanupTableInfo(cleanupTables = {OPEN_KEY_TABLE, DELETED_TABLE,
     MULTIPARTINFO_TABLE, BUCKET_TABLE})
 public class S3MultipartUploadCommitPartResponse extends OmKeyResponse {
+
+  private static final Logger LOG = LoggerFactory.getLogger(S3MultipartUploadCommitPartResponse.class);
 
   private String multipartKey;
   private String openKey;
@@ -146,6 +150,7 @@ public class S3MultipartUploadCommitPartResponse extends OmKeyResponse {
           deleteKey, repeatedOmKeyInfo);
     }
 
+    LOG.debug("ZZZ {} put {}: {} parts", omMultipartKeyInfo.getUpdateID(), multipartKey, omMultipartKeyInfo.getPartKeyInfoMap().size());
     omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
         multipartKey, omMultipartKeyInfo);
 
