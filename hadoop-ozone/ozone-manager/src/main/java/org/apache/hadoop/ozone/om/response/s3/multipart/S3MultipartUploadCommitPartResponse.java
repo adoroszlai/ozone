@@ -150,7 +150,9 @@ public class S3MultipartUploadCommitPartResponse extends OmKeyResponse {
           deleteKey, repeatedOmKeyInfo);
     }
 
-    LOG.debug("ZZZ {} put {}: {} parts", omMultipartKeyInfo.getUpdateID(), multipartKey, omMultipartKeyInfo.getPartKeyInfoMap().size());
+    OmMultipartKeyInfo.PartKeyInfoMap partKeyInfoMap = omMultipartKeyInfo.getPartKeyInfoMap();
+    LOG.debug("ZZZ {} put {}: {} parts @{}", omMultipartKeyInfo.getUpdateID(), multipartKey, partKeyInfoMap.size(),
+        Integer.toHexString(partKeyInfoMap.hashCode()));
     omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
         multipartKey, omMultipartKeyInfo);
 

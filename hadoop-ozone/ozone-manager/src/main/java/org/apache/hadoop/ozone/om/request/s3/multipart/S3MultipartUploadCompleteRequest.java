@@ -280,6 +280,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
       if (partsList.size() > 0) {
         final OmMultipartKeyInfo.PartKeyInfoMap partKeyInfoMap
             = multipartKeyInfo.getPartKeyInfoMap();
+        LOG.debug("ZZZ parts in DB: {} @{}", partKeyInfoMap.size(), Integer.toHexString(partKeyInfoMap.hashCode()));
         if (partKeyInfoMap.size() == 0) {
           LOG.error("Complete MultipartUpload failed for key {} , MPU Key has" +
                   " no parts in OM, parts given to upload are {}", ozoneKey,
