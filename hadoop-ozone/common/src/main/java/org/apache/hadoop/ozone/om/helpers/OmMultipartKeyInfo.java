@@ -182,6 +182,10 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     this.replicationConfig = b.replicationConfig;
     this.partKeyInfoMap = new PartKeyInfoMap(b.partKeyInfoList);
     this.parentID = b.parentID;
+    LOG.trace("ZZZ create @{} with @{} (size={})",
+        Integer.toHexString(System.identityHashCode(this)),
+        Integer.toHexString(System.identityHashCode(partKeyInfoMap)),
+        partKeyInfoMap.size());
   }
 
   /** Copy constructor. */
@@ -196,6 +200,11 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     setObjectID(b.getObjectID());
     setUpdateID(b.getUpdateID());
     this.parentID = b.parentID;
+    LOG.trace("ZZZ create @{} with @{} (size={}) as copy of @{}",
+        Integer.toHexString(System.identityHashCode(this)),
+        Integer.toHexString(System.identityHashCode(partKeyInfoMap)),
+        Integer.toHexString(System.identityHashCode(b)),
+        partKeyInfoMap.size());
   }
 
   /**
@@ -227,7 +236,8 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     PartKeyInfoMap oldMap = partKeyInfoMap;
     PartKeyInfoMap newMap = PartKeyInfoMap.put(partKeyInfo, oldMap);
     if (oldMap != newMap) {
-      LOG.trace("ZZZ replace map @{} with @{}",
+      LOG.trace("ZZZ @{} replace map @{} with @{}",
+          Integer.toHexString(System.identityHashCode(this)),
           Integer.toHexString(System.identityHashCode(oldMap)),
           Integer.toHexString(System.identityHashCode(newMap)));
     }
