@@ -554,6 +554,7 @@ public final class OzoneManagerDoubleBuffer {
    */
   public synchronized void add(OMClientResponse response, TermIndex termIndex) {
     currentBuffer.add(new Entry(termIndex, response));
+    LOG.info("ZZZ add response with index={}", termIndex.getIndex());
     notify();
 
     if (!isRatisEnabled()) {

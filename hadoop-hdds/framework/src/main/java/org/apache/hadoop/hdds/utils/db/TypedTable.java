@@ -237,17 +237,23 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     if (cacheResult.getCacheStatus() == EXISTS) {
       VALUE cached = cacheResult.getValue().getCacheValue();
       VALUE copy = valueCodec.copyObject(cached);
-      LOG.trace("{}: {}={} found in cache, copy as {}", rawTable.getName(), key,
-          Integer.toHexString(System.identityHashCode(cached)),
-          Integer.toHexString(System.identityHashCode(copy)));
+      if (cache.getCacheType() == CacheType.PARTIAL_CACHE) {
+        LOG.trace("{}: {}={} found in cache, copy as {}", rawTable.getName(), key,
+            Integer.toHexString(System.identityHashCode(cached)),
+            Integer.toHexString(System.identityHashCode(copy)));
+      }
       return copy;
     } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
-      LOG.trace("{}: {} does not exist", rawTable.getName(), key);
+      if (cache.getCacheType() == CacheType.PARTIAL_CACHE) {
+        LOG.trace("{}: {} does not exist", rawTable.getName(), key);
+      }
       return null;
     } else {
       VALUE value = getFromTable(key);
-      LOG.trace("{}: {}={} returned from table", rawTable.getName(), key,
-          Integer.toHexString(System.identityHashCode(value)));
+      if (cache.getCacheType() == CacheType.PARTIAL_CACHE) {
+        LOG.trace("{}: {}={} returned from table", rawTable.getName(), key,
+            Integer.toHexString(System.identityHashCode(value)));
+      }
       return value;
     }
   }

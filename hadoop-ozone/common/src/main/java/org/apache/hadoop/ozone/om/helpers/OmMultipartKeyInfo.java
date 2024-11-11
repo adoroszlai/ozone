@@ -203,8 +203,9 @@ public final class OmMultipartKeyInfo extends WithObjectID implements CopyObject
     LOG.trace("ZZZ create @{} with @{} (size={}) as copy of @{}",
         Integer.toHexString(System.identityHashCode(this)),
         Integer.toHexString(System.identityHashCode(partKeyInfoMap)),
-        Integer.toHexString(System.identityHashCode(b)),
-        partKeyInfoMap.size());
+        partKeyInfoMap.size(),
+        Integer.toHexString(System.identityHashCode(b))
+    );
   }
 
   /**
