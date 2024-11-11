@@ -130,7 +130,7 @@ public class SCMSafeModeManager implements SafeModeManager {
           new ContainerSafeModeRule(CONT_EXIT_RULE, eventQueue, config,
               allContainers,  containerManager, this);
       DataNodeSafeModeRule dataNodeSafeModeRule =
-          new DataNodeSafeModeRule(DN_EXIT_RULE, eventQueue, config, this);
+          new DataNodeSafeModeRule(DN_EXIT_RULE, eventQueue, config, this, pipelineManager);
       exitRules.put(CONT_EXIT_RULE, containerSafeModeRule);
       exitRules.put(DN_EXIT_RULE, dataNodeSafeModeRule);
       preCheckRules.add(DN_EXIT_RULE);
@@ -339,6 +339,12 @@ public class SCMSafeModeManager implements SafeModeManager {
   public double getCurrentContainerThreshold() {
     return ((ContainerSafeModeRule) exitRules.get(CONT_EXIT_RULE))
         .getCurrentContainerThreshold();
+  }
+
+  @VisibleForTesting
+  public double getCurrentECContainerThreshold() {
+    return ((ContainerSafeModeRule) exitRules.get(CONT_EXIT_RULE))
+        .getCurrentECContainerThreshold();
   }
 
   @VisibleForTesting
