@@ -180,10 +180,8 @@ jobs:
     if: needs.build-info.outputs.needs-compile == 'true'
     strategy:
       matrix:
-        java: [ 11, 17, 21 ]
         include:
-          - os: ubuntu-20.04
-          - java: 8
+          - java: 21
             os: macos-13
       fail-fast: false
     runs-on: ${{ matrix.os }}
