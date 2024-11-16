@@ -27,13 +27,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static org.apache.hadoop.ozone.s3.util.S3Consts.S3_XML_NAMESPACE;
+
 /**
  * Bucket ACL.
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement(name = "AccessControlPolicy",
-    namespace = "http://s3.amazonaws.com/doc/2006-03-01/")
+@XmlRootElement(name = S3BucketAcl.ROOT_ELEMENT, namespace = S3_XML_NAMESPACE)
 public class S3BucketAcl {
+
+  public static final String ROOT_ELEMENT = "AccessControlPolicy";
 
   @XmlElement(name = "Owner")
   private S3Owner owner;

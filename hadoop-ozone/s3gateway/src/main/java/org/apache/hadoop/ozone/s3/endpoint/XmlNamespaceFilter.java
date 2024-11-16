@@ -17,38 +17,56 @@
  */
 package org.apache.hadoop.ozone.s3.endpoint;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.XMLFilterImpl;
 
+import java.util.Objects;
+
 /**
- * SAX filter to force namespace usage.
+ * SAX filter to force namespace usage on the root element.
  * <p>
  * This filter will read the XML content as namespace qualified content
- * independent from the current namespace usage.
+ * independent of the current namespace usage.
  */
 public class XmlNamespaceFilter extends XMLFilterImpl {
 
-  private String namespace;
+  private static final Logger LOG = LoggerFactory.getLogger(XmlNamespaceFilter.class);
+
+  private final String namespace;
+  private final String rootElement;
 
   /**
    * Create the filter.
    *
-   * @param namespace to add to every elements.
+   * @param namespace to add to the root element
    */
-  public XmlNamespaceFilter(String namespace) {
+  public XmlNamespaceFilter(String namespace, String root) {
     this.namespace = namespace;
+    this.rootElement = root;
   }
 
   @Override
   public void startElement(String uri, String localName, String qName,
       Attributes atts) throws SAXException {
-    super.startElement(namespace, localName, qName, atts);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("startElement uri:{} local:{} qName:{}", uri, localName, qName);
+    }
+    super.startElement(getNamespace(uri, qName), localName, qName, atts);
   }
 
   @Override
   public void endElement(String uri, String localName, String qName)
       throws SAXException {
-    super.endElement(namespace, localName, qName);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("endElement uri:{} local:{} qName:{}", uri, localName, qName);
+    }
+    super.endElement(getNamespace(uri, qName), localName, qName);
+  }
+
+  private String getNamespace(String uri, String qName) {
+    return Objects.equals(rootElement, qName) ? namespace : uri;
   }
 }

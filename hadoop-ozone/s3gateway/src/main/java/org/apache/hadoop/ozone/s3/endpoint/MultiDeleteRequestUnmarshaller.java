@@ -34,6 +34,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.INVALID_REQUEST;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.S3_XML_NAMESPACE;
 import static org.apache.hadoop.ozone.s3.util.S3Utils.wrapOS3Exception;
 
 /**
@@ -74,7 +75,7 @@ public class MultiDeleteRequestUnmarshaller
           context.createUnmarshaller().getUnmarshallerHandler();
 
       XmlNamespaceFilter filter =
-          new XmlNamespaceFilter("http://s3.amazonaws.com/doc/2006-03-01/");
+          new XmlNamespaceFilter(S3_XML_NAMESPACE, MultiDeleteRequest.ROOT_ELEMENT);
       filter.setContentHandler(unmarshallerHandler);
       filter.setParent(xmlReader);
       filter.parse(new InputSource(entityStream));

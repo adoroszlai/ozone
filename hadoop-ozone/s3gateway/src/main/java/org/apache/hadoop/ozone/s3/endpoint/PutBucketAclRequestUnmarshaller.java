@@ -29,7 +29,6 @@ import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.UnmarshallerHandler;
 import javax.xml.parsers.SAXParserFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
@@ -69,13 +68,13 @@ public class PutBucketAclRequestUnmarshaller
       Class<S3BucketAcl> aClass, Type type,
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, String> multivaluedMap,
-      InputStream inputStream) throws IOException, WebApplicationException {
+      InputStream inputStream) throws WebApplicationException {
     try {
       XMLReader xmlReader = saxParserFactory.newSAXParser().getXMLReader();
       UnmarshallerHandler unmarshallerHandler =
           context.createUnmarshaller().getUnmarshallerHandler();
       XmlNamespaceFilter filter =
-          new XmlNamespaceFilter(S3_XML_NAMESPACE);
+          new XmlNamespaceFilter(S3_XML_NAMESPACE, S3BucketAcl.ROOT_ELEMENT);
       filter.setContentHandler(unmarshallerHandler);
       filter.setParent(xmlReader);
       filter.parse(new InputSource(inputStream));

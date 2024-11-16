@@ -28,13 +28,16 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.hadoop.ozone.s3.util.S3Consts.S3_XML_NAMESPACE;
+
 /**
  * Request for Complete Multipart Upload request.
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement(name = "CompleteMultipartUpload", namespace =
-    "http://s3.amazonaws.com/doc/2006-03-01/")
+@XmlRootElement(name = CompleteMultipartUploadRequest.ROOT_ELEMENT, namespace = S3_XML_NAMESPACE)
 public class CompleteMultipartUploadRequest {
+
+  public static final String ROOT_ELEMENT = "CompleteMultipartUpload";
 
   @XmlElement(name = "Part")
   private List<Part> partList = new ArrayList<>();
