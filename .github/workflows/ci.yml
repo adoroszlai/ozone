@@ -478,13 +478,20 @@ jobs:
       - basic
       - dependency
       - license
-    runs-on: ubuntu-20.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        include:
+          - os: ubuntu-20.04
+          - suite: unsecure
+            os: macos-13
+        exclude:
+          - suite: unsecure
+            os: ubuntu-20.04
       fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
