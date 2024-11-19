@@ -90,6 +90,11 @@ public final class RatisReplicationConfig
   }
 
   @Override
+  public int getMinimumNodes() {
+    return 1;
+  }
+
+  @Override
   public ReplicationFactor getReplicationFactor() {
     return replicationFactor;
   }

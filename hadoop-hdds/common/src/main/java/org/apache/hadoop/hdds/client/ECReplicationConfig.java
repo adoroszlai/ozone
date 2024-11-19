@@ -147,6 +147,11 @@ public class ECReplicationConfig implements ReplicationConfig {
   }
 
   @Override
+  public int getMinimumNodes() {
+    return data;
+  }
+
+  @Override
   @JsonIgnore
   public String getReplication() {
     return getCodec() + EC_REPLICATION_PARAMS_DELIMITER

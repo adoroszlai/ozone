@@ -227,6 +227,9 @@ public interface ReplicationConfig {
    */
   int getRequiredNodes();
 
+  /** Minimum number of nodes, below this data loss happens. */
+  int getMinimumNodes();
+
   /**
    * Returns the replication option in string format.
    */

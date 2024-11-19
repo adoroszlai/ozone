@@ -81,6 +81,11 @@ public final class StandaloneReplicationConfig implements
   }
 
   @Override
+  public int getMinimumNodes() {
+    return replicationFactor.getNumber();
+  }
+
+  @Override
   @JsonIgnore
   public String getReplication() {
     return String.valueOf(this.replicationFactor);

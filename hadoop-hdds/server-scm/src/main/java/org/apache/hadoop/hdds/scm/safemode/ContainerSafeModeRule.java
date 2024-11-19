@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -49,29 +49,33 @@ import org.slf4j.LoggerFactory;
 /**
  * Class defining Safe mode exit criteria for Containers.
  */
-public class ContainerSafeModeRule extends
+public abstract class ContainerSafeModeRule extends
     SafeModeExitRule<NodeRegistrationContainerReport> {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(ContainerSafeModeRule.class);
   // Required cutoff % for containers with at least 1 reported replica.
-  private double safeModeCutoff;
+  private final double safeModeCutoff;
   // Containers read from scm db (excluding containers in ALLOCATED state).
-  private Map<Long, Integer> ratisContainerMinReplicaMap;
-  private Map<Long, Set<UUID>> ratisContainerDNsMap;
-  private Map<Long, Integer> ecContainerMinReplicaMap;
-  private Map<Long, Set<UUID>> ecContainerDNsMap;
-  private double ratisMaxContainer;
-  private double ecMaxContainer;
-  private AtomicLong ratisContainerWithMinReplicas = new AtomicLong(0);
-  private AtomicLong ecContainerWithMinReplicas = new AtomicLong(0);
+  private final Map<Long, Integer> containerMinReplicaMap;
+  private final Map<Long, Set<UUID>> containerDNsMap;
+  private double maxContainer;
+  private final AtomicLong containerWithMinReplicas = new AtomicLong(0);
+  private final ReplicationType type;
   private final ContainerManager containerManager;
 
-  public ContainerSafeModeRule(String ruleName, EventQueue eventQueue,
+  protected abstract void updateCutoffMetrics(long cutOff);
+  protected abstract void updateReportedContainerMetrics();
+
+  protected ContainerSafeModeRule(String ruleName, EventQueue eventQueue,
+             ReplicationType type,
              ConfigurationSource conf,
              List<ContainerInfo> containers,
              ContainerManager containerManager, SCMSafeModeManager manager) {
     super(manager, ruleName, eventQueue);
+
+    this.type = type;
+
     this.containerManager = containerManager;
     safeModeCutoff = conf.getDouble(
         HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT,
@@ -82,14 +86,11 @@ public class ContainerSafeModeRule extends
         HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT  +
             " value should be >= 0.0 and <= 1.0");
 
-    ratisContainerMinReplicaMap = new ConcurrentHashMap<>();
-    ratisContainerDNsMap = new ConcurrentHashMap<>();
-    ecContainerMinReplicaMap = new ConcurrentHashMap<>();
-    ecContainerDNsMap = new ConcurrentHashMap<>();
+    containerMinReplicaMap = new ConcurrentHashMap<>();
+    containerDNsMap = new ConcurrentHashMap<>();
 
     initializeRule(containers);
   }
-
 
   @Override
   protected TypedEvent<NodeRegistrationContainerReport> getEventType() {
@@ -98,38 +99,22 @@ public class ContainerSafeModeRule extends
 
   @Override
   protected synchronized boolean validate() {
-    return (getCurrentContainerThreshold() >= safeModeCutoff) &&
-        (getCurrentECContainerThreshold() >= safeModeCutoff);
+    return getCurrentContainerThreshold() >= safeModeCutoff;
   }
 
   @VisibleForTesting
   public synchronized double getCurrentContainerThreshold() {
-    if (ratisMaxContainer == 0) {
+    if (maxContainer == 0) {
       return 1;
     }
-    return (ratisContainerWithMinReplicas.doubleValue() / ratisMaxContainer);
+    return (containerWithMinReplicas.doubleValue() / maxContainer);
   }
 
-  @VisibleForTesting
-  public synchronized double getCurrentECContainerThreshold() {
-    if (ecMaxContainer == 0) {
+  private synchronized double getMaxContainer() {
+    if (maxContainer == 0) {
       return 1;
     }
-    return (ecContainerWithMinReplicas.doubleValue() / ecMaxContainer);
-  }
-
-  private synchronized double getEcMaxContainer() {
-    if (ecMaxContainer == 0) {
-      return 1;
-    }
-    return ecMaxContainer;
-  }
-
-  private synchronized double getRatisMaxContainer() {
-    if (ratisMaxContainer == 0) {
-      return 1;
-    }
-    return ratisMaxContainer;
+    return maxContainer;
   }
 
   @Override
@@ -140,27 +125,18 @@ public class ContainerSafeModeRule extends
     StorageContainerDatanodeProtocolProtos.ContainerReportsProto report = reportsProto.getReport();
 
     report.getReportsList().forEach(c -> {
-      long containerID = c.getContainerID();
+      Long containerID = c.getContainerID();
 
-      // If it is a Ratis container.
-      if (ratisContainerMinReplicaMap.containsKey(containerID)) {
-        putInContainerDNsMap(containerID, ratisContainerDNsMap, datanodeUUID);
-        recordReportedContainer(containerID, Boolean.FALSE);
-      }
-
-      // If it is an EC container.
-      if (ecContainerMinReplicaMap.containsKey(containerID)) {
-        putInContainerDNsMap(containerID, ecContainerDNsMap, datanodeUUID);
-        recordReportedContainer(containerID, Boolean.TRUE);
+      if (containerMinReplicaMap.containsKey(containerID)) {
+        putInContainerDNsMap(containerID, datanodeUUID);
+        recordReportedContainer(containerID);
       }
     });
 
     if (scmInSafeMode()) {
       SCMSafeModeManager.getLogger().info(
-          "SCM in safe mode. {} % containers [Ratis] have at least one"
-          + " reported replica, {} % containers [EC] have at N reported replica.",
-          ((ratisContainerWithMinReplicas.doubleValue() / getRatisMaxContainer()) * 100),
-          ((ecContainerWithMinReplicas.doubleValue() / getEcMaxContainer()) * 100)
+          "SCM in safe mode. {} % of {} containers have at least the minimum number of replicas reported.",
+          ((containerWithMinReplicas.doubleValue() / getMaxContainer()) * 100), type
       );
     }
   }
@@ -171,22 +147,13 @@ public class ContainerSafeModeRule extends
    * We will differentiate and count according to the type of Container.
    *
    * @param containerID containerID
-   * @param isEcContainer true, means ECContainer, false, means not ECContainer.
    */
-  private void recordReportedContainer(long containerID, boolean isEcContainer) {
-    Set<UUID> uuids = isEcContainer ? ecContainerDNsMap.get(containerID) :
-        ratisContainerDNsMap.get(containerID);
-    int minReplica = getMinReplica(containerID, isEcContainer);
+  private void recordReportedContainer(long containerID) {
+    Set<UUID> uuids = containerDNsMap.get(containerID);
+    int minReplica = getMinReplica(containerID);
     if (uuids != null && uuids.size() >= minReplica) {
-      if (isEcContainer) {
-        getSafeModeMetrics()
-            .incCurrentContainersWithECDataReplicaReportedCount();
-        ecContainerWithMinReplicas.getAndAdd(1);
-      } else {
-        ratisContainerWithMinReplicas.getAndAdd(1);
-        getSafeModeMetrics()
-            .incCurrentContainersWithOneReplicaReportedCount();
-      }
+      containerWithMinReplicas.getAndAdd(1);
+      updateReportedContainerMetrics();
     }
   }
 
@@ -197,40 +164,21 @@ public class ContainerSafeModeRule extends
    * If it is an EC Container, the minimum copy will be the number of Data in replicationConfig.
    *
    * @param containerID containerID
-   * @param isEcContainer true, means ECContainer, false, means not ECContainer.
    * @return MinReplica.
    */
-  private int getMinReplica(long containerID, boolean isEcContainer) {
-
-    // If it is an EC Container,
-    // return the minimum replica count of the EC Container.
-    if (isEcContainer) {
-      if (ecContainerMinReplicaMap.containsKey(containerID)) {
-        return ecContainerMinReplicaMap.get(containerID);
-      }
-    }
-
-    // If it is an Ratis Container,
-    // return the minimum replica count of the Ratis Container.
-    if (ratisContainerMinReplicaMap.containsKey(containerID)) {
-      return ratisContainerMinReplicaMap.get(containerID);
-    }
-
-    return 1;
+  private int getMinReplica(Long containerID) {
+    return containerMinReplicaMap.getOrDefault(containerID, 1);
   }
 
-  private void putInContainerDNsMap(long containerID, Map<Long, Set<UUID>> containerDNsMap,
-      UUID datanodeUUID) {
-    containerDNsMap.computeIfAbsent(containerID, key -> Sets.newHashSet());
-    containerDNsMap.get(containerID).add(datanodeUUID);
+  private void putInContainerDNsMap(Long containerID, UUID datanodeUUID) {
+    containerDNsMap.computeIfAbsent(containerID, key -> Sets.newHashSet())
+        .add(datanodeUUID);
   }
 
   @Override
   protected synchronized void cleanup() {
-    ratisContainerMinReplicaMap.clear();
-    ratisContainerDNsMap.clear();
-    ecContainerMinReplicaMap.clear();
-    ecContainerDNsMap.clear();
+    containerMinReplicaMap.clear();
+    containerDNsMap.clear();
   }
 
   @Override
@@ -238,51 +186,23 @@ public class ContainerSafeModeRule extends
 
     // ratis container
     String status = String.format(
-        "%1.2f%% of [Ratis] Containers(%s / %s) with at least one reported replica (=%1.2f) >= " +
+        "%1.2f%% of [%s] Containers(%s / %s) with at least the minimum number of replicas reported (=%1.2f) >= " +
         "safeModeCutoff (=%1.2f);",
-        (ratisContainerWithMinReplicas.doubleValue() / getRatisMaxContainer()) * 100,
-        ratisContainerWithMinReplicas, (long) getRatisMaxContainer(),
+        (containerWithMinReplicas.doubleValue() / getMaxContainer()) * 100,
+        type,
+        containerWithMinReplicas, (long) getMaxContainer(),
         getCurrentContainerThreshold(), this.safeModeCutoff);
 
-    Set<Long> sampleRatisContainers = ratisContainerDNsMap.entrySet().stream().
-        filter(entry -> entry.getValue().isEmpty()).
-        map(Map.Entry::getKey).
-        limit(SAMPLE_CONTAINER_DISPLAY_LIMIT).
-        collect(Collectors.toSet());
+    Set<Long> sampleContainers = containerDNsMap.entrySet().stream()
+        .filter(entry -> entry.getValue().size() < getMinReplica(entry.getKey()))
+        .map(Map.Entry::getKey)
+        .limit(SAMPLE_CONTAINER_DISPLAY_LIMIT)
+        .collect(Collectors.toSet());
 
-    if (!sampleRatisContainers.isEmpty()) {
+    if (!sampleContainers.isEmpty()) {
       String sampleContainerText =
-          "Sample Ratis Containers not satisfying the criteria : " + sampleRatisContainers + ";";
+          "Sample Containers not satisfying the criteria : " + sampleContainers + ";";
       status = status.concat("\n").concat(sampleContainerText);
-    }
-
-    // ec container
-    String ecStatus = String.format(
-        "%1.2f%% of [EC] Containers(%s / %s) with at least N reported replica (=%1.2f) >= " +
-        "safeModeCutoff (=%1.2f);",
-        (ecContainerWithMinReplicas.doubleValue() / getEcMaxContainer()) * 100,
-        ecContainerWithMinReplicas, (long) getEcMaxContainer(),
-        getCurrentECContainerThreshold(), this.safeModeCutoff);
-    status = status.concat("\n").concat(ecStatus);
-
-    Set<Long> sampleEcContainers = ecContainerDNsMap.entrySet().stream().
-        filter(entry -> {
-          Long containerId = entry.getKey();
-          int minReplica = getMinReplica(containerId, Boolean.TRUE);
-          Set<UUID> allReplicas = entry.getValue();
-          if (allReplicas.size() >= minReplica) {
-            return false;
-          }
-          return true;
-        }).
-        map(Map.Entry::getKey).
-        limit(SAMPLE_CONTAINER_DISPLAY_LIMIT).
-        collect(Collectors.toSet());
-
-    if (!sampleEcContainers.isEmpty()) {
-      String sampleECContainerText =
-          "Sample EC Containers not satisfying the criteria : " + sampleEcContainers + ";";
-      status = status.concat("\n").concat(sampleECContainerText);
     }
 
     return status;
@@ -302,17 +222,15 @@ public class ContainerSafeModeRule extends
   }
 
   private boolean checkContainerState(LifeCycleState state) {
-    if (state == LifeCycleState.QUASI_CLOSED || state == LifeCycleState.CLOSED) {
-      return true;
-    }
-    return false;
+    return state == LifeCycleState.QUASI_CLOSED || state == LifeCycleState.CLOSED;
   }
 
   private void initializeRule(List<ContainerInfo> containers) {
 
     // Clean up the related data in the map.
-    ratisContainerMinReplicaMap.clear();
-    ecContainerMinReplicaMap.clear();
+    containerMinReplicaMap.clear();
+
+    HddsProtos.ReplicationType protoType = ReplicationType.toProto(type);
 
     // Iterate through the container list to
     // get the minimum replica count for each container.
@@ -325,31 +243,69 @@ public class ContainerSafeModeRule extends
       ReplicationConfig replicationConfig = container.getReplicationConfig();
       HddsProtos.ReplicationType replicationType = container.getReplicationType();
 
-      if (checkContainerState(containerState) && container.getNumberOfKeys() > 0) {
-        // If it's of type Ratis, The minimum replica count will be 1.
-        if (replicationType.equals(HddsProtos.ReplicationType.RATIS)) {
-          ratisContainerMinReplicaMap.put(container.getContainerID(), 1);
-        }
-
-        // If it's of type EC, The minimum replica count will be 3.
-        if (replicationType.equals(HddsProtos.ReplicationType.EC)) {
-          ECReplicationConfig ecReplicationConfig = (ECReplicationConfig) replicationConfig;
-          int dataNum = ecReplicationConfig.getData();
-          ecContainerMinReplicaMap.put(container.getContainerID(), dataNum);
-        }
+      if (protoType.equals(replicationType)
+          && checkContainerState(containerState)
+          && container.getNumberOfKeys() > 0) {
+        containerMinReplicaMap.put(container.getContainerID(), replicationConfig.getMinimumNodes());
       }
     });
 
-    ratisMaxContainer = ratisContainerMinReplicaMap.size();
-    ecMaxContainer = ecContainerMinReplicaMap.size();
+    maxContainer = containerMinReplicaMap.size();
 
-    long ratisCutOff = (long) Math.ceil(ratisMaxContainer * safeModeCutoff);
-    long ecCutOff = (long) Math.ceil(ecMaxContainer * safeModeCutoff);
+    long cutOff = (long) Math.ceil(maxContainer * safeModeCutoff);
 
-    getSafeModeMetrics().setNumContainerWithOneReplicaReportedThreshold(ratisCutOff);
-    getSafeModeMetrics().setNumContainerWithECDataReplicaReportedThreshold(ecCutOff);
+    updateCutoffMetrics(cutOff);
 
-    LOG.info("Refreshed Containers with one replica threshold count {}, " +
-        "with ec n replica threshold count {}.", ratisCutOff, ecCutOff);
+    LOG.info("Refreshed {} Containers with threshold count {}.", type, cutOff);
+  }
+
+  /** Safemode rule for Ratis containers. */
+  public static class Ratis extends ContainerSafeModeRule {
+
+    public Ratis(
+        String ruleName,
+        EventQueue eventQueue,
+        ConfigurationSource conf,
+        List<ContainerInfo> containers,
+        ContainerManager containerManager,
+        SCMSafeModeManager manager
+    ) {
+      super(ruleName, eventQueue, ReplicationType.RATIS, conf, containers, containerManager, manager);
+    }
+
+    @Override
+    protected void updateCutoffMetrics(long cutOff) {
+      getSafeModeMetrics().setNumContainerWithOneReplicaReportedThreshold(cutOff);
+    }
+
+    @Override
+    protected void updateReportedContainerMetrics() {
+      getSafeModeMetrics().incCurrentContainersWithOneReplicaReportedCount();
+    }
+  }
+
+  /** Safemode rule for EC containers. */
+  public static class EC extends ContainerSafeModeRule {
+
+    public EC(
+        String ruleName,
+        EventQueue eventQueue,
+        ConfigurationSource conf,
+        List<ContainerInfo> containers,
+        ContainerManager containerManager,
+        SCMSafeModeManager manager
+    ) {
+      super(ruleName, eventQueue, ReplicationType.EC, conf, containers, containerManager, manager);
+    }
+
+    @Override
+    protected void updateCutoffMetrics(long cutOff) {
+      getSafeModeMetrics().setNumContainerWithECDataReplicaReportedThreshold(cutOff);
+    }
+
+    @Override
+    protected void updateReportedContainerMetrics() {
+      getSafeModeMetrics().incCurrentContainersWithECDataReplicaReportedCount();
+    }
   }
 }

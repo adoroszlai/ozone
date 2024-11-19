@@ -93,7 +93,8 @@ public class SCMSafeModeManager implements SafeModeManager {
   private Map<String, SafeModeExitRule> exitRules = new HashMap(1);
   private Set<String> preCheckRules = new HashSet<>(1);
   private ConfigurationSource config;
-  private static final String CONT_EXIT_RULE = "ContainerSafeModeRule";
+  private static final String CONT_EXIT_RULE = "ContainerSafeModeRuleRATIS";
+  private static final String CONT_EXIT_RULE_EC = "ContainerSafeModeRuleEC";
   private static final String DN_EXIT_RULE = "DataNodeSafeModeRule";
   private static final String HEALTHY_PIPELINE_EXIT_RULE =
       "HealthyPipelineSafeModeRule";
@@ -126,12 +127,14 @@ public class SCMSafeModeManager implements SafeModeManager {
 
     if (isSafeModeEnabled) {
       this.safeModeMetrics = SafeModeMetrics.create();
-      ContainerSafeModeRule containerSafeModeRule =
-          new ContainerSafeModeRule(CONT_EXIT_RULE, eventQueue, config,
-              allContainers,  containerManager, this);
+
+      exitRules.put(CONT_EXIT_RULE, new ContainerSafeModeRule.Ratis(CONT_EXIT_RULE, eventQueue, config,
+          allContainers, containerManager, this));
+      exitRules.put(CONT_EXIT_RULE_EC, new ContainerSafeModeRule.EC(CONT_EXIT_RULE_EC, eventQueue, config,
+          allContainers, containerManager, this));
+
       DataNodeSafeModeRule dataNodeSafeModeRule =
           new DataNodeSafeModeRule(DN_EXIT_RULE, eventQueue, config, this, pipelineManager);
-      exitRules.put(CONT_EXIT_RULE, containerSafeModeRule);
       exitRules.put(DN_EXIT_RULE, dataNodeSafeModeRule);
       preCheckRules.add(DN_EXIT_RULE);
       if (conf.getBoolean(
@@ -343,8 +346,8 @@ public class SCMSafeModeManager implements SafeModeManager {
 
   @VisibleForTesting
   public double getCurrentECContainerThreshold() {
-    return ((ContainerSafeModeRule) exitRules.get(CONT_EXIT_RULE))
-        .getCurrentECContainerThreshold();
+    return ((ContainerSafeModeRule) exitRules.get(CONT_EXIT_RULE_EC))
+        .getCurrentContainerThreshold();
   }
 
   @VisibleForTesting
