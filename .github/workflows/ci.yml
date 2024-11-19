@@ -483,8 +483,8 @@ jobs:
     strategy:
       matrix:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        os: [ ubuntu-20.04 ]
         include:
-          - os: ubuntu-20.04
           - suite: unsecure
             os: macos-13
         exclude:
