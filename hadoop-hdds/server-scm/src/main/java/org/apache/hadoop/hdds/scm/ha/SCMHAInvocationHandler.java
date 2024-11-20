@@ -104,6 +104,10 @@ public class SCMHAInvocationHandler implements InvocationHandler {
       LOG.trace("Invoking method {} on target {}", method, ratisHandler);
     }
     try {
+      if (Thread.currentThread().getName().contains("StateMachineUpdater")) {
+        LOG.error("Should not invoke method {} on target {} in this thread", method, ratisHandler);
+        throw new IllegalStateException("Should not submit request to Ratis from StateMachineUpdater thread");
+      }
       switch (method.getAnnotation(Replicate.class).invocationType()) {
       case CLIENT:
         return invokeRatisClient(method, args);
