@@ -41,7 +41,7 @@ jobs:
 
       - name: Test original Docker Compose version
         run: |
-          docker-compose run old_client_1_4_0 ozone version
+          docker compose run old_client_1_4_0 ozone version
         working-directory: hadoop-ozone/dist/src/main/compose/xcompat
 
       - name: Try to upgrade
@@ -67,5 +67,5 @@ jobs:
 
       - name: Test updated Docker Compose version
         run: |
-          docker-compose run old_client_1_4_0 ozone version
+          docker compose run old_client_1_4_0 ozone version
         working-directory: hadoop-ozone/dist/src/main/compose/xcompat
