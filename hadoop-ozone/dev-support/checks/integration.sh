@@ -25,4 +25,4 @@ if [[ "$@" =~ "-Ptest-" ]] && [[ ! "$@" =~ "-Ptest-filesystem" ]]; then
   args="$args -DskipShade"
 fi
 
-source "${DIR}/junit.sh" "$@" "$args"
+source "${DIR}/junit.sh" $args "$@"
