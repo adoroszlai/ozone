@@ -114,12 +114,11 @@ services:
     command: ["sleep","1000000"]
   new_client:
     image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
-    environment:
-      <<: *docker-config
     volumes:
       - ../..:/opt/hadoop
       - ../_keytabs:/etc/security/keytabs
       - ./krb5.conf:/etc/krb5.conf
     environment:
       OZONE_OPTS:
+      <<: *docker-config
     command: ["sleep","1000000"]
