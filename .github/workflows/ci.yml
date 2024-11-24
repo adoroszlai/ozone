@@ -168,6 +168,7 @@ jobs:
           path: |
             ~/.m2/repository/org/apache/ozone
           retention-days: 1
+
   compile:
     needs:
       - build-info
@@ -175,7 +176,6 @@ jobs:
       - basic
       - dependency
       - license
-    timeout-minutes: 45
     if: needs.build-info.outputs.needs-compile == 'true'
     strategy:
       matrix:
@@ -185,292 +185,95 @@ jobs:
           - java: 8
             os: macos-13
       fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Download Ozone source tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-src
-      - name: Untar sources
-        run: |
-          tar --strip-components 1 -xzvf ozone*-src.tar.gz
-      - name: Workaround for HADOOP-19011
-        run: |
-          git init
-          git config user.name 'Github Actions'
-          git config user.email 'noreply@github.com'
-          git commit --allow-empty -a -m 'workaround for HADOOP-19011'
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-      - name: Download Ratis repo
-        if: ${{ inputs.ratis_args != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Setup java ${{ matrix.java }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-      - name: Compile Ozone using Java ${{ matrix.java }}
-        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=${{ matrix.java != 8 }} -Djavac.version=${{ matrix.java }} ${{ inputs.ratis_args }}
-        env:
-          OZONE_WITH_COVERAGE: false
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ matrix.java }}
+      needs-maven-repo: true
+      needs-ozone-source-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      runner: ${{ matrix.os }}
+      script: build
+      script-args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=${{ matrix.java != 8 }} -Djavac.version=${{ matrix.java }}"
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 45
+    env:
+      OZONE_WITH_COVERAGE: false
+
   basic:
     needs:
       - build-info
-    runs-on: ubuntu-20.04
-    timeout-minutes: 30
     if: needs.build-info.outputs.needs-basic-check == 'true'
+    uses: ./.github/workflows/check.yml
+    with:
+      checkout-fetch-depth: ${{ matrix.check == 'bats' && 0 || 1 }}
+      java-version: 8
+      needs-maven-repo: ${{ !contains('author,bats,docs', matrix.check) }}
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ matrix.check }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 30
     strategy:
       matrix:
         check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
       fail-fast: false
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-        if: matrix.check != 'bats'
-      - name: Checkout project with history
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.build-info.outputs.sha }}
-        if: matrix.check == 'bats'
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-        if: ${{ !contains('author,bats,docs', matrix.check) }}
-      - name: Download Ratis repo
-        if: ${{ inputs.ratis_args != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Setup java 8
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 8
-      - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/${{ matrix.check }}.sh ${{ inputs.ratis_args }}
-        continue-on-error: true
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ matrix.check }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: ${{ matrix.check }}
-          path: target/${{ matrix.check }}
-        continue-on-error: true
+
   native:
     needs:
       - build-info
       - basic
-    runs-on: ubuntu-20.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-native-check == 'true'
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-      - name: Download Ratis repo
-        if: ${{ inputs.ratis_args != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Setup java ${{ env.TEST_JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.TEST_JAVA_VERSION }}
-      - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/${{ github.job }}.sh ${{ inputs.ratis_args }}
-        continue-on-error: true
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: ${{ github.job }}
-          path: target/${{ github.job }}
-        continue-on-error: true
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      needs-maven-repo: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ github.job }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 150
+
   dependency:
     needs:
       - build-info
       - build
-    runs-on: ubuntu-20.04
-    timeout-minutes: 5
     if: needs.build-info.outputs.needs-dependency-check == 'true'
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Download compiled Ozone binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-bin
-      - name: Untar binaries
-        run: |
-          mkdir dist
-          tar  -C dist --strip-components 1 -xzf ozone*.tar.gz
-      - name: Execute tests
-        run: |
-          export OZONE_DIST_DIR=`pwd`/dist
-          ./hadoop-ozone/dev-support/checks/dependency.sh
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency
-          path: target/dependency
-        continue-on-error: true
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      needs-ozone-binary-tarball: true
+      script: ${{ github.job }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 5
+
   license:
     needs:
       - build-info
       - build
-    runs-on: ubuntu-20.04
-    timeout-minutes: 15
     if: needs.build-info.outputs.needs-dependency-check == 'true'
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-      - name: Download Ozone repo
-        id: download-ozone-repo
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-repo
-          path: |
-            ~/.m2/repository/org/apache/ozone
-      - name: Setup java ${{ env.TEST_JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.TEST_JAVA_VERSION }}
-      - name: Execute tests
-        run: |
-          hadoop-ozone/dev-support/checks/${{ github.job }}.sh
-        continue-on-error: true
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ${{ github.job }}
-          path: target/${{ github.job }}
-        continue-on-error: true
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      needs-maven-repo: true
+      needs-ozone-repo: true
+      script: ${{ github.job }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 15
+
   repro:
     needs:
       - build-info
       - build
-    runs-on: ubuntu-20.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-      - name: Download Ozone repo
-        id: download-ozone-repo
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-repo
-          path: |
-            ~/.m2/repository/org/apache/ozone
-      - name: Download Ratis repo
-        if: ${{ inputs.ratis_args != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Setup java ${{ env.TEST_JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.TEST_JAVA_VERSION }}
-      - name: Execute tests
-        run: |
-          hadoop-ozone/dev-support/checks/${{ github.job }}.sh -Pdist -Psrc -Dmaven.javadoc.skip=true ${{ inputs.ratis_args }}
-        continue-on-error: true
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Install diffoscope
-        run: |
-          sudo apt update -q
-          sudo apt install -y diffoscope
-        if: ${{ failure() }}
-      - name: Check artifact differences
-        run: |
-          hadoop-ozone/dev-support/checks/_diffoscope.sh
-        if: ${{ failure() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ${{ github.job }}
-          path: target/${{ github.job }}
-        continue-on-error: true
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      needs-maven-repo: true
+      needs-ozone-repo: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ github.job }}
+      script-args: -Pdist -Psrc -Dmaven.javadoc.skip=true
+      post-failure: hadoop-ozone/dev-support/checks/_diffoscope.sh
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 30
+
   acceptance:
     needs:
       - build-info
@@ -478,48 +281,24 @@ jobs:
       - basic
       - dependency
       - license
-    runs-on: ubuntu-20.04
-    timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    with:
+      artifact-name: ${{ github.job }}-${{ matrix.suite }}
+      needs-ozone-binary-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ github.job }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 150
+    env:
+      KEEP_IMAGE: false
+      OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
+      OZONE_VOLUME_OWNER: 1000
     strategy:
       matrix:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
       fail-fast: false
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Download compiled Ozone binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-bin
-      - name: Untar binaries
-        run: |
-          mkdir -p hadoop-ozone/dist/target
-          tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
-          rm ozone*.tar.gz
-      - name: Execute tests
-        run: |
-          pushd hadoop-ozone/dist/target/ozone-*
-          sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          popd
-          ./hadoop-ozone/dev-support/checks/acceptance.sh
-        env:
-          KEEP_IMAGE: false
-          OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
-          OZONE_VOLUME_OWNER: 1000
-        continue-on-error: true
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: acceptance-${{ matrix.suite }}
-          path: target/acceptance
-        continue-on-error: true
+
   kubernetes:
     needs:
       - build-info
@@ -527,46 +306,32 @@ jobs:
       - basic
       - dependency
       - license
-    runs-on: ubuntu-20.04
-    timeout-minutes: 60
     if: needs.build-info.outputs.needs-kubernetes-tests == 'true'
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Download compiled Ozone binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: ozone-bin
-      - name: Untar binaries
-        run: |
-          mkdir -p hadoop-ozone/dist/target
-          tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
-      - name: Execute tests
-        run: |
-          pushd hadoop-ozone/dist/target/ozone-*
-          sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          popd
-          ./hadoop-ozone/dev-support/checks/kubernetes.sh
-        continue-on-error: true
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: kubernetes
-          path: target/kubernetes
-        continue-on-error: true
+    uses: ./.github/workflows/check.yml
+    with:
+      needs-ozone-binary-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ github.job }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 60
+
   integration:
     needs:
       - build-info
       - basic
+    if: needs.build-info.outputs.needs-integration-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    with:
+      artifact-name: ${{ github.job }}-${{ matrix.suite }}
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      needs-maven-repo: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ github.job }}
+      script-args: -P${{ matrix.profile }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 150
     runs-on: ubuntu-20.04
     timeout-minutes: 150
-    if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
         profile:
@@ -581,60 +346,7 @@ jobs:
           - snapshot
           - flaky
       fail-fast: false
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build-info.outputs.sha }}
-      - name: Cache for maven dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-repo-
-      - name: Download Ratis repo
-        if: ${{ inputs.ratis_args != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Setup java ${{ env.TEST_JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.TEST_JAVA_VERSION }}
-      - name: Execute tests
-        continue-on-error: true
-        run: |
-          args="${{ inputs.ratis_args }}"
-          if [[ "${{ matrix.profile }}" == "flaky" ]]; then
-            args="$args -Dsurefire.rerunFailingTestsCount=5 -Dsurefire.fork.timeout=3600"
-          fi
-          if [[ "${{ matrix.profile }}" != "filesystem" ]]; then
-            args="$args -DskipShade"
-          fi
 
-          hadoop-ozone/dev-support/checks/integration.sh -P${{ matrix.profile }} ${args}
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
-      - name: Summary of failures
-        run: |
-          if [[ -s "target/${{ github.job }}/summary.md" ]]; then
-            cat target/${{ github.job }}/summary.md >> $GITHUB_STEP_SUMMARY
-          fi
-          hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
-        if: ${{ !cancelled() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: it-${{ matrix.profile }}
-          path: target/integration
-        continue-on-error: true
   coverage:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
