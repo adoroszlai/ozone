@@ -37,13 +37,13 @@ on:
         required: false
 
       checkout-fetch-depth:
-        type: int
+        type: number
         description: Fetch depth for checking out the repo
         default: 1
         required: false
 
       java-version:
-        type: int
+        type: number
         description: Java version to set up
         required: false
 
@@ -108,7 +108,7 @@ on:
         required: false
 
       timeout-minutes:
-        type: int
+        type: number
         description: Job timeout in minutes
         default: 30
         required: false
