@@ -43,7 +43,7 @@ on:
         required: false
 
       java-version:
-        type: number
+        type: string
         description: Java version to set up
         required: false
 
