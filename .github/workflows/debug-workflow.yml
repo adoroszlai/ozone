@@ -21,6 +21,7 @@ on:
 jobs:
   debug:
     runs-on: ubuntu-24.04
+    steps:
       - name: Docker Compose version
         run: |
           docker compose version
