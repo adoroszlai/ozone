@@ -14,40 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u -o pipefail
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-cd "$DIR/../../.." || exit 1
 
-: ${CHECK:="build"}
-: ${ERROR_PATTERN:="ERROR"}
-: ${OZONE_WITH_COVERAGE:="false"}
+CHECK=compile
 
-BASE_DIR="$(pwd -P)"
-REPORT_DIR=${OUTPUT_DIR:-"${BASE_DIR}/target/${CHECK}"}
-
-MAVEN_OPTIONS='-V -B -DskipTests -DskipDocs --no-transfer-progress'
-
-if [[ "${OZONE_WITH_COVERAGE}" == "true" ]]; then
-  MAVEN_OPTIONS="${MAVEN_OPTIONS} -Pcoverage"
-else
-  MAVEN_OPTIONS="${MAVEN_OPTIONS} -Djacoco.skip"
-fi
-
-export MAVEN_OPTS="-Xmx4096m ${MAVEN_OPTS:-}"
-mvn ${MAVEN_OPTIONS} clean "$@" | tee output.log
-rc=$?
-
-mkdir -p "$REPORT_DIR"
-mv output.log "$REPORT_DIR"/
-
-REPORT_FILE="$REPORT_DIR/summary.txt"
-grep "${ERROR_PATTERN}" "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
-
-wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
-
-if [[ -s "${REPORT_FILE}" ]]; then
-   exit 1
-fi
-
-exit $rc # result of mvn
+source "${DIR}"/_build.sh verify "$@"

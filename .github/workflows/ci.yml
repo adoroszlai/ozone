@@ -193,7 +193,7 @@ jobs:
       ratis-args: ${{ inputs.ratis_args }}
       run-name: "compile (${{ matrix.java }})"
       runner: ${{ matrix.os }}
-      script: build
+      script: compile
       script-args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=${{ matrix.java != 8 }} -Djavac.version=${{ matrix.java }}"
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 45
