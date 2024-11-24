@@ -28,13 +28,16 @@ on:
         required: false
 env:
   FAIL_FAST: ${{ github.event_name == 'pull_request' }}
+  KEEP_IMAGE: false
   # Minimum required Java version for running Ozone is defined in pom.xml (javac.version).
   TEST_JAVA_VERSION: 17 # JDK version used by CI build and tests; should match the JDK version in apache/ozone-runner image
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   HADOOP_IMAGE: ghcr.io/apache/hadoop
   OZONE_IMAGE: ghcr.io/apache/ozone
   OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
+  OZONE_VOLUME_OWNER: 1000
   OZONE_WITH_COVERAGE: ${{ github.event_name == 'push' }}
+
 jobs:
   build-info:
     runs-on: ubuntu-20.04
@@ -196,8 +199,7 @@ jobs:
       script-args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=${{ matrix.java != 8 }} -Djavac.version=${{ matrix.java }}"
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 45
-    env:
-      OZONE_WITH_COVERAGE: false
+      with-coverage: false
 
   basic:
     needs:
@@ -288,12 +290,9 @@ jobs:
       needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
       script: ${{ github.job }}
+      script-args: ${{ matrix.suite }}
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 150
-    env:
-      KEEP_IMAGE: false
-      OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
-      OZONE_VOLUME_OWNER: 1000
     strategy:
       matrix:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}

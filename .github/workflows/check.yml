@@ -113,6 +113,12 @@ on:
         default: 30
         required: false
 
+      with-coverage:
+        type: boolean
+        description: Set OZONE_WITH_COVERAGE
+        default: true
+        required: false
+
 jobs:
   check:
     runs-on: ${{ inputs.runner }}
@@ -187,23 +193,24 @@ jobs:
       - name: Execute pre-test steps
         if: ${{ inputs.pre-script }}
         run: |
-          hadoop-ozone/dev-support/checks/${{ inputs.pre-script }}.sh
+          ${{ inputs.pre-script }}
 
       - name: Execute tests
         run: |
           hadoop-ozone/dev-support/checks/${{ inputs.script }}.sh ${{ inputs.script-args }} ${{ inputs.ratis-args }}
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
+          OZONE_WITH_COVERAGE: ${{ inputs.with-coverage }}
 
       - name: Execute post-failure steps
         if: ${{ failure() && inputs.post-failure }}
         run: |
-          hadoop-ozone/dev-support/checks/${{ inputs.post-failure }}.sh
+          ${{ inputs.post-failure }}
 
       - name: Execute post-success steps
         if: ${{ !failure() && inputs.post-success }}
         run: |
-          hadoop-ozone/dev-support/checks/${{ inputs.post-success }}.sh
+          ${{ inputs.post-success }}
 
       - name: Summary of failures
         if: ${{ !cancelled() }}
