@@ -22,6 +22,7 @@ env:
   COMPOSE_FILE: clients.yaml
   HADOOP_IMAGE: ghcr.io/apache/hadoop
   HADOOP_VERSION: 3.4.1
+  HDDS_VERSION: 2.0.0-SNAPSHOT
   OZONE_IMAGE: ghcr.io/apache/ozone
   OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
   OZONE_RUNNER_VERSION: 20241108-jdk17-1
