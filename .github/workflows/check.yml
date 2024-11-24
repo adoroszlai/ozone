@@ -95,10 +95,22 @@ on:
         default: ''
         required: false
 
+      run-name:
+        type: string
+        description: Display name of the run
+        default: ''
+        required: false
+
       runner:
         type: string
         description: GitHub Actions runner to use
         default: 'ubuntu-20.04'
+        required: false
+
+      split:
+        type: string
+        description: Name of split for matrix jobs
+        default: ''
         required: false
 
       script-args:
@@ -118,6 +130,8 @@ on:
         description: Set OZONE_WITH_COVERAGE
         default: true
         required: false
+
+run-name: ${{ inputs.run-name || (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
 
 jobs:
   check:

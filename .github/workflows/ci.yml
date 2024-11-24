@@ -195,6 +195,7 @@ jobs:
       needs-maven-repo: true
       needs-ozone-source-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
+      run-name: "${{ github.job }} (${{ matrix.java }})"
       runner: ${{ matrix.os }}
       script: build
       script-args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=${{ matrix.java != 8 }} -Djavac.version=${{ matrix.java }}"
@@ -293,6 +294,7 @@ jobs:
       script: ${{ github.job }}
       script-args: ${{ matrix.suite }}
       sha: ${{ needs.build-info.outputs.sha }}
+      split: ${{ matrix.suite }}
       timeout-minutes: 150
     strategy:
       matrix:
@@ -327,8 +329,9 @@ jobs:
       needs-maven-repo: true
       ratis-args: ${{ inputs.ratis_args }}
       script: ${{ github.job }}
-      script-args: -P${{ matrix.profile }}
+      script-args: -Ptest-${{ matrix.profile }}
       sha: ${{ needs.build-info.outputs.sha }}
+      split: ${{ matrix.profile }}
       timeout-minutes: 150
     strategy:
       matrix:
