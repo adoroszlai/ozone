@@ -32,7 +32,7 @@ on:
       # OPTIONAL
       artifact-name:
         type: string
-        description: Name of artifact to upload (default: value of input script)
+        description: "Name of artifact to upload (default: value of input script)"
         default: ''
         required: false
 
