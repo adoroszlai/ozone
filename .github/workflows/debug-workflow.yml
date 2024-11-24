@@ -18,13 +18,31 @@ name: debug-workflow
 on:
   push:
 
+env:
+  COMPOSE_FILE: clients.yaml
+  HADOOP_IMAGE: ghcr.io/apache/hadoop
+  HADOOP_VERSION: 3.4.1
+  OZONE_IMAGE: ghcr.io/apache/ozone
+  OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
+  OZONE_RUNNER_VERSION: 20241108-jdk17-1
+  OZONE_TESTKRB5_IMAGE: ghcr.io/apache/ozone-testkrb5:20241112-1
+  OZONE_IMAGE_FLAVOR: "-rocky"
+
 jobs:
   debug:
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
       - name: Docker Compose version
         run: |
           docker compose version
+
+      - name: Test original Docker Compose version
+        run: |
+          docker-compose run old_client_1_4_0 ozone version
+        working-directory: hadoop-ozone/dist/src/main/compose/xcompat
 
       - name: Try to upgrade
         run: |
@@ -46,3 +64,8 @@ jobs:
       - name: Docker Compose version
         run: |
           docker compose version
+
+      - name: Test updated Docker Compose version
+        run: |
+          docker-compose run old_client_1_4_0 ozone version
+        working-directory: hadoop-ozone/dist/src/main/compose/xcompat
