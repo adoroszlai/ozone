@@ -20,7 +20,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
 : ${CHECK:="build"}
-: ${ERROR_PATTERN:="ERROR"}
+: ${ERROR_PATTERN:="\[ERROR\]"}
 : ${OZONE_WITH_COVERAGE:="false"}
 
 BASE_DIR="$(pwd -P)"
