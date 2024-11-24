@@ -131,10 +131,9 @@ on:
         default: true
         required: false
 
-run-name: ${{ inputs.run-name || (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
-
 jobs:
   check:
+    name: ${{ inputs.run-name || (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
