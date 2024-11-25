@@ -233,7 +233,7 @@ jobs:
       script: native
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 150
-      with-coverage: ${{ needs.build-info.outputs.with-coverage }}
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
 
   dependency:
     needs:
@@ -280,7 +280,7 @@ jobs:
       post-failure: hadoop-ozone/dev-support/checks/_diffoscope.sh
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 30
-      with-coverage: ${{ needs.build-info.outputs.with-coverage }}
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
 
   acceptance:
     needs:
@@ -301,7 +301,7 @@ jobs:
       sha: ${{ needs.build-info.outputs.sha }}
       split: ${{ matrix.suite }}
       timeout-minutes: 150
-      with-coverage: ${{ needs.build-info.outputs.with-coverage }}
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
@@ -323,7 +323,7 @@ jobs:
       script: kubernetes
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 60
-      with-coverage: ${{ needs.build-info.outputs.with-coverage }}
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
 
   integration:
     needs:
@@ -342,7 +342,7 @@ jobs:
       sha: ${{ needs.build-info.outputs.sha }}
       split: ${{ matrix.profile }}
       timeout-minutes: 150
-      with-coverage: ${{ needs.build-info.outputs.with-coverage }}
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
         profile:
