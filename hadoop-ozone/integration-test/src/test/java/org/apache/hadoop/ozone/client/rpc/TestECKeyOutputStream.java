@@ -31,8 +31,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.cli.ContainerOperationClient;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.utils.IOUtils;
@@ -52,26 +50,17 @@ import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.TestHelper;
-import org.apache.hadoop.ozone.container.common.interfaces.Handler;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL;
@@ -80,10 +69,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Tests key output stream.
@@ -97,14 +84,14 @@ public class TestECKeyOutputStream {
   private static int flushSize;
   private static int maxFlushSize;
   private static int blockSize;
-  private static String volumeName;
-  private static String bucketName;
-  private static String keyString;
-  private static int dataBlocks = 3;
-  private static int inputSize = dataBlocks * chunkSize;
+  static String volumeName;
+  static String bucketName;
+  static String keyString;
+  static int dataBlocks = 3;
+  static int inputSize = dataBlocks * chunkSize;
   private static byte[][] inputChunks = new byte[dataBlocks][chunkSize];
 
-  private static void initConf(OzoneConfiguration configuration) {
+  static void initConf(OzoneConfiguration configuration) {
     OzoneClientConfig clientConfig = configuration.getObject(OzoneClientConfig.class);
     clientConfig.setChecksumType(ContainerProtos.ChecksumType.NONE);
     clientConfig.setStreamBufferFlushDelay(false);
@@ -186,90 +173,6 @@ public class TestECKeyOutputStream {
                 ECReplicationConfig.EcCodec.RS, chunkSize), inputSize,
             objectStore, volumeName, bucketName)) {
       assertInstanceOf(ECKeyOutputStream.class, key.getOutputStream());
-    }
-  }
-
-  @Test
-  public void testECKeyCreatetWithDatanodeIdChange()
-      throws Exception {
-    AtomicReference<Boolean> failed = new AtomicReference<>(false);
-    AtomicReference<MiniOzoneCluster> miniOzoneCluster = new AtomicReference<>();
-    OzoneClient client1 = null;
-    try (MockedStatic<Handler> mockedHandler = Mockito.mockStatic(Handler.class, Mockito.CALLS_REAL_METHODS)) {
-      Map<String, Handler> handlers = new HashMap<>();
-      mockedHandler.when(() -> Handler.getHandlerForContainerType(any(), any(), any(), any(), any(), any(), any()))
-          .thenAnswer(i -> {
-            Handler handler = Mockito.spy((Handler) i.callRealMethod());
-            handlers.put(handler.getDatanodeId(), handler);
-            return handler;
-          });
-      OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-      initConf(ozoneConfiguration);
-      miniOzoneCluster.set(MiniOzoneCluster.newBuilder(ozoneConfiguration).setNumDatanodes(10).build());
-      miniOzoneCluster.get().waitForClusterToBeReady();
-      client1 = miniOzoneCluster.get().newClient();
-      ObjectStore store = client1.getObjectStore();
-      store.createVolume(volumeName);
-      store.getVolume(volumeName).createBucket(bucketName);
-      OzoneOutputStream key = TestHelper.createKey(keyString, new ECReplicationConfig(3, 2,
-          ECReplicationConfig.EcCodec.RS, 1024), inputSize, store, volumeName, bucketName);
-      byte[] b = new byte[6 * 1024];
-      ECKeyOutputStream groupOutputStream = (ECKeyOutputStream) key.getOutputStream();
-      List<OmKeyLocationInfo> locationInfoList = groupOutputStream.getLocationInfoList();
-      while (locationInfoList.isEmpty()) {
-        locationInfoList = groupOutputStream.getLocationInfoList();
-        Random random = new Random();
-        random.nextBytes(b);
-        assertInstanceOf(ECKeyOutputStream.class, key.getOutputStream());
-        key.write(b);
-        key.flush();
-      }
-
-      assertEquals(1, locationInfoList.size());
-
-      OmKeyLocationInfo omKeyLocationInfo = locationInfoList.get(0);
-      long containerId = omKeyLocationInfo.getContainerID();
-      Pipeline pipeline = omKeyLocationInfo.getPipeline();
-      DatanodeDetails dnWithReplicaIndex1 =
-          pipeline.getReplicaIndexes().entrySet().stream().filter(e -> e.getValue() == 1).map(Map.Entry::getKey)
-              .findFirst().get();
-      Mockito.when(handlers.get(dnWithReplicaIndex1.getUuidString()).getDatanodeId())
-          .thenAnswer(i -> {
-            if (!failed.get()) {
-              // Change dnId for one write chunk request.
-              failed.set(true);
-              return dnWithReplicaIndex1.getUuidString() + "_failed";
-            } else {
-              return dnWithReplicaIndex1.getUuidString();
-            }
-          });
-      locationInfoList = groupOutputStream.getLocationInfoList();
-      while (locationInfoList.size() == 1) {
-        locationInfoList = groupOutputStream.getLocationInfoList();
-        Random random = new Random();
-        random.nextBytes(b);
-        assertInstanceOf(ECKeyOutputStream.class, key.getOutputStream());
-        key.write(b);
-        key.flush();
-      }
-      assertEquals(2, locationInfoList.size());
-      assertNotEquals(locationInfoList.get(1).getPipeline().getId(), pipeline.getId());
-      GenericTestUtils.waitFor(() -> {
-        try {
-          return miniOzoneCluster.get().getStorageContainerManager().getContainerManager()
-              .getContainer(ContainerID.valueOf(containerId)).getState().equals(
-                  HddsProtos.LifeCycleState.CLOSED);
-        } catch (ContainerNotFoundException e) {
-          throw new RuntimeException(e);
-        }
-      }, 1000, 30000);
-      key.close();
-      Assertions.assertTrue(failed.get());
-    } finally {
-      IOUtils.closeQuietly(client1);
-      if (miniOzoneCluster.get() != null) {
-        miniOzoneCluster.get().shutdown();
-      }
     }
   }
 
