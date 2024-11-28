@@ -37,7 +37,6 @@ import org.apache.hadoop.ozone.om.codec.OMDBDefinition;
 import org.apache.hadoop.ozone.recon.scm.ReconSCMDBDefinition;
 import org.apache.hadoop.ozone.recon.spi.impl.ReconDBDefinition;
 
-import com.amazonaws.services.kms.model.InvalidArnException;
 import com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
@@ -78,7 +77,7 @@ public final class DBDefinitionFactory {
         "Path is required to identify the used db scheme");
     final Path fileName = dbPath.getFileName();
     if (fileName == null) {
-      throw new InvalidArnException(
+      throw new IllegalArgumentException(
           "Path is required to identify the used db scheme");
     }
     String dbName = fileName.toString();

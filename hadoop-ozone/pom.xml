@@ -47,6 +47,10 @@
     <module>insight</module>
     <module>httpfsgateway</module>
     <module>s3-secret-store</module>
+    <module>cli-admin</module>
+    <module>cli-common</module>
+    <module>cli-shell</module>
+    <module>freon</module>
   </modules>
 
   <repositories>
@@ -77,6 +81,21 @@
       </dependency>
       <dependency>
         <groupId>org.apache.ozone</groupId>
+        <artifactId>ozone-cli-admin</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>ozone-cli-common</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>ozone-cli-shell</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
         <artifactId>ozone-interface-client</artifactId>
         <version>${ozone.version}</version>
       </dependency>
@@ -103,6 +122,11 @@
       <dependency>
         <groupId>org.apache.ozone</groupId>
         <artifactId>ozone-datanode</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.ozone</groupId>
+        <artifactId>ozone-freon</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
