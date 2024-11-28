@@ -80,16 +80,16 @@ public class TestECKeyOutputStream {
   private static OzoneConfiguration conf = new OzoneConfiguration();
   private static OzoneClient client;
   private static ObjectStore objectStore;
-  private static int chunkSize;
-  private static int flushSize;
-  private static int maxFlushSize;
-  private static int blockSize;
-  static String volumeName;
-  static String bucketName;
-  static String keyString;
-  static int dataBlocks = 3;
-  static int inputSize = dataBlocks * chunkSize;
-  private static byte[][] inputChunks = new byte[dataBlocks][chunkSize];
+  private static final int CHUNK_SIZE = 1024 * 1024;
+  private static final int FLUSH_SIZE = 2 * CHUNK_SIZE;
+  private static final int MAX_FLUSH_SIZE = 2 * FLUSH_SIZE;
+  private static final int BLOCK_SIZE = 2 * MAX_FLUSH_SIZE;
+  static final String VOLUME_NAME = "testeckeyoutputstream";
+  static final String BUCKET_NAME = VOLUME_NAME;
+  static final String KEY_STRING = UUID.randomUUID().toString();
+  static final int DATA_BLOCKS = 3;
+  static final int INPUT_SIZE = DATA_BLOCKS * CHUNK_SIZE;
+  private static final byte[][] INPUT_CHUNKS = createInputChunks();
 
   static void initConf(OzoneConfiguration configuration) {
     OzoneClientConfig clientConfig = configuration.getObject(OzoneClientConfig.class);
@@ -124,10 +124,10 @@ public class TestECKeyOutputStream {
     configuration.setBoolean(OzoneConfigKeys.OZONE_FS_HSYNC_ENABLED, true);
 
     ClientConfigForTesting.newBuilder(StorageUnit.BYTES)
-        .setBlockSize(blockSize)
-        .setChunkSize(chunkSize)
-        .setStreamBufferFlushSize(flushSize)
-        .setStreamBufferMaxSize(maxFlushSize)
+        .setBlockSize(BLOCK_SIZE)
+        .setChunkSize(CHUNK_SIZE)
+        .setStreamBufferFlushSize(FLUSH_SIZE)
+        .setStreamBufferMaxSize(MAX_FLUSH_SIZE)
         .applyTo(configuration);
   }
 
@@ -136,10 +136,6 @@ public class TestECKeyOutputStream {
    */
   @BeforeAll
   protected static void init() throws Exception {
-    chunkSize = 1024 * 1024;
-    flushSize = 2 * chunkSize;
-    maxFlushSize = 2 * flushSize;
-    blockSize = 2 * maxFlushSize;
     initConf(conf);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(10)
@@ -147,12 +143,8 @@ public class TestECKeyOutputStream {
     cluster.waitForClusterToBeReady();
     client = OzoneClientFactory.getRpcClient(conf);
     objectStore = client.getObjectStore();
-    keyString = UUID.randomUUID().toString();
-    volumeName = "testeckeyoutputstream";
-    bucketName = volumeName;
-    objectStore.createVolume(volumeName);
-    objectStore.getVolume(volumeName).createBucket(bucketName);
-    initInputChunks();
+    objectStore.createVolume(VOLUME_NAME);
+    objectStore.getVolume(VOLUME_NAME).createBucket(BUCKET_NAME);
   }
 
   /**
@@ -169,20 +161,20 @@ public class TestECKeyOutputStream {
   @Test
   public void testCreateKeyWithECReplicationConfig() throws Exception {
     try (OzoneOutputStream key = TestHelper
-        .createKey(keyString, new ECReplicationConfig(3, 2,
-                ECReplicationConfig.EcCodec.RS, chunkSize), inputSize,
-            objectStore, volumeName, bucketName)) {
+        .createKey(KEY_STRING, new ECReplicationConfig(3, 2,
+                ECReplicationConfig.EcCodec.RS, CHUNK_SIZE), INPUT_SIZE,
+            objectStore, VOLUME_NAME, BUCKET_NAME)) {
       assertInstanceOf(ECKeyOutputStream.class, key.getOutputStream());
     }
   }
 
   @Test
   public void testCreateKeyWithOutBucketDefaults() throws Exception {
-    OzoneVolume volume = objectStore.getVolume(volumeName);
-    OzoneBucket bucket = volume.getBucket(bucketName);
-    try (OzoneOutputStream out = bucket.createKey("myKey", inputSize)) {
+    OzoneVolume volume = objectStore.getVolume(VOLUME_NAME);
+    OzoneBucket bucket = volume.getBucket(BUCKET_NAME);
+    try (OzoneOutputStream out = bucket.createKey("myKey", INPUT_SIZE)) {
       assertInstanceOf(KeyOutputStream.class, out.getOutputStream());
-      for (byte[] inputChunk : inputChunks) {
+      for (byte[] inputChunk : INPUT_CHUNKS) {
         out.write(inputChunk);
       }
     }
@@ -191,27 +183,27 @@ public class TestECKeyOutputStream {
   @Test
   public void testCreateKeyWithBucketDefaults() throws Exception {
     String myBucket = UUID.randomUUID().toString();
-    OzoneVolume volume = objectStore.getVolume(volumeName);
+    OzoneVolume volume = objectStore.getVolume(VOLUME_NAME);
     final BucketArgs.Builder bucketArgs = BucketArgs.newBuilder();
     bucketArgs.setDefaultReplicationConfig(
         new DefaultReplicationConfig(
             new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-                chunkSize)));
+                CHUNK_SIZE)));
 
     volume.createBucket(myBucket, bucketArgs.build());
     OzoneBucket bucket = volume.getBucket(myBucket);
 
-    try (OzoneOutputStream out = bucket.createKey(keyString, inputSize)) {
+    try (OzoneOutputStream out = bucket.createKey(KEY_STRING, INPUT_SIZE)) {
       assertInstanceOf(ECKeyOutputStream.class, out.getOutputStream());
-      for (byte[] inputChunk : inputChunks) {
+      for (byte[] inputChunk : INPUT_CHUNKS) {
         out.write(inputChunk);
       }
     }
-    byte[] buf = new byte[chunkSize];
-    try (OzoneInputStream in = bucket.readKey(keyString)) {
-      for (byte[] inputChunk : inputChunks) {
-        int read = in.read(buf, 0, chunkSize);
-        assertEquals(chunkSize, read);
+    byte[] buf = new byte[CHUNK_SIZE];
+    try (OzoneInputStream in = bucket.readKey(KEY_STRING)) {
+      for (byte[] inputChunk : INPUT_CHUNKS) {
+        int read = in.read(buf, 0, CHUNK_SIZE);
+        assertEquals(CHUNK_SIZE, read);
         assertArrayEquals(buf, inputChunk);
       }
     }
@@ -220,45 +212,45 @@ public class TestECKeyOutputStream {
   @Test
   public void testOverwriteECKeyWithRatisKey() throws Exception {
     String myBucket = UUID.randomUUID().toString();
-    OzoneVolume volume = objectStore.getVolume(volumeName);
+    OzoneVolume volume = objectStore.getVolume(VOLUME_NAME);
     final BucketArgs.Builder bucketArgs = BucketArgs.newBuilder();
     volume.createBucket(myBucket, bucketArgs.build());
     OzoneBucket bucket = volume.getBucket(myBucket);
-    createKeyAndCheckReplicationConfig(keyString, bucket,
+    createKeyAndCheckReplicationConfig(KEY_STRING, bucket,
         new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-            chunkSize));
+            CHUNK_SIZE));
 
     //Overwrite with RATIS/THREE
-    createKeyAndCheckReplicationConfig(keyString, bucket,
+    createKeyAndCheckReplicationConfig(KEY_STRING, bucket,
         RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.THREE));
 
     //Overwrite with RATIS/ONE
-    createKeyAndCheckReplicationConfig(keyString, bucket,
+    createKeyAndCheckReplicationConfig(KEY_STRING, bucket,
         RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE));
   }
 
   @Test
   public void testOverwriteRatisKeyWithECKey() throws Exception {
     String myBucket = UUID.randomUUID().toString();
-    OzoneVolume volume = objectStore.getVolume(volumeName);
+    OzoneVolume volume = objectStore.getVolume(VOLUME_NAME);
     final BucketArgs.Builder bucketArgs = BucketArgs.newBuilder();
     volume.createBucket(myBucket, bucketArgs.build());
     OzoneBucket bucket = volume.getBucket(myBucket);
 
-    createKeyAndCheckReplicationConfig(keyString, bucket,
+    createKeyAndCheckReplicationConfig(KEY_STRING, bucket,
         RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.THREE));
     // Overwrite with EC key
-    createKeyAndCheckReplicationConfig(keyString, bucket,
+    createKeyAndCheckReplicationConfig(KEY_STRING, bucket,
         new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-            chunkSize));
+            CHUNK_SIZE));
   }
 
   private void createKeyAndCheckReplicationConfig(String keyName,
                                                   OzoneBucket bucket, ReplicationConfig replicationConfig)
       throws IOException {
     try (OzoneOutputStream out = bucket
-        .createKey(keyName, inputSize, replicationConfig, new HashMap<>())) {
-      for (byte[] inputChunk : inputChunks) {
+        .createKey(keyName, INPUT_SIZE, replicationConfig, new HashMap<>())) {
+      for (byte[] inputChunk : INPUT_CHUNKS) {
         out.write(inputChunk);
       }
     }
@@ -274,7 +266,7 @@ public class TestECKeyOutputStream {
         RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.THREE),
         new HashMap<>())) {
       assertInstanceOf(KeyOutputStream.class, out.getOutputStream());
-      for (byte[] inputChunk : inputChunks) {
+      for (byte[] inputChunk : INPUT_CHUNKS) {
         out.write(inputChunk);
       }
     }
@@ -316,11 +308,11 @@ public class TestECKeyOutputStream {
             numChunks);
     try (OzoneOutputStream out = bucket.createKey(keyName, 4096,
         new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-            chunkSize), new HashMap<>())) {
-      out.write(inputData, offset, numChunks * chunkSize);
+            CHUNK_SIZE), new HashMap<>())) {
+      out.write(inputData, offset, numChunks * CHUNK_SIZE);
     }
 
-    validateContent(offset, numChunks * chunkSize, inputData, bucket,
+    validateContent(offset, numChunks * CHUNK_SIZE, inputData, bucket,
         bucket.getKey(keyName));
   }
 
@@ -338,7 +330,7 @@ public class TestECKeyOutputStream {
         new ContainerOperationClient(conf);
 
     ECReplicationConfig repConfig = new ECReplicationConfig(
-        3, 2, ECReplicationConfig.EcCodec.RS, chunkSize);
+        3, 2, ECReplicationConfig.EcCodec.RS, CHUNK_SIZE);
     // Close all EC pipelines so we must get a fresh pipeline and hence
     // container for this test.
     PipelineManager pm =
@@ -388,21 +380,23 @@ public class TestECKeyOutputStream {
 
   private OzoneBucket getOzoneBucket() throws IOException {
     String myBucket = UUID.randomUUID().toString();
-    OzoneVolume volume = objectStore.getVolume(volumeName);
+    OzoneVolume volume = objectStore.getVolume(VOLUME_NAME);
     final BucketArgs.Builder bucketArgs = BucketArgs.newBuilder();
     bucketArgs.setDefaultReplicationConfig(
         new DefaultReplicationConfig(
             new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-                chunkSize)));
+                CHUNK_SIZE)));
 
     volume.createBucket(myBucket, bucketArgs.build());
     return volume.getBucket(myBucket);
   }
 
-  private static void initInputChunks() {
-    for (int i = 0; i < dataBlocks; i++) {
-      inputChunks[i] = getBytesWith(i + 1, chunkSize);
+  private static byte[][] createInputChunks() {
+    final byte[][] inputChunks = new byte[DATA_BLOCKS][CHUNK_SIZE];
+    for (int i = 0; i < DATA_BLOCKS; i++) {
+      inputChunks[i] = getBytesWith(i + 1, CHUNK_SIZE);
     }
+    return inputChunks;
   }
 
   private static byte[] getBytesWith(int singleDigitNumber, int total) {
@@ -423,7 +417,7 @@ public class TestECKeyOutputStream {
     try {
       try (OzoneOutputStream out = bucket.createKey(keyName, 1024,
           new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS,
-              chunkSize), new HashMap<>())) {
+              CHUNK_SIZE), new HashMap<>())) {
         ECKeyOutputStream ecOut = (ECKeyOutputStream) out.getOutputStream();
         out.write(inputData);
         // Kill a node from first pipeline
@@ -465,10 +459,10 @@ public class TestECKeyOutputStream {
   }
 
   private byte[] getInputBytes(int offset, int bufferChunks, int numChunks) {
-    byte[] inputData = new byte[offset + bufferChunks * chunkSize];
+    byte[] inputData = new byte[offset + bufferChunks * CHUNK_SIZE];
     for (int i = 0; i < numChunks; i++) {
-      int start = offset + (i * chunkSize);
-      Arrays.fill(inputData, start, start + chunkSize - 1,
+      int start = offset + (i * CHUNK_SIZE);
+      Arrays.fill(inputData, start, start + CHUNK_SIZE - 1,
           String.valueOf(i % 9).getBytes(UTF_8)[0]);
     }
     return inputData;
@@ -478,8 +472,8 @@ public class TestECKeyOutputStream {
   public void testBlockedHflushAndHsync() throws Exception {
     // Expect ECKeyOutputStream hflush and hsync calls to throw exception
     try (OzoneOutputStream oOut = TestHelper.createKey(
-        keyString, new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS, chunkSize),
-        inputSize, objectStore, volumeName, bucketName)) {
+        KEY_STRING, new ECReplicationConfig(3, 2, ECReplicationConfig.EcCodec.RS, CHUNK_SIZE),
+        INPUT_SIZE, objectStore, VOLUME_NAME, BUCKET_NAME)) {
       assertInstanceOf(ECKeyOutputStream.class, oOut.getOutputStream());
       KeyOutputStream kOut = (KeyOutputStream) oOut.getOutputStream();
 

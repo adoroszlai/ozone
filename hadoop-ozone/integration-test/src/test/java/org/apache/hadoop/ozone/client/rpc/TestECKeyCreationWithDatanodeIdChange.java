@@ -44,10 +44,10 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.initConf;
-import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.bucketName;
-import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.inputSize;
-import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.keyString;
-import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.volumeName;
+import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.BUCKET_NAME;
+import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.INPUT_SIZE;
+import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.KEY_STRING;
+import static org.apache.hadoop.ozone.client.rpc.TestECKeyOutputStream.VOLUME_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -75,10 +75,10 @@ class TestECKeyCreationWithDatanodeIdChange {
       miniOzoneCluster.get().waitForClusterToBeReady();
       client1 = miniOzoneCluster.get().newClient();
       ObjectStore store = client1.getObjectStore();
-      store.createVolume(volumeName);
-      store.getVolume(volumeName).createBucket(bucketName);
-      OzoneOutputStream key = TestHelper.createKey(keyString, new ECReplicationConfig(3, 2,
-          ECReplicationConfig.EcCodec.RS, 1024), inputSize, store, volumeName, bucketName);
+      store.createVolume(VOLUME_NAME);
+      store.getVolume(VOLUME_NAME).createBucket(BUCKET_NAME);
+      OzoneOutputStream key = TestHelper.createKey(KEY_STRING, new ECReplicationConfig(3, 2,
+          ECReplicationConfig.EcCodec.RS, 1024), INPUT_SIZE, store, VOLUME_NAME, BUCKET_NAME);
       byte[] b = new byte[6 * 1024];
       ECKeyOutputStream groupOutputStream = (ECKeyOutputStream) key.getOutputStream();
       List<OmKeyLocationInfo> locationInfoList = groupOutputStream.getLocationInfoList();
