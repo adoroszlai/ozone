@@ -31,6 +31,7 @@
       <fileFingerprints>true</fileFingerprints>
       <buildLogging>true</buildLogging>
       <testLogging>true</testLogging>
+      <resourceUsage>false</resourceUsage>
     </capture>
     <backgroundBuildScanUpload>#{isFalse(env['GITHUB_ACTIONS'])}</backgroundBuildScanUpload>
     <publishing>
