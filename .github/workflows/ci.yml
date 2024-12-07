@@ -58,4 +58,4 @@ jobs:
             maven-repo-
       - name: Run test
         run: |
-          mvn --batch-mode --debug --show-version help:evaluate -Dexpression=ozone.version -DforceStdout -Dscan=false
+          mvn --batch-mode --show-version help:evaluate -Dexpression=ozone.version -DforceStdout -Dscan=false
