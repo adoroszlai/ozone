@@ -46,4 +46,4 @@ jobs:
     steps:
       - name: Run test
         run: |
-          curl http://ifconfig.co
+          curl http://ifconfig.me
