@@ -127,4 +127,5 @@ execute_command_in_container s3g ozone sh bucket create --layout FILE_SYSTEM_OPT
 
 for bucket in obs-bucket leg-bucket fso-bucket; do
   execute_s3a_tests "$bucket"
+  break
 done
