@@ -35,10 +35,10 @@ REPORT_FILE="$REPORT_DIR/summary.txt"
 OZONE_VERSION=$(mvn help:evaluate -Dexpression=ozone.version -q -DforceStdout -Dscan=false)
 DIST_DIR="${OZONE_ROOT}/hadoop-ozone/dist/target/ozone-$OZONE_VERSION"
 
-if [ ! -d "$DIST_DIR" ]; then
-    echo "Distribution dir is missing. Doing a full build"
-    "$DIR/build.sh" -Pcoverage
-fi
+#if [ ! -d "$DIST_DIR" ]; then
+#    echo "Distribution dir is missing. Doing a full build"
+#    "$DIR/build.sh" -Pcoverage
+#fi
 
 mkdir -p "$REPORT_DIR"
 
@@ -54,6 +54,14 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
     echo "Failed to download Hadoop ${HADOOP_VERSION}" > "${REPORT_FILE}"
     exit 1
   fi
+
+  echo $MAVEN_OPTIONS
+  pushd "${HADOOP_AWS_DIR}"
+  mvn $MAVEN_OPTIONS help:effective-pom
+  mvn $MAVEN_OPTIONS help:effective-settings
+  mvn $MAVEN_OPTIONS eu.maveniverse.maven.plugins:toolbox:list-repositories
+  mvn $MAVEN_OPTIONS -N --debug clean
+  exit
 fi
 
 export OZONE_ACCEPTANCE_SUITE OZONE_ACCEPTANCE_TEST_TYPE

@@ -46,7 +46,7 @@ jobs:
       needs-basic-check: false
       needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
+      needs-build: false
       needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
       needs-dependency-check: false
@@ -480,7 +480,6 @@ jobs:
   acceptance:
     needs:
       - build-info
-      - build
     runs-on: ubuntu-20.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
@@ -504,19 +503,18 @@ jobs:
           restore-keys: |
             maven-repo-
       - name: Download compiled Ozone binaries
+        if: needs.build-info.outputs.needs-build == 'true'
         uses: actions/download-artifact@v4
         with:
           name: ozone-bin
       - name: Untar binaries
+        if: needs.build-info.outputs.needs-build == 'true'
         run: |
           mkdir -p hadoop-ozone/dist/target
           tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
           rm ozone*.tar.gz
       - name: Execute tests
         run: |
-          pushd hadoop-ozone/dist/target/ozone-*
-          sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          popd
           ./hadoop-ozone/dev-support/checks/acceptance.sh
         env:
           KEEP_IMAGE: false

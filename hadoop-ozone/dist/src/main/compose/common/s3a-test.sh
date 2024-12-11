@@ -25,6 +25,14 @@ if [[ -z ${HADOOP_AWS_DIR} ]] || [[ ! -e ${HADOOP_AWS_DIR} ]]; then
 fi
 
 MAVEN_OPTIONS="--fail-never ${MAVEN_OPTIONS:-}"
+echo $MAVEN_OPTIONS
+
+pushd "${HADOOP_AWS_DIR}"
+mvn $MAVEN_OPTIONS help:effective-pom
+mvn $MAVEN_OPTIONS help:effective-settings
+mvn $MAVEN_OPTIONS eu.maveniverse.maven.plugins:toolbox:list-repositories
+mvn $MAVEN_OPTIONS -N --debug clean
+exit
 
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
