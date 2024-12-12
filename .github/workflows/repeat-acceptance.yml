@@ -143,6 +143,16 @@ jobs:
           tar xzvf ozone*.tar.gz -C hadoop-ozone/dist/target
           rm ozone*.tar.gz
           sudo chmod -R a+rwX hadoop-ozone/dist/target
+      - name: Cache for maven dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.m2/repository/*/*/*
+            !~/.m2/repository/org/apache/ozone
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}-${{ env.JAVA_VERSION }}
+          restore-keys: |
+            maven-repo-${{ hashFiles('**/pom.xml') }}
+            maven-repo-
       - name: Execute tests
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
