@@ -18,23 +18,24 @@
 package org.apache.hadoop.ozone.container.ec.reconstruction;
 
 import com.google.common.collect.ImmutableList;
+import jakarta.annotation.Nonnull;
 import org.apache.commons.collections.map.SingletonMap;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerDataProto.State;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
-import org.apache.hadoop.hdds.utils.HAUtils;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerDataProto.State;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * This class wraps necessary container-level rpc calls
@@ -65,16 +65,18 @@ public class ECContainerOperationClient implements Closeable {
     this(createClientManager(conf, certificateClient));
   }
 
-  @NotNull
-  private static XceiverClientManager createClientManager(
-      ConfigurationSource conf, CertificateClient certificateClient)
+  @Nonnull
+  private static XceiverClientManager createClientManager(ConfigurationSource conf, CertificateClient certificateClient)
       throws IOException {
-    return new XceiverClientManager(conf,
-        new XceiverClientManager.XceiverClientManagerConfigBuilder()
-            .setMaxCacheSize(256).setStaleThresholdMs(10 * 1000).build(),
-        certificateClient != null ?
-            HAUtils.buildCAX509List(certificateClient, conf) :
-            null);
+    ClientTrustManager trustManager = null;
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+      trustManager = certificateClient.createClientTrustManager();
+    }
+    XceiverClientManager.ScmClientConfig scmClientConfig = new XceiverClientManager.XceiverClientManagerConfigBuilder()
+        .setMaxCacheSize(256)
+        .setStaleThresholdMs(10 * 1000)
+        .build();
+    return new XceiverClientManager(conf, scmClientConfig, trustManager);
   }
 
   public BlockData[] listBlock(long containerId, DatanodeDetails dn,
@@ -90,14 +92,11 @@ public class ECContainerOperationClient implements Closeable {
         try {
           return BlockData.getFromProtoBuf(i);
         } catch (IOException e) {
-          LOG.debug("Failed while converting to protobuf BlockData. Returning"
-                  + " null for listBlock from DN: " + dn,
-              e);
+          LOG.debug("Failed while converting to protobuf BlockData. Returning null for listBlock from DN: {}", dn, e);
           // TODO: revisit here.
           return null;
         }
-      }).collect(Collectors.toList())
-          .toArray(new BlockData[blockDataList.size()]);
+      }).toArray(BlockData[]::new);
     } finally {
       this.xceiverClientManager.releaseClient(xceiverClient, false);
     }

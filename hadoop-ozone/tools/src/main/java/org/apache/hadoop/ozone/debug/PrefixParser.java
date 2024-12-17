@@ -21,13 +21,12 @@ package org.apache.hadoop.ozone.debug;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 import java.nio.file.Path;
-import org.apache.hadoop.hdds.cli.SubcommandWithParent;
+import org.apache.hadoop.hdds.cli.DebugSubcommand;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.MetadataKeyFilters;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OzoneManagerUtils;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.WithParentObjectId;
@@ -53,8 +53,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 @CommandLine.Command(
     name = "prefix",
     description = "Parse prefix contents")
-@MetaInfServices(SubcommandWithParent.class)
-public class PrefixParser implements Callable<Void>, SubcommandWithParent {
+@MetaInfServices(DebugSubcommand.class)
+public class PrefixParser implements Callable<Void>, DebugSubcommand {
 
   /**
    * Types to represent the level or path component type.
@@ -102,11 +102,6 @@ public class PrefixParser implements Callable<Void>, SubcommandWithParent {
   }
 
   @Override
-  public Class<?> getParentType() {
-    return OzoneDebug.class;
-  }
-
-  @Override
   public Void call() throws Exception {
     parse(volume, bucket, dbPath, filePath);
     return null;
@@ -147,17 +142,16 @@ public class PrefixParser implements Callable<Void>, SubcommandWithParent {
 
     parserStats[Types.VOLUME.ordinal()]++;
     // First get the info about the bucket
-    String bucketKey = metadataManager.getBucketKey(vol, buck);
-    OmBucketInfo info = metadataManager.getBucketTable().get(bucketKey);
-    if (info == null) {
+    OmBucketInfo info;
+    try {
+      info = OzoneManagerUtils
+          .getResolvedBucketInfo(metadataManager, vol, buck);
+    } catch (OMException e) {
       System.out.println("Invalid Bucket:" + buck);
       metadataManager.stop();
       return;
     }
-
-    BucketLayout bucketLayout =
-        OzoneManagerUtils.resolveLinkBucketLayout(info, metadataManager,
-            new HashSet<>()).getBucketLayout();
+    BucketLayout bucketLayout = info.getBucketLayout();
 
     if (!bucketLayout.isFileSystemOptimized()) {
       System.out.println("Prefix tool only works for FileSystem Optimized" +
@@ -171,7 +165,8 @@ public class PrefixParser implements Callable<Void>, SubcommandWithParent {
     long lastObjectId = info.getObjectID();
     WithParentObjectId objectBucketId = new WithParentObjectId();
     objectBucketId.setObjectID(lastObjectId);
-    dumpInfo(Types.BUCKET, effectivePath, objectBucketId, bucketKey);
+    dumpInfo(Types.BUCKET, effectivePath, objectBucketId,
+        metadataManager.getBucketKey(vol, buck));
 
     Iterator<Path> pathIterator =  p.iterator();
     while (pathIterator.hasNext()) {

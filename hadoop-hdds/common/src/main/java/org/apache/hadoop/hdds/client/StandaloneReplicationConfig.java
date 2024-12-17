@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.client;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import net.jcip.annotations.Immutable;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 
@@ -31,6 +32,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor
 /**
  * Replication configuration for STANDALONE replication.
  */
+@Immutable
 public final class StandaloneReplicationConfig implements
     ReplicatedReplicationConfig {
 
@@ -125,5 +127,10 @@ public final class StandaloneReplicationConfig implements
   @Override
   public String configFormat() {
     return toString();
+  }
+
+  @Override
+  public int getMinimumNodes() {
+    return replicationFactor.getNumber();
   }
 }

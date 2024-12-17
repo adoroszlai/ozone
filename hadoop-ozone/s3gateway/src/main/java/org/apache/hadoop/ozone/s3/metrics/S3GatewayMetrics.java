@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.s3.metrics;
 
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -27,16 +29,20 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.s3.S3GatewayConfigKeys;
+import org.apache.hadoop.ozone.util.PerformanceMetrics;
 import org.apache.hadoop.util.Time;
+
+import java.io.Closeable;
+import java.util.Map;
 
 /**
  * This class maintains S3 Gateway related metrics.
  */
 @InterfaceAudience.Private
 @Metrics(about = "S3 Gateway Metrics", context = OzoneConsts.OZONE)
-public final class S3GatewayMetrics implements MetricsSource {
+public final class S3GatewayMetrics implements Closeable, MetricsSource {
 
   public static final String SOURCE_NAME =
       S3GatewayMetrics.class.getSimpleName();
@@ -89,162 +95,207 @@ public final class S3GatewayMetrics implements MetricsSource {
   private @Metric MutableCounterLong copyObjectSuccessLength;
   private @Metric MutableCounterLong putKeySuccessLength;
   private @Metric MutableCounterLong getKeySuccessLength;
+  private @Metric MutableCounterLong getObjectTaggingSuccess;
+  private @Metric MutableCounterLong getObjectTaggingFailure;
+  private @Metric MutableCounterLong putObjectTaggingSuccess;
+  private @Metric MutableCounterLong putObjectTaggingFailure;
+  private @Metric MutableCounterLong deleteObjectTaggingSuccess;
+  private @Metric MutableCounterLong deleteObjectTaggingFailure;
+  private @Metric MutableCounterLong putObjectAclSuccess;
+  private @Metric MutableCounterLong putObjectAclFailure;
 
   // S3 Gateway Latency Metrics
   // BucketEndpoint
 
   @Metric(about = "Latency for successfully retrieving an S3 bucket in " +
       "nanoseconds")
-  private MutableRate getBucketSuccessLatencyNs;
+  private PerformanceMetrics getBucketSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to retrieve an S3 bucket in nanoseconds")
-  private MutableRate getBucketFailureLatencyNs;
+  private PerformanceMetrics getBucketFailureLatencyNs;
 
   @Metric(about = "Latency for successfully creating an S3 bucket in " +
       "nanoseconds")
-  private MutableRate createBucketSuccessLatencyNs;
+  private PerformanceMetrics createBucketSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to create an S3 bucket in nanoseconds")
-  private MutableRate createBucketFailureLatencyNs;
+  private PerformanceMetrics createBucketFailureLatencyNs;
 
   @Metric(about = "Latency for successfully checking the existence of an " +
       "S3 bucket in nanoseconds")
-  private MutableRate headBucketSuccessLatencyNs;
+  private PerformanceMetrics headBucketSuccessLatencyNs;
 
   @Metric(about = "Latency for successfully deleting an S3 bucket in " +
       "nanoseconds")
-  private MutableRate deleteBucketSuccessLatencyNs;
+  private PerformanceMetrics deleteBucketSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to delete an S3 bucket in nanoseconds")
-  private MutableRate deleteBucketFailureLatencyNs;
+  private PerformanceMetrics deleteBucketFailureLatencyNs;
 
   @Metric(about = "Latency for successfully retrieving an S3 bucket ACL " +
       "in nanoseconds")
-  private MutableRate getAclSuccessLatencyNs;
+  private PerformanceMetrics getAclSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to retrieve an S3 bucket ACL " +
       "in nanoseconds")
-  private MutableRate getAclFailureLatencyNs;
+  private PerformanceMetrics getAclFailureLatencyNs;
 
   @Metric(about = "Latency for successfully setting an S3 bucket ACL " +
       "in nanoseconds")
-  private MutableRate putAclSuccessLatencyNs;
+  private PerformanceMetrics putAclSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to set an S3 bucket ACL " +
       "in nanoseconds")
-  private MutableRate putAclFailureLatencyNs;
+  private PerformanceMetrics putAclFailureLatencyNs;
 
   @Metric(about = "Latency for successfully listing multipart uploads " +
       "in nanoseconds")
-  private MutableRate listMultipartUploadsSuccessLatencyNs;
+  private PerformanceMetrics listMultipartUploadsSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to list multipart uploads " +
       "in nanoseconds")
-  private MutableRate listMultipartUploadsFailureLatencyNs;
+  private PerformanceMetrics listMultipartUploadsFailureLatencyNs;
 
   // RootEndpoint
 
   @Metric(about = "Latency for successfully listing S3 buckets " +
       "in nanoseconds")
-  private MutableRate listS3BucketsSuccessLatencyNs;
+  private PerformanceMetrics listS3BucketsSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to list S3 buckets " +
       "in nanoseconds")
-  private MutableRate listS3BucketsFailureLatencyNs;
+  private PerformanceMetrics listS3BucketsFailureLatencyNs;
 
   // ObjectEndpoint
 
   @Metric(about = "Latency for successfully creating a multipart object key " +
       "in nanoseconds")
-  private MutableRate createMultipartKeySuccessLatencyNs;
+  private PerformanceMetrics createMultipartKeySuccessLatencyNs;
 
   @Metric(about = "Latency for failing to create a multipart object key in " +
       "nanoseconds")
-  private MutableRate createMultipartKeyFailureLatencyNs;
+  private PerformanceMetrics createMultipartKeyFailureLatencyNs;
 
   @Metric(about = "Latency for successfully copying an S3 object in " +
       "nanoseconds")
-  private MutableRate copyObjectSuccessLatencyNs;
+  private PerformanceMetrics copyObjectSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to copy an S3 object in nanoseconds")
-  private MutableRate copyObjectFailureLatencyNs;
+  private PerformanceMetrics copyObjectFailureLatencyNs;
 
   @Metric(about = "Latency for successfully creating an S3 object key in " +
       "nanoseconds")
-  private MutableRate createKeySuccessLatencyNs;
+  private PerformanceMetrics createKeySuccessLatencyNs;
 
   @Metric(about = "Latency for failing to create an S3 object key in " +
       "nanoseconds")
-  private MutableRate createKeyFailureLatencyNs;
+  private PerformanceMetrics createKeyFailureLatencyNs;
 
   @Metric(about = "Latency for successfully listing parts of a multipart " +
       "upload in nanoseconds")
-  private MutableRate listPartsSuccessLatencyNs;
+  private PerformanceMetrics listPartsSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to list parts of a multipart upload " +
       "in nanoseconds")
-  private MutableRate listPartsFailureLatencyNs;
+  private PerformanceMetrics listPartsFailureLatencyNs;
 
   @Metric(about = "Latency for successfully retrieving an S3 object in " +
       "nanoseconds")
-  private MutableRate getKeySuccessLatencyNs;
+  private PerformanceMetrics getKeySuccessLatencyNs;
 
   @Metric(about = "Latency for failing to retrieve an S3 object in nanoseconds")
-  private MutableRate getKeyFailureLatencyNs;
+  private PerformanceMetrics getKeyFailureLatencyNs;
 
   @Metric(about = "Latency for successfully retrieving metadata for an S3 " +
       "object in nanoseconds")
-  private MutableRate headKeySuccessLatencyNs;
+  private PerformanceMetrics headKeySuccessLatencyNs;
 
   @Metric(about = "Latency for failing to retrieve metadata for an S3 object " +
       "in nanoseconds")
-  private MutableRate headKeyFailureLatencyNs;
+  private PerformanceMetrics headKeyFailureLatencyNs;
 
   @Metric(about = "Latency for successfully initiating a multipart upload in " +
       "nanoseconds")
-  private MutableRate initMultipartUploadSuccessLatencyNs;
+  private PerformanceMetrics initMultipartUploadSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to initiate a multipart upload in " +
       "nanoseconds")
-  private MutableRate initMultipartUploadFailureLatencyNs;
+  private PerformanceMetrics initMultipartUploadFailureLatencyNs;
 
   @Metric(about = "Latency for successfully completing a multipart upload in " +
       "nanoseconds")
-  private MutableRate completeMultipartUploadSuccessLatencyNs;
+  private PerformanceMetrics completeMultipartUploadSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to complete a multipart upload in " +
       "nanoseconds")
-  private MutableRate completeMultipartUploadFailureLatencyNs;
+  private PerformanceMetrics completeMultipartUploadFailureLatencyNs;
 
   @Metric(about = "Latency for successfully aborting a multipart upload in " +
       "nanoseconds")
-  private MutableRate abortMultipartUploadSuccessLatencyNs;
+  private PerformanceMetrics abortMultipartUploadSuccessLatencyNs;
 
   @Metric(about = "Latency for failing to abort a multipart upload in " +
       "nanoseconds")
-  private MutableRate abortMultipartUploadFailureLatencyNs;
+  private PerformanceMetrics abortMultipartUploadFailureLatencyNs;
 
   @Metric(about = "Latency for successfully deleting an S3 object in " +
       "nanoseconds")
-  private MutableRate deleteKeySuccessLatencyNs;
+  private PerformanceMetrics deleteKeySuccessLatencyNs;
 
   @Metric(about = "Latency for failing to delete an S3 object in nanoseconds")
-  private MutableRate deleteKeyFailureLatencyNs;
+  private PerformanceMetrics deleteKeyFailureLatencyNs;
 
   @Metric(about = "Latency for put metadata of an key in nanoseconds")
-  private MutableRate putKeyMetadataLatencyNs;
+  private PerformanceMetrics putKeyMetadataLatencyNs;
 
   @Metric(about = "Latency for get metadata of an key in nanoseconds")
-  private MutableRate getKeyMetadataLatencyNs;
+  private PerformanceMetrics getKeyMetadataLatencyNs;
 
   @Metric(about = "Latency for copy metadata of an key in nanoseconds")
-  private MutableRate copyKeyMetadataLatencyNs;
+  private PerformanceMetrics copyKeyMetadataLatencyNs;
+
+  @Metric(about = "Latency for successful get object tagging of a key in nanoseconds")
+  private PerformanceMetrics getObjectTaggingSuccessLatencyNs;
+
+  @Metric(about = "Latency for failing to get object tagging of a key in nanoseconds")
+  private PerformanceMetrics getObjectTaggingFailureLatencyNs;
+
+  @Metric(about = "Latency for successful put object tagging of a key in nanoseconds")
+  private PerformanceMetrics putObjectTaggingSuccessLatencyNs;
+
+  @Metric(about = "Latency for failing to put object tagging of a key in nanoseconds")
+  private PerformanceMetrics putObjectTaggingFailureLatencyNs;
+
+  @Metric(about = "Latency for successful delete object tagging of a key in nanoseconds")
+  private PerformanceMetrics deleteObjectTaggingSuccessLatencyNs;
+
+  @Metric(about = "Latency for failing to delete object tagging of a key in nanoseconds")
+  private PerformanceMetrics deleteObjectTaggingFailureLatencyNs;
+
+  @Metric(about = "Latency for successfully setting an S3 object ACL " +
+      "in nanoseconds")
+  private PerformanceMetrics putObjectAclSuccessLatencyNs;
+
+  @Metric(about = "Latency for failing to set an S3 object ACL " +
+      "in nanoseconds")
+  private PerformanceMetrics putObjectAclFailureLatencyNs;
+
+  private final Map<String, PerformanceMetrics> performanceMetrics;
 
   /**
    * Private constructor.
    */
-  private S3GatewayMetrics() {
+  private S3GatewayMetrics(OzoneConfiguration conf) {
     this.registry = new MetricsRegistry(SOURCE_NAME);
+    int[] intervals = conf.getInts(S3GatewayConfigKeys
+        .OZONE_S3G_METRICS_PERCENTILES_INTERVALS_SECONDS_KEY);
+    performanceMetrics = PerformanceMetrics.initializeMetrics(
+        this, registry, "Ops", "Time", intervals);
+  }
+
+  @Override
+  public void close() {
+    IOUtils.closeQuietly(performanceMetrics.values());
   }
 
   /**
@@ -252,13 +303,13 @@ public final class S3GatewayMetrics implements MetricsSource {
    *
    * @return S3GatewayMetrics
    */
-  public static synchronized S3GatewayMetrics create() {
+  public static synchronized S3GatewayMetrics create(OzoneConfiguration conf) {
     if (instance != null) {
       return instance;
     }
     MetricsSystem ms = DefaultMetricsSystem.instance();
     instance = ms.register(SOURCE_NAME, "S3 Gateway Metrics",
-        new S3GatewayMetrics());
+        new S3GatewayMetrics(conf));
     return instance;
   }
 
@@ -266,6 +317,7 @@ public final class S3GatewayMetrics implements MetricsSource {
    * Unregister the metrics instance.
    */
   public static void unRegister() {
+    IOUtils.closeQuietly(instance);
     instance = null;
     MetricsSystem ms = DefaultMetricsSystem.instance();
     ms.unregisterSource(SOURCE_NAME);
@@ -357,14 +409,28 @@ public final class S3GatewayMetrics implements MetricsSource {
     putKeySuccessLength.snapshot(recordBuilder, true);
     getKeySuccessLength.snapshot(recordBuilder, true);
     listKeyCount.snapshot(recordBuilder, true);
+    getObjectTaggingSuccess.snapshot(recordBuilder, true);
+    getObjectTaggingSuccessLatencyNs.snapshot(recordBuilder, true);
+    getObjectTaggingFailure.snapshot(recordBuilder, true);
+    getObjectTaggingFailureLatencyNs.snapshot(recordBuilder, true);
+    putObjectTaggingSuccess.snapshot(recordBuilder, true);
+    putObjectTaggingSuccessLatencyNs.snapshot(recordBuilder, true);
+    putObjectTaggingFailure.snapshot(recordBuilder, true);
+    putObjectTaggingFailureLatencyNs.snapshot(recordBuilder, true);
+    deleteObjectTaggingSuccess.snapshot(recordBuilder, true);
+    deleteObjectTaggingSuccessLatencyNs.snapshot(recordBuilder, true);
+    deleteObjectTaggingFailure.snapshot(recordBuilder, true);
+    deleteObjectTaggingFailureLatencyNs.snapshot(recordBuilder, true);
+    putObjectAclSuccess.snapshot(recordBuilder, true);
+    putObjectAclFailure.snapshot(recordBuilder, true);
   }
 
   // INC and UPDATE
   // BucketEndpoint
 
-  public void updateGetBucketSuccessStats(long startNanos) {
+  public long updateGetBucketSuccessStats(long startNanos) {
     getBucketSuccess.incr();
-    getBucketSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(getBucketSuccessLatencyNs, startNanos);
   }
 
   public void updateGetBucketFailureStats(long startNanos) {
@@ -447,10 +513,9 @@ public final class S3GatewayMetrics implements MetricsSource {
 
   // ObjectEndpoint
 
-  public void updateCreateMultipartKeySuccessStats(long startNanos) {
+  public long updateCreateMultipartKeySuccessStats(long startNanos) {
     createMultipartKeySuccess.incr();
-    createMultipartKeySuccessLatencyNs.add(
-        Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(createMultipartKeySuccessLatencyNs, startNanos);
   }
 
   public void updateCreateMultipartKeyFailureStats(long startNanos) {
@@ -459,9 +524,9 @@ public final class S3GatewayMetrics implements MetricsSource {
         Time.monotonicNowNanos() - startNanos);
   }
 
-  public void updateCopyObjectSuccessStats(long startNanos) {
+  public long updateCopyObjectSuccessStats(long startNanos) {
     copyObjectSuccess.incr();
-    copyObjectSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(copyObjectSuccessLatencyNs, startNanos);
   }
 
   public void updateCopyObjectFailureStats(long startNanos) {
@@ -469,9 +534,9 @@ public final class S3GatewayMetrics implements MetricsSource {
     copyObjectFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
   }
 
-  public void updateCreateKeySuccessStats(long startNanos) {
+  public long updateCreateKeySuccessStats(long startNanos) {
     createKeySuccess.incr();
-    createKeySuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(createKeySuccessLatencyNs, startNanos);
   }
 
   public void updateCreateKeyFailureStats(long startNanos) {
@@ -479,9 +544,9 @@ public final class S3GatewayMetrics implements MetricsSource {
     createKeyFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
   }
 
-  public void updateListPartsSuccessStats(long startNanos) {
+  public long updateListPartsSuccessStats(long startNanos) {
     listPartsSuccess.incr();
-    listPartsSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(listPartsSuccessLatencyNs, startNanos);
   }
 
   public void updateListPartsFailureStats(long startNanos) {
@@ -489,9 +554,9 @@ public final class S3GatewayMetrics implements MetricsSource {
     listPartsFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
   }
 
-  public void updateGetKeySuccessStats(long startNanos) {
+  public long updateGetKeySuccessStats(long startNanos) {
     getKeySuccess.incr();
-    getKeySuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+    return updateAndGetStats(getKeySuccessLatencyNs, startNanos);
   }
 
   public void updateGetKeyFailureStats(long startNanos) {
@@ -555,16 +620,16 @@ public final class S3GatewayMetrics implements MetricsSource {
     deleteKeyFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
   }
 
-  public void updateGetKeyMetadataStats(long startNanos) {
-    getKeyMetadataLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  public long updateGetKeyMetadataStats(long startNanos) {
+    return updateAndGetStats(getKeyMetadataLatencyNs, startNanos);
   }
 
-  public void updateCopyKeyMetadataStats(long startNanos) {
-    copyKeyMetadataLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  public long updateCopyKeyMetadataStats(long startNanos) {
+    return updateAndGetStats(copyKeyMetadataLatencyNs, startNanos);
   }
 
-  public void updatePutKeyMetadataStats(long startNanos) {
-    putKeyMetadataLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  public long updatePutKeyMetadataStats(long startNanos) {
+    return updateAndGetStats(putKeyMetadataLatencyNs, startNanos);
   }
 
   public void incCopyObjectSuccessLength(long bytes) {
@@ -577,6 +642,46 @@ public final class S3GatewayMetrics implements MetricsSource {
 
   public void incGetKeySuccessLength(long bytes) {
     getKeySuccessLength.incr(bytes);
+  }
+
+  public void updateGetObjectTaggingSuccessStats(long startNanos) {
+    this.getObjectTaggingSuccess.incr();
+    this.getObjectTaggingSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updateGetObjectTaggingFailureStats(long startNanos) {
+    this.getObjectTaggingFailure.incr();
+    this.getObjectTaggingFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updatePutObjectTaggingSuccessStats(long startNanos) {
+    this.putObjectTaggingSuccess.incr();
+    this.putObjectTaggingSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updatePutObjectTaggingFailureStats(long startNanos) {
+    this.putObjectTaggingFailure.incr();
+    this.putObjectTaggingFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updateDeleteObjectTaggingSuccessStats(long startNanos) {
+    this.deleteObjectTaggingSuccess.incr();
+    this.deleteObjectTaggingSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updateDeleteObjectTaggingFailureStats(long startNanos) {
+    this.deleteObjectTaggingFailure.incr();
+    this.deleteObjectTaggingFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updatePutObjectAclSuccessStats(long startNanos) {
+    this.putObjectAclSuccess.incr();
+    this.putObjectAclSuccessLatencyNs.add(Time.monotonicNowNanos() - startNanos);
+  }
+
+  public void updatePutObjectAclFailureStats(long startNanos) {
+    this.putObjectAclFailure.incr();
+    this.putObjectAclFailureLatencyNs.add(Time.monotonicNowNanos() - startNanos);
   }
 
   // GET
@@ -718,5 +823,39 @@ public final class S3GatewayMetrics implements MetricsSource {
 
   public long getListS3BucketsFailure() {
     return listS3BucketsFailure.value();
+  }
+
+  public long getGetObjectTaggingSuccess() {
+    return getObjectTaggingSuccess.value();
+  }
+
+  public long getGetObjectTaggingFailure() {
+    return getObjectTaggingFailure.value();
+  }
+
+  public long getPutObjectTaggingSuccess() {
+    return putObjectTaggingSuccess.value();
+  }
+
+  public long getPutObjectTaggingFailure() {
+    return putObjectTaggingFailure.value();
+  }
+
+  public long getDeleteObjectTaggingSuccess() {
+    return deleteObjectTaggingSuccess.value();
+  }
+
+  public long getDeleteObjectTaggingFailure() {
+    return deleteObjectTaggingFailure.value();
+  }
+
+  private long updateAndGetStats(PerformanceMetrics metric, long startNanos) {
+    long value = Time.monotonicNowNanos() - startNanos;
+    metric.add(value);
+    return value;
+  }
+
+  public static synchronized S3GatewayMetrics getMetrics() {
+    return instance;
   }
 }

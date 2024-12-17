@@ -23,9 +23,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -33,6 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
@@ -46,15 +45,21 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManagerImpl;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.ozone.test.GenericTestUtils;
-
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This class tests HealthyPipelineSafeMode rule.
  */
 public class TestHealthyPipelineSafeModeRule {
+  @TempDir
+  private File tempFile;
 
   @Test
   public void testHealthyPipelineSafeModeRuleWithNoPipelines()
@@ -65,12 +70,11 @@ public class TestHealthyPipelineSafeModeRule {
     List<ContainerInfo> containers =
             new ArrayList<>(HddsTestUtils.getContainerInfo(1));
 
-    String storageDir = GenericTestUtils.getTempPath(
-            TestHealthyPipelineSafeModeRule.class.getName() +
-                    UUID.randomUUID());
     OzoneConfiguration config = new OzoneConfiguration();
     MockNodeManager nodeManager = new MockNodeManager(true, 0);
-    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
+    ContainerManager containerManager = mock(ContainerManager.class);
+    when(containerManager.getContainers()).thenReturn(containers);
+    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, tempFile.getPath());
     // enable pipeline check
     config.setBoolean(
             HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
@@ -95,24 +99,21 @@ public class TestHealthyPipelineSafeModeRule {
       pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
           mockRatisProvider);
       SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
-          config, containers, null, pipelineManager, eventQueue,
+          config, containers, containerManager, pipelineManager, eventQueue,
           serviceManager, scmContext);
 
       HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
           scmSafeModeManager.getHealthyPipelineSafeModeRule();
 
       // This should be immediately satisfied, as no pipelines are there yet.
-      Assertions.assertTrue(healthyPipelineSafeModeRule.validate());
+      assertTrue(healthyPipelineSafeModeRule.validate());
     } finally {
       scmMetadataStore.getStore().close();
-      FileUtil.fullyDelete(new File(storageDir));
     }
   }
 
   @Test
   public void testHealthyPipelineSafeModeRuleWithPipelines() throws Exception {
-    String storageDir = GenericTestUtils.getTempPath(
-        TestHealthyPipelineSafeModeRule.class.getName() + UUID.randomUUID());
 
     EventQueue eventQueue = new EventQueue();
     SCMServiceManager serviceManager = new SCMServiceManager();
@@ -125,7 +126,9 @@ public class TestHealthyPipelineSafeModeRule {
     // stale and last one is dead, and this repeats. So for a 12 node, 9
     // healthy, 2 stale and one dead.
     MockNodeManager nodeManager = new MockNodeManager(true, 12);
-    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
+    ContainerManager containerManager = mock(ContainerManager.class);
+    when(containerManager.getContainers()).thenReturn(containers);
+    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, tempFile.getPath());
     // enable pipeline check
     config.setBoolean(
             HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
@@ -176,14 +179,14 @@ public class TestHealthyPipelineSafeModeRule {
       MockRatisPipelineProvider.markPipelineHealthy(pipeline3);
 
       SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
-          config, containers, null, pipelineManager, eventQueue,
+          config, containers, containerManager, pipelineManager, eventQueue,
           serviceManager, scmContext);
 
       HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
           scmSafeModeManager.getHealthyPipelineSafeModeRule();
 
       // No datanodes have sent pipelinereport from datanode
-      Assertions.assertFalse(healthyPipelineSafeModeRule.validate());
+      assertFalse(healthyPipelineSafeModeRule.validate());
 
       // Fire pipeline report from all datanodes in first pipeline, as here we
       // have 3 pipelines, 10% is 0.3, when doing ceil it is 1. So, we should
@@ -200,7 +203,6 @@ public class TestHealthyPipelineSafeModeRule {
           1000, 5000);
     } finally {
       scmMetadataStore.getStore().close();
-      FileUtil.fullyDelete(new File(storageDir));
     }
   }
 
@@ -208,10 +210,6 @@ public class TestHealthyPipelineSafeModeRule {
   @Test
   public void testHealthyPipelineSafeModeRuleWithMixedPipelines()
       throws Exception {
-
-    String storageDir = GenericTestUtils.getTempPath(
-        TestHealthyPipelineSafeModeRule.class.getName() + UUID.randomUUID());
-
     EventQueue eventQueue = new EventQueue();
     SCMServiceManager serviceManager = new SCMServiceManager();
     SCMContext scmContext = SCMContext.emptyContext();
@@ -224,7 +222,9 @@ public class TestHealthyPipelineSafeModeRule {
     // stale and last one is dead, and this repeats. So for a 12 node, 9
     // healthy, 2 stale and one dead.
     MockNodeManager nodeManager = new MockNodeManager(true, 12);
-    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
+    ContainerManager containerManager = mock(ContainerManager.class);
+    when(containerManager.getContainers()).thenReturn(containers);
+    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, tempFile.getPath());
     // enable pipeline check
     config.setBoolean(
             HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
@@ -275,7 +275,7 @@ public class TestHealthyPipelineSafeModeRule {
       MockRatisPipelineProvider.markPipelineHealthy(pipeline3);
 
       SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
-          config, containers, null, pipelineManager, eventQueue,
+          config, containers, containerManager, pipelineManager, eventQueue,
           serviceManager, scmContext);
 
       HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
@@ -283,7 +283,7 @@ public class TestHealthyPipelineSafeModeRule {
 
 
       // No pipeline event have sent to SCMSafemodeManager
-      Assertions.assertFalse(healthyPipelineSafeModeRule.validate());
+      assertFalse(healthyPipelineSafeModeRule.validate());
 
 
       GenericTestUtils.LogCapturer logCapturer =
@@ -297,7 +297,7 @@ public class TestHealthyPipelineSafeModeRule {
       GenericTestUtils.waitFor(() -> logCapturer.getOutput().contains(
           "reported count is 1"),
           1000, 5000);
-      Assertions.assertFalse(healthyPipelineSafeModeRule.validate());
+      assertFalse(healthyPipelineSafeModeRule.validate());
 
       firePipelineEvent(pipeline2, eventQueue);
       firePipelineEvent(pipeline3, eventQueue);
@@ -307,7 +307,6 @@ public class TestHealthyPipelineSafeModeRule {
 
     } finally {
       scmMetadataStore.getStore().close();
-      FileUtil.fullyDelete(new File(storageDir));
     }
 
   }

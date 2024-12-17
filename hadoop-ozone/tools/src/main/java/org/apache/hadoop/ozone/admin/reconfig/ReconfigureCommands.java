@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.ozone.admin.reconfig;
 
+import org.apache.hadoop.hdds.cli.AdminSubcommand;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.cli.OzoneAdmin;
-import org.apache.hadoop.hdds.cli.SubcommandWithParent;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.cli.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.kohsuke.MetaInfServices;
@@ -46,15 +47,19 @@ import java.util.concurrent.Callable;
         ReconfigureStatusSubcommand.class,
         ReconfigurePropertiesSubcommand.class
     })
-@MetaInfServices(SubcommandWithParent.class)
-public class ReconfigureCommands implements Callable<Void>,
-    SubcommandWithParent {
+@MetaInfServices(AdminSubcommand.class)
+public class ReconfigureCommands implements Callable<Void>, AdminSubcommand {
 
   @CommandLine.ParentCommand
   private OzoneAdmin parent;
 
   @Spec
   private CommandSpec spec;
+
+  @CommandLine.Option(names = {"--service"},
+      description = "service: OM, SCM, DATANODE.",
+      required = true)
+  private String service;
 
   @CommandLine.Option(names = {"--address"},
       description = "node address: <ip:port> or <hostname:port>.",
@@ -77,9 +82,8 @@ public class ReconfigureCommands implements Callable<Void>,
     return address;
   }
 
-  @Override
-  public Class<?> getParentType() {
-    return OzoneAdmin.class;
+  public HddsProtos.NodeType getService() {
+    return HddsProtos.NodeType.valueOf(service);
   }
 
   public boolean isBatchReconfigDatanodes() {

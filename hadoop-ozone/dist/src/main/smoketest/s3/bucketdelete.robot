@@ -19,6 +19,7 @@ Library             OperatingSystem
 Library             String
 Resource            ../commonlib.robot
 Resource            commonawslib.robot
+Resource            mpu_lib.robot
 Test Timeout        5 minutes
 Suite Setup         Setup s3 tests
 
@@ -43,3 +44,18 @@ Delete non-existent bucket
     ${randStr} =   Generate Ozone String
     ${result} =    Execute AWSS3APICli and checkrc    delete-bucket --bucket nosuchbucket-${randStr}    255
                    Should contain                     ${result}                              NoSuchBucket
+
+Delete bucket with incomplete multipart uploads
+    [tags]    no-bucket-type
+    ${bucket} =                Create bucket
+
+    # initiate incomplete multipart upload (multipart upload is initiated but not completed/aborted)
+    ${uploadID} =              Initiate MPU    ${bucket}    incomplete-multipartkey
+
+    # bucket deletion should fail since there is still incomplete multipart upload
+    ${delete_fail_result} =    Execute AWSS3APICli and checkrc    delete-bucket --bucket ${bucket}    255
+                               Should contain                     ${delete_fail_result}               BucketNotEmpty
+
+    # after aborting the multipart upload, the bucket deletion should succeed
+    ${abort_result} =          Abort MPU    ${bucket}    incomplete-multipartkey    ${uploadID}
+    ${delete_result} =         Execute AWSS3APICli and checkrc    delete-bucket --bucket ${bucket}    0

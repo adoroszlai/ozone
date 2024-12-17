@@ -20,12 +20,13 @@ package org.apache.hadoop.ozone.client;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.collections.ListUtils;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -106,7 +107,7 @@ public class OzoneVolume extends WithMetadata {
   private long refCount;
 
   protected OzoneVolume(Builder builder) {
-    this.metadata = builder.metadata;
+    super(builder);
     this.proxy = builder.proxy;
     this.name = builder.name;
     this.admin = builder.admin;
@@ -124,7 +125,7 @@ public class OzoneVolume extends WithMetadata {
             this.creationTime.getEpochSecond(), this.creationTime.getNano());
       }
     }
-    this.acls = builder.acls;
+    this.acls = new ArrayList<>(builder.acls);
     if (builder.conf != null) {
       this.listCacheSize = HddsClientUtils.getListCacheSize(builder.conf);
     }
@@ -203,7 +204,7 @@ public class OzoneVolume extends WithMetadata {
    * @return aclMap
    */
   public List<OzoneAcl> getAcls() {
-    return ListUtils.unmodifiableList(acls);
+    return Collections.unmodifiableList(acls);
   }
 
    /**
@@ -409,8 +410,7 @@ public class OzoneVolume extends WithMetadata {
   /**
    * Inner builder for OzoneVolume.
    */
-  public static class Builder {
-    private Map<String, String> metadata;
+  public static class Builder extends WithMetadata.Builder {
     private ConfigurationSource conf;
     private ClientProtocol proxy;
     private String name;
@@ -482,8 +482,9 @@ public class OzoneVolume extends WithMetadata {
       return this;
     }
 
+    @Override
     public Builder setMetadata(Map<String, String> metadata) {
-      this.metadata = metadata;
+      super.setMetadata(metadata);
       return this;
     }
 

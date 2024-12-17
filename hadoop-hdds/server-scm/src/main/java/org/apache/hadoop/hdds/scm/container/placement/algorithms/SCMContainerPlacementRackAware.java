@@ -346,8 +346,7 @@ public final class SCMContainerPlacementRackAware
       return chooseNodes(null, chosenNodes, mutableFavoredNodes,
           mutableUsedNodes, favorIndex, nodesRequired, mapSizeRequired);
     } else {
-      List<DatanodeDetails> mutableExcludedNodes = new ArrayList<>();
-      mutableExcludedNodes.addAll(excludedNodes);
+      List<DatanodeDetails> mutableExcludedNodes = new ArrayList<>(excludedNodes);
       // choose node to meet replication requirement
       // case 1: one excluded node, choose one on the same rack as the excluded
       // node, choose others on different racks.
@@ -561,7 +560,7 @@ public final class SCMContainerPlacementRackAware
       DatanodeDetails favoredNode = favoredNodeNum > favorIndex ?
           favoredNodes.get(favorIndex) : null;
       DatanodeDetails chosenNode;
-      if (favoredNode != null && networkTopology.isSameParent(
+      if (favoredNode != null && !networkTopology.isSameParent(
           excludedNodeList.get(excludedNodeList.size() - 1), favoredNode)) {
         chosenNode = favoredNode;
         favorIndex++;

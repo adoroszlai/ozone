@@ -108,7 +108,7 @@ public interface ConfigurationSource {
   /**
    * Gets the configuration entries where the key contains the prefix. This
    * method will strip the prefix from the key in the return Map.
-   * Example: somePrefix.key->value will be key->value in the returned map.
+   * Example: {@code somePrefix.key->value} will be {@code key->value} in the returned map.
    * @param keyPrefix Prefix to search.
    * @return Map containing keys that match and their values.
    */
@@ -283,6 +283,17 @@ public interface ConfigurationSource {
     } else {
       return TimeDurationUtil.getTimeDurationHelper(name, vStr, unit);
     }
+  }
+
+  default int getBufferSize(String name, String defaultValue) {
+    final double size = getStorageSize(name, defaultValue, StorageUnit.BYTES);
+    if (size <= 0) {
+      throw new IllegalArgumentException(name + " <= 0");
+    } else if (size > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException(
+          name + " > Integer.MAX_VALUE = " + Integer.MAX_VALUE);
+    }
+    return (int) size;
   }
 
   default double getStorageSize(String name, String defaultValue,

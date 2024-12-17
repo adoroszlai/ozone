@@ -35,58 +35,49 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.apache.ozone.test.GenericTestUtils;
-import org.apache.ratis.util.FileUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import java.io.File;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import org.junit.Rule;
-import org.junit.rules.Timeout;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test cases for ContainerMapper.
  */
-
+@Timeout(value = 300, unit = TimeUnit.SECONDS)
 public class TestContainerMapper {
-
-  /**
-    * Set a timeout for each test.
-    */
-  @Rule
-  public Timeout timeout = Timeout.seconds(300);
-
+  @TempDir
+  private static Path dbPath;
   private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
   private static OzoneManager ozoneManager;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
-  private static final String SCM_ID = UUID.randomUUID().toString();
   private static String volName = UUID.randomUUID().toString();
   private static String bucketName = UUID.randomUUID().toString();
   private static OzoneConfiguration conf;
   private static List<String> keyList = new ArrayList<>();
-  private static String dbPath;
 
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    dbPath = GenericTestUtils.getRandomizedTempPath();
-    conf.set(OZONE_OM_DB_DIRS, dbPath);
+    conf.set(OZONE_OM_DB_DIRS, dbPath.toString());
     conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE, "100MB");
     conf.setStorageSize(OZONE_DATANODE_RATIS_VOLUME_FREE_SPACE_MIN,
         0, StorageUnit.MB);
@@ -95,7 +86,6 @@ public class TestContainerMapper {
     conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 6);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
-        .setScmId(SCM_ID)
         .build();
     cluster.waitForClusterToBeReady();
     ozClient = OzoneClientFactory.getRpcClient(conf);
@@ -142,10 +132,9 @@ public class TestContainerMapper {
     return chars;
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     IOUtils.closeQuietly(ozClient);
     cluster.shutdown();
-    FileUtils.deleteFully(new File(dbPath));
   }
 }

@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.ozone</groupId>
     <artifactId>ozone</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>ozone-filesystem-shaded</artifactId>
   <name>Apache Ozone FileSystem Shaded</name>
   <packaging>jar</packaging>
-  <version>1.4.0-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
 
   <properties>
     <maven.test.skip>true</maven.test.skip> <!-- no tests in this module so far -->
@@ -78,9 +78,22 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>2.5.0</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <proc>none</proc>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -91,6 +104,7 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <skip>${maven.shade.skip}</skip>
               <transformers>
                 <transformer
                         implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
@@ -128,7 +142,6 @@
                     <include>org.apache.commons.digester.**.*</include>
                     <include>org.apache.commons.io.**.*</include>
                     <include>org.apache.commons.logging.**.*</include>
-                    <include>org.apache.commons.pool2.**.*</include>
                     <include>org.apache.commons.validator.**.*</include>
                     <include>org.apache.commons.lang3.**.*</include>
                     <include>org.sqlite.**.*</include>

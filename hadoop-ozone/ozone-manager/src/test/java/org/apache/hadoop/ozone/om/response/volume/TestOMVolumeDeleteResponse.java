@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.ozone.om.response.volume;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -30,49 +28,22 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos.PersistedUserVolumeInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.UUID;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * This class tests OMVolumeCreateResponse.
  */
-public class TestOMVolumeDeleteResponse {
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OMMetadataManager omMetadataManager;
-  private BatchOperation batchOperation;
-
-  @Before
-  public void setup() throws Exception {
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration, null);
-    batchOperation = omMetadataManager.getStore().initBatchOperation();
-  }
-
-  @After
-  public void tearDown() {
-    if (batchOperation != null) {
-      batchOperation.close();
-    }
-  }
+public class TestOMVolumeDeleteResponse extends TestOMVolumeResponse {
 
   @Test
   public void testAddToDBBatch() throws Exception {
-
+    OMMetadataManager omMetadataManager = getOmMetadataManager();
+    BatchOperation batchOperation = getBatchOperation();
     String volumeName = UUID.randomUUID().toString();
     String userName = "user1";
     PersistedUserVolumeInfo volumeList = PersistedUserVolumeInfo.newBuilder()
@@ -96,7 +67,7 @@ public class TestOMVolumeDeleteResponse {
     // As we are deleting updated volume list should be empty.
     PersistedUserVolumeInfo updatedVolumeList =
         PersistedUserVolumeInfo.newBuilder()
-        .setObjectID(1).setUpdateID(1).build();
+            .setObjectID(1).setUpdateID(1).build();
     OMVolumeDeleteResponse omVolumeDeleteResponse =
         new OMVolumeDeleteResponse(omResponse, volumeName, userName,
             updatedVolumeList);
@@ -107,18 +78,17 @@ public class TestOMVolumeDeleteResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
-    Assert.assertNull(null,
-        omMetadataManager.getVolumeTable().get(
-            omMetadataManager.getVolumeKey(volumeName)));
+    assertNull(omMetadataManager.getVolumeTable().get(
+        omMetadataManager.getVolumeKey(volumeName)));
 
-    Assert.assertEquals(null,
-        omMetadataManager.getUserTable().get(
-            omMetadataManager.getUserKey(userName)));
+    assertNull(omMetadataManager.getUserTable().get(
+        omMetadataManager.getUserKey(userName)));
   }
 
   @Test
-  public void testAddToDBBatchNoOp() throws Exception {
-
+  public void testAddToDBBatchNoOp() {
+    OMMetadataManager omMetadataManager = getOmMetadataManager();
+    BatchOperation batchOperation = getBatchOperation();
     OMResponse omResponse = OMResponse.newBuilder()
         .setCmdType(OzoneManagerProtocolProtos.Type.DeleteVolume)
         .setStatus(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND)
@@ -128,15 +98,6 @@ public class TestOMVolumeDeleteResponse {
 
     OMVolumeDeleteResponse omVolumeDeleteResponse = new OMVolumeDeleteResponse(
         omResponse);
-
-    try {
-      omVolumeDeleteResponse.checkAndUpdateDB(omMetadataManager,
-          batchOperation);
-    } catch (IOException ex) {
-      fail("testAddToDBBatchFailure failed");
-    }
-
+    assertDoesNotThrow(() -> omVolumeDeleteResponse.checkAndUpdateDB(omMetadataManager, batchOperation));
   }
-
-
 }

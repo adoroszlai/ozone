@@ -52,6 +52,18 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=false
   assert_output -p needs-compose-tests=true
+  assert_output -p needs-dependency-check=true
+  assert_output -p needs-integration-tests=false
+  assert_output -p needs-kubernetes-tests=false
+}
+
+@test "dashboard only" {
+  run dev-support/ci/selective_ci_checks.sh 039dea9
+
+  assert_output -p 'basic-checks=["rat"]'
+  assert_output -p needs-build=false
+  assert_output -p needs-compile=false
+  assert_output -p needs-compose-tests=false
   assert_output -p needs-dependency-check=false
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=false
@@ -64,7 +76,7 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=false
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=true
 }
@@ -88,7 +100,7 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=false
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=true
 }
@@ -96,11 +108,11 @@ load bats-assert/load.bash
 @test "integration and unit: java change" {
   run dev-support/ci/selective_ci_checks.sh 9aebf6e25
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }
@@ -108,7 +120,7 @@ load bats-assert/load.bash
 @test "integration and unit: script change" {
   run dev-support/ci/selective_ci_checks.sh c6850484f
 
-  assert_output -p 'basic-checks=["rat","bats","unit"]'
+  assert_output -p 'basic-checks=["rat","bats"]'
   assert_output -p needs-build=false
   assert_output -p needs-compile=false
   assert_output -p needs-compose-tests=false
@@ -120,11 +132,11 @@ load bats-assert/load.bash
 @test "script change including junit.sh" {
   run dev-support/ci/selective_ci_checks.sh 66093e52c6
 
-  assert_output -p 'basic-checks=["rat","bats","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","bats","checkstyle","findbugs","native"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }
@@ -132,23 +144,23 @@ load bats-assert/load.bash
 @test "unit only" {
   run dev-support/ci/selective_ci_checks.sh 1dd1d0ba3
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
-  assert_output -p needs-integration-tests=false
+  assert_output -p needs-dependency-check=true
+  assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }
 
 @test "unit helper" {
   run dev-support/ci/selective_ci_checks.sh 88383d1d5
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }
@@ -160,7 +172,7 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }
@@ -172,19 +184,19 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=false
 }
 
 @test "native test in other module" {
-  run dev-support/ci/selective_ci_checks.sh 7d01cc14a6
+  run dev-support/ci/selective_ci_checks.sh 822c0dee1a
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","native","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","native"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=false
 }
@@ -196,7 +208,7 @@ load bats-assert/load.bash
   assert_output -p needs-build=true
   assert_output -p needs-compile=false
   assert_output -p needs-compose-tests=false
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
   assert_output -p needs-kubernetes-tests=true
 }
@@ -216,11 +228,11 @@ load bats-assert/load.bash
 @test "main/java change" {
   run dev-support/ci/selective_ci_checks.sh 86a771dfe
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=true
 }
@@ -228,11 +240,11 @@ load bats-assert/load.bash
 @test "..../java change" {
   run dev-support/ci/selective_ci_checks.sh 01c616536
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=true
 }
@@ -240,11 +252,11 @@ load bats-assert/load.bash
 @test "java and compose change" {
   run dev-support/ci/selective_ci_checks.sh d0f0f806e
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","findbugs","native"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=true
 }
@@ -252,11 +264,11 @@ load bats-assert/load.bash
 @test "java and docs change" {
   run dev-support/ci/selective_ci_checks.sh 2c0adac26
 
-  assert_output -p 'basic-checks=["rat","author","checkstyle","docs","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","author","checkstyle","docs","findbugs"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
-  assert_output -p needs-dependency-check=false
+  assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=true
 }
@@ -264,7 +276,7 @@ load bats-assert/load.bash
 @test "pom change" {
   run dev-support/ci/selective_ci_checks.sh 9129424a9
 
-  assert_output -p 'basic-checks=["rat","checkstyle","findbugs","unit"]'
+  assert_output -p 'basic-checks=["rat","checkstyle","findbugs","native"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
@@ -276,7 +288,7 @@ load bats-assert/load.bash
 @test "CI lib change" {
   run dev-support/ci/selective_ci_checks.sh ceb79acaa
 
-  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat","unit"]'
+  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
@@ -288,7 +300,7 @@ load bats-assert/load.bash
 @test "CI workflow change" {
   run dev-support/ci/selective_ci_checks.sh 90a8d7c01
 
-  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat","unit"]'
+  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
@@ -297,10 +309,23 @@ load bats-assert/load.bash
   assert_output -p needs-kubernetes-tests=true
 }
 
+@test "draft CI workflow change" {
+  export PR_DRAFT=true
+  run dev-support/ci/selective_ci_checks.sh 90fd5f2adc
+
+  assert_output -p 'basic-checks=[]'
+  assert_output -p needs-build=false
+  assert_output -p needs-compile=false
+  assert_output -p needs-compose-tests=false
+  assert_output -p needs-dependency-check=false
+  assert_output -p needs-integration-tests=false
+  assert_output -p needs-kubernetes-tests=false
+}
+
 @test "CI workflow change (ci.yaml)" {
   run dev-support/ci/selective_ci_checks.sh 90fd5f2adc
 
-  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat","unit"]'
+  assert_output -p 'basic-checks=["author","bats","checkstyle","docs","findbugs","native","rat"]'
   assert_output -p needs-build=true
   assert_output -p needs-compile=true
   assert_output -p needs-compose-tests=true
@@ -381,6 +406,18 @@ load bats-assert/load.bash
   assert_output -p needs-kubernetes-tests=false
 }
 
+@test "IntelliJ config" {
+  run dev-support/ci/selective_ci_checks.sh 92bf0913b6
+
+  assert_output -p 'basic-checks=["rat"]'
+  assert_output -p needs-build=false
+  assert_output -p needs-compile=false
+  assert_output -p needs-compose-tests=false
+  assert_output -p needs-dependency-check=false
+  assert_output -p needs-integration-tests=false
+  assert_output -p needs-kubernetes-tests=false
+}
+
 @test "dependency helper" {
   run dev-support/ci/selective_ci_checks.sh 47a5671cc5
 
@@ -390,5 +427,17 @@ load bats-assert/load.bash
   assert_output -p needs-compose-tests=false
   assert_output -p needs-dependency-check=true
   assert_output -p needs-integration-tests=false
+  assert_output -p needs-kubernetes-tests=false
+}
+
+@test "properties file in resources" {
+  run dev-support/ci/selective_ci_checks.sh 71b8bdd8becf72d6f7d4e7986895504b8259b3e5
+
+  assert_output -p 'basic-checks=["rat","checkstyle","native"]'
+  assert_output -p needs-build=false
+  assert_output -p needs-compile=false
+  assert_output -p needs-compose-tests=false
+  assert_output -p needs-dependency-check=false
+  assert_output -p needs-integration-tests=true
   assert_output -p needs-kubernetes-tests=false
 }

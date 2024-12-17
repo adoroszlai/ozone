@@ -15,15 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export COMPOSE_FILE=docker-compose.yaml:../common/hadoop.yaml
+extra_compose_file=hadoop.yaml
+if [[ ${SECURITY_ENABLED} == "true" ]]; then
+  extra_compose_file=hadoop-secure.yaml
+fi
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}":../common/${extra_compose_file}
+
+: ${HADOOP_IMAGE:="apache/hadoop"}
+: ${HADOOP_TEST_IMAGES:=""}
+
+if [[ -z "${HADOOP_TEST_IMAGES}" ]]; then
+  # hadoop2 and flokkr images are only available from Docker Hub
+  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} apache/hadoop:${hadoop2.version}"
+  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} flokkr/hadoop:3.1.2"
+  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.version}"
+fi
+
 export HADOOP_MAJOR_VERSION=3
-export HADOOP_VERSION=unused # will be set for each test version below
+export HADOOP_TEST_IMAGE="${HADOOP_IMAGE}:${hadoop.version}"
 export OZONE_REPLICATION_FACTOR=3
 
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
 start_docker_env
+
+if [[ ${SECURITY_ENABLED} == "true" ]]; then
+  execute_robot_test ${SCM} kinit.robot
+fi
 
 execute_robot_test ${SCM} createmrenv.robot
 
@@ -33,23 +52,25 @@ export OZONE_DIR=/opt/ozone
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
-for HADOOP_VERSION in 2.7.3 3.1.2 3.2.2 3.3.6; do
-  export HADOOP_VERSION
-  export HADOOP_MAJOR_VERSION=${HADOOP_VERSION%%.*}
-  # Check if $HADOOP_VERSION starts with the prefix "3.3."
-  if [[ $HADOOP_VERSION == 3.3.* ]]; then
-    export HADOOP_IMAGE=apache/hadoop
-  else
-    export HADOOP_IMAGE=flokkr/hadoop
-  fi
+for HADOOP_TEST_IMAGE in $HADOOP_TEST_IMAGES; do
+  export HADOOP_TEST_IMAGE
+  hadoop_version="${HADOOP_TEST_IMAGE##*:}"
+  export HADOOP_MAJOR_VERSION=${hadoop_version%%.*}
 
   docker-compose --ansi never --profile hadoop up -d nm rm
 
   execute_command_in_container rm hadoop version
 
+  if [[ ${SECURITY_ENABLED} == "true" ]]; then
+    execute_robot_test rm kinit-hadoop.robot
+  fi
+
   for scheme in o3fs ofs; do
-    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${HADOOP_VERSION}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
-    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${HADOOP_VERSION}-mapreduce-${scheme}" mapreduce.robot
+    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
+    # TODO secure MapReduce test is failing with 2.7 due to some token problem
+    if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
+      execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-mapreduce-${scheme}" mapreduce.robot
+    fi
   done
 
   save_container_logs nm rm

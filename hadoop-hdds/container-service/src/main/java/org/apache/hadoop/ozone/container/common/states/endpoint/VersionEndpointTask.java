@@ -17,11 +17,13 @@
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.DatanodeLayoutStorage;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.utils.StorageVolumeUtil;
 import org.apache.hadoop.ozone.container.common.volume.MutableVolumeSet;
@@ -87,6 +89,11 @@ public class VersionEndpointTask implements
           // Check HddsVolumes
           checkVolumeSet(ozoneContainer.getVolumeSet(), scmId, clusterId);
 
+          DatanodeLayoutStorage layoutStorage
+              = new DatanodeLayoutStorage(configuration);
+          layoutStorage.setClusterId(clusterId);
+          layoutStorage.persistCurrentState();
+
           // Start the container services after getting the version information
           ozoneContainer.start(clusterId);
         }
@@ -98,7 +105,7 @@ public class VersionEndpointTask implements
         LOG.debug("Cannot execute GetVersion task as endpoint state machine " +
             "is in {} state", rpcEndPoint.getState());
       }
-    } catch (DiskOutOfSpaceException ex) {
+    } catch (DiskOutOfSpaceException | BindException ex) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.SHUTDOWN);
     } catch (IOException ex) {
       rpcEndPoint.logIfNeeded(ex);

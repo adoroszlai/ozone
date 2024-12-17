@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.server.upgrade;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManager;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Class to initiate SCM finalization and query its progress.
@@ -53,6 +55,7 @@ public class FinalizationManagerImpl implements FinalizationManager {
   private OzoneConfiguration conf;
   private HDDSLayoutVersionManager versionManager;
   private final FinalizationStateManager finalizationStateManager;
+  private ThreadFactory threadFactory;
 
   /**
    * For test classes to inject their own state manager.
@@ -98,6 +101,11 @@ public class FinalizationManagerImpl implements FinalizationManager {
             .build();
 
     finalizationStateManager.setUpgradeContext(this.context);
+
+    String prefix = scmContext != null ? scmContext.threadNamePrefix() : "";
+    this.threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat(prefix + "FinalizationManager-%d")
+        .build();
   }
 
   @Override
@@ -150,7 +158,7 @@ public class FinalizationManagerImpl implements FinalizationManager {
   @Override
   public void onLeaderReady() {
     // Launch a background thread to drive finalization.
-    Executors.newSingleThreadExecutor().submit(() -> {
+    Executors.newSingleThreadExecutor(threadFactory).submit(() -> {
       FinalizationCheckpoint currentCheckpoint = getCheckpoint();
       if (currentCheckpoint.hasCrossed(
           FinalizationCheckpoint.FINALIZATION_STARTED) &&
@@ -175,7 +183,6 @@ public class FinalizationManagerImpl implements FinalizationManager {
   /**
    * Builds a {@link FinalizationManagerImpl}.
    */
-  @SuppressWarnings("checkstyle:hiddenfield")
   public static class Builder {
     private OzoneConfiguration conf;
     private HDDSLayoutVersionManager versionManager;
@@ -188,14 +195,14 @@ public class FinalizationManagerImpl implements FinalizationManager {
       executor = new DefaultUpgradeFinalizationExecutor<>();
     }
 
-    public Builder setConfiguration(OzoneConfiguration conf) {
-      this.conf = conf;
+    public Builder setConfiguration(OzoneConfiguration configuration) {
+      this.conf = configuration;
       return this;
     }
 
     public Builder setLayoutVersionManager(
-        HDDSLayoutVersionManager versionManager) {
-      this.versionManager = versionManager;
+        HDDSLayoutVersionManager layoutVersionManager) {
+      this.versionManager = layoutVersionManager;
       return this;
     }
 
@@ -204,8 +211,8 @@ public class FinalizationManagerImpl implements FinalizationManager {
       return this;
     }
 
-    public Builder setHAManager(SCMHAManager scmHAManager) {
-      this.scmHAManager = scmHAManager;
+    public Builder setHAManager(SCMHAManager haManager) {
+      this.scmHAManager = haManager;
       return this;
     }
 
@@ -216,8 +223,8 @@ public class FinalizationManagerImpl implements FinalizationManager {
     }
 
     public Builder setFinalizationExecutor(
-        UpgradeFinalizationExecutor<SCMUpgradeFinalizationContext> executor) {
-      this.executor = executor;
+        UpgradeFinalizationExecutor<SCMUpgradeFinalizationContext> finalizationExecutor) {
+      this.executor = finalizationExecutor;
       return this;
     }
 

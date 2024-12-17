@@ -32,9 +32,9 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.raftlog.RaftLog;
 import java.util.LinkedList;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -43,15 +43,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 
-import static org.apache.ozone.test.GenericTestUtils.getTempPath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test for HadoopNestedDirGenerator.
  */
 
 public class TestHadoopNestedDirGenerator {
-
-  private String path;
+  @TempDir
+  private java.nio.file.Path path;
   private OzoneConfiguration conf = null;
   private MiniOzoneCluster cluster = null;
   private ObjectStore store = null;
@@ -59,13 +59,10 @@ public class TestHadoopNestedDirGenerator {
           LoggerFactory.getLogger(TestHadoopNestedDirGenerator.class);
   private OzoneClient client;
 
-  @Before
+  @BeforeEach
     public void setup() {
-    path = getTempPath(TestHadoopNestedDirGenerator.class.getSimpleName());
     GenericTestUtils.setLogLevel(RaftLog.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(RaftServer.LOG, Level.DEBUG);
-    File baseDir = new File(path);
-    baseDir.mkdirs();
   }
 
     /**
@@ -76,7 +73,6 @@ public class TestHadoopNestedDirGenerator {
     IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
-      FileUtils.deleteDirectory(new File(path));
     }
   }
 
@@ -101,8 +97,7 @@ public class TestHadoopNestedDirGenerator {
     public void testNestedDirTreeGeneration() throws Exception {
     try {
       startCluster();
-      FileOutputStream out = FileUtils.openOutputStream(new File(path,
-              "conf"));
+      FileOutputStream out = FileUtils.openOutputStream(new File(path.toString(), "conf"));
       cluster.getConf().writeXml(out);
       out.getFD().sync();
       out.close();
@@ -128,7 +123,7 @@ public class TestHadoopNestedDirGenerator {
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
     String rootPath = "o3fs://" + bucketName + "." + volumeName;
-    String confPath = new File(path, "conf").getAbsolutePath();
+    String confPath = new File(path.toString(), "conf").getAbsolutePath();
     new Freon().execute(new String[]{"-conf", confPath, "ddsg", "-d",
         actualDepth + "", "-s", span + "", "-n", "1", "-r", rootPath});
     // verify the directory structure
@@ -142,8 +137,7 @@ public class TestHadoopNestedDirGenerator {
       // verify the num of peer directories and span directories
       p = depthBFS(fileSystem, fileStatuses, span, actualDepth);
       int actualSpan = spanCheck(fileSystem, span, p);
-      Assert.assertEquals("Mismatch span in a path",
-              span, actualSpan);
+      assertEquals(span, actualSpan, "Mismatch span in a path");
     }
   }
 
@@ -183,8 +177,7 @@ public class TestHadoopNestedDirGenerator {
         p = f.getPath().getParent();
       }
     }
-    Assert.assertEquals("Mismatch depth in a path",
-            depth, actualDepth);
+    assertEquals(depth, actualDepth, "Mismatch depth in a path");
     return p;
   }
 

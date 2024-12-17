@@ -49,9 +49,13 @@ import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPa
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequestWithFSO;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequestWithFSO;
+import org.apache.hadoop.ozone.om.request.s3.tagging.S3DeleteObjectTaggingRequest;
+import org.apache.hadoop.ozone.om.request.s3.tagging.S3DeleteObjectTaggingRequestWithFSO;
+import org.apache.hadoop.ozone.om.request.s3.tagging.S3PutObjectTaggingRequest;
+import org.apache.hadoop.ozone.om.request.s3.tagging.S3PutObjectTaggingRequestWithFSO;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
-import org.jetbrains.annotations.NotNull;
+import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,6 +195,23 @@ public final class BucketLayoutAwareOMKeyRequestFactory {
     addRequestClass(Type.SetTimes,
         OMKeySetTimesRequestWithFSO.class,
         BucketLayout.FILE_SYSTEM_OPTIMIZED);
+
+    // PutObjectTagging
+    addRequestClass(Type.PutObjectTagging,
+        S3PutObjectTaggingRequest.class,
+        BucketLayout.OBJECT_STORE);
+    addRequestClass(Type.PutObjectTagging,
+        S3PutObjectTaggingRequestWithFSO.class,
+        BucketLayout.FILE_SYSTEM_OPTIMIZED);
+
+    // DeleteObjectTagging
+    addRequestClass(Type.DeleteObjectTagging,
+        S3DeleteObjectTaggingRequest.class,
+        BucketLayout.OBJECT_STORE);
+    addRequestClass(Type.DeleteObjectTagging,
+        S3DeleteObjectTaggingRequestWithFSO.class,
+        BucketLayout.FILE_SYSTEM_OPTIMIZED);
+
   }
 
   private BucketLayoutAwareOMKeyRequestFactory() {
@@ -294,7 +315,7 @@ public final class BucketLayoutAwareOMKeyRequestFactory {
    * @throws InvocationTargetException if the request class constructor throws
    *                                   an exception.
    */
-  @NotNull
+  @Nonnull
   static OMKeyRequest getRequestInstanceFromMap(OMRequest omRequest,
                                                 String classKey,
                                                 BucketLayout bucketLayout)

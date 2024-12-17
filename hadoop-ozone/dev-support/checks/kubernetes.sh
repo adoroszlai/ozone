@@ -35,8 +35,9 @@ else
 fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/kubernetes"}
+REPORT_FILE="$REPORT_DIR/summary.txt"
 
-OZONE_VERSION=$(mvn help:evaluate -Dexpression=ozone.version -q -DforceStdout)
+OZONE_VERSION=$(mvn help:evaluate -Dexpression=ozone.version -q -DforceStdout -Dscan=false)
 DIST_DIR="$DIR/../../dist/target/ozone-$OZONE_VERSION"
 
 if [ ! -d "$DIST_DIR" ]; then
@@ -48,7 +49,10 @@ mkdir -p "$REPORT_DIR"
 
 cd "$DIST_DIR/kubernetes/examples" || exit 1
 ./test-all.sh 2>&1 | tee "${REPORT_DIR}/output.log"
-RES=$?
+rc=$?
 cp -r result/* "$REPORT_DIR/"
-cp "$REPORT_DIR/log.html" "$REPORT_DIR/summary.html"
-exit $RES
+
+grep -A1 FAIL "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
+
+ERROR_PATTERN="FAIL"
+source "${DIR}/_post_process.sh"

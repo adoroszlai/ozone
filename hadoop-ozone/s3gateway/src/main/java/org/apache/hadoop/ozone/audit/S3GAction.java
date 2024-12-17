@@ -36,6 +36,7 @@ public enum S3GAction implements AuditAction {
 
   //ObjectEndpoint
   CREATE_MULTIPART_KEY,
+  CREATE_MULTIPART_KEY_BY_COPY,
   COPY_OBJECT,
   CREATE_KEY,
   LIST_PARTS,
@@ -47,7 +48,11 @@ public enum S3GAction implements AuditAction {
   DELETE_KEY,
   CREATE_DIRECTORY,
   GENERATE_SECRET,
-  REVOKE_SECRET;
+  REVOKE_SECRET,
+  GET_OBJECT_TAGGING,
+  PUT_OBJECT_TAGGING,
+  DELETE_OBJECT_TAGGING,
+  PUT_OBJECT_ACL;
 
   @Override
   public String getAction() {

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.cert.X509Certificate;
-import java.util.function.IntFunction;
 
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
@@ -33,7 +32,7 @@ import org.apache.hadoop.hdds.utils.db.CodecBuffer;
 import org.apache.hadoop.hdds.utils.io.LengthOutputStream;
 import org.apache.ratis.util.function.CheckedFunction;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Codec to serialize/deserialize {@link X509Certificate}.
@@ -53,6 +52,11 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
   }
 
   @Override
+  public Class<X509Certificate> getTypeClass() {
+    return X509Certificate.class;
+  }
+
+  @Override
   public boolean supportCodecBuffer() {
     return true;
   }
@@ -65,7 +69,7 @@ public final class X509CertificateCodec implements Codec<X509Certificate> {
 
   @Override
   public CodecBuffer toCodecBuffer(@Nonnull X509Certificate object,
-      IntFunction<CodecBuffer> allocator) throws IOException {
+      CodecBuffer.Allocator allocator) throws IOException {
     return allocator.apply(-INITIAL_CAPACITY).put(writeTo(object));
   }
 

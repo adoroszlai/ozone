@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.common;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -28,14 +27,29 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.apache.hadoop.ozone.common.utils.BufferUtils;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.UncheckedAutoCloseable;
 
 /** {@link ChunkBuffer} implementation using a single {@link ByteBuffer}. */
 final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
   private final ByteBuffer buffer;
+  private final UncheckedAutoCloseable underlying;
 
   ChunkBufferImplWithByteBuffer(ByteBuffer buffer) {
+    this(buffer, null);
+  }
+
+  ChunkBufferImplWithByteBuffer(ByteBuffer buffer, UncheckedAutoCloseable underlying) {
     this.buffer = Objects.requireNonNull(buffer, "buffer == null");
+    this.underlying = underlying;
+  }
+
+  @Override
+  public void close() {
+    if (underlying != null) {
+      underlying.close();
+    }
   }
 
   @Override
@@ -89,7 +103,7 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
 
   @Override
   public long writeTo(GatheringByteChannel channel) throws IOException {
-    return channel.write(buffer);
+    return BufferUtils.writeFully(channel, buffer);
   }
 
   @Override
@@ -125,7 +139,7 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
   @Override
   public List<ByteString> toByteStringListImpl(
       Function<ByteBuffer, ByteString> f) {
-    return Arrays.asList(f.apply(buffer));
+    return Collections.singletonList(f.apply(buffer));
   }
 
   @Override
@@ -148,6 +162,6 @@ final class ChunkBufferImplWithByteBuffer implements ChunkBuffer {
   @Override
   public String toString() {
     return getClass().getSimpleName() + ":limit=" + buffer.limit()
-        + "@" + Integer.toHexString(hashCode());
+        + "@" + Integer.toHexString(super.hashCode());
   }
 }

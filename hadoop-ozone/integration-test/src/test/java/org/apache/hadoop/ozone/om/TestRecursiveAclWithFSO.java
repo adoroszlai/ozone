@@ -32,10 +32,10 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
+import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.ozone.test.tag.Flaky;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,9 +52,10 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS_NATIVE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test recursive acl checks for delete and rename for FSO Buckets.
@@ -70,6 +71,8 @@ public class TestRecursiveAclWithFSO {
       .createUserForTesting("user1", new String[] {"test1"});
   private final UserGroupInformation user2 = UserGroupInformation
       .createUserForTesting("user2", new String[] {"test2"});
+  private final UserGroupInformation user3 = UserGroupInformation
+      .createUserForTesting("user3", new String[] {"test3, test4"});
 
   @BeforeEach
   public void init() throws Exception {
@@ -82,7 +85,6 @@ public class TestRecursiveAclWithFSO {
   }
 
   @Test
-  @Flaky("HDDS-8092")
   public void testKeyDeleteAndRenameWithoutPermission() throws Exception {
     /* r = READ, w = WRITE, c = CREATE, d = DELETE
        l = LIST, a = ALL, n = NONE, x = READ_ACL, y = WRITE_ACL */
@@ -170,23 +172,17 @@ public class TestRecursiveAclWithFSO {
       OzoneBucket ozoneBucket = volume.getBucket("bucket1");
 
       // perform  delete
-      try {
-        ozoneBucket.deleteDirectory("a/b2", true);
-        fail("Should throw permission denied !");
-      } catch (OMException ome) {
-        // expect permission error
-        assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
-            ome.getResult(), "Permission check failed");
-      }
+      OMException e =
+          assertThrows(OMException.class, () -> ozoneBucket.deleteDirectory("a/b2", true));
+      // expect permission error
+      assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
+          e.getResult(), "Permission check failed");
+
       // perform rename
-      try {
-        ozoneBucket.renameKey("a/b2", "a/b2_renamed");
-        fail("Should throw permission denied !");
-      } catch (OMException ome) {
-        // expect permission error
-        assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
-            ome.getResult(), "Permission check failed");
-      }
+      e = assertThrows(OMException.class, () -> ozoneBucket.renameKey("a/b2", "a/b2_renamed"));
+      // expect permission error
+      assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
+          e.getResult(), "Permission check failed");
 
       // Test case 2
       // Remove acl from directory c2, delete/rename a/b1 should throw
@@ -202,35 +198,87 @@ public class TestRecursiveAclWithFSO {
 
       UserGroupInformation.setLoginUser(user2);
       // perform  delete
-      try {
-        ozoneBucket.deleteDirectory("a/b1", true);
-        fail("Should throw permission denied !");
-      } catch (OMException ome) {
-        // expect permission error
-        assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
-            ome.getResult(), "Permission check failed");
-      }
+      e = assertThrows(OMException.class, () -> ozoneBucket.deleteDirectory("a/b1", true));
+      // expect permission error
+      assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
+          e.getResult(), "Permission check failed");
 
       // perform rename
-      try {
-        ozoneBucket.renameKey("a/b1", "a/b1_renamed");
-        fail("Should throw permission denied !");
-      } catch (OMException ome) {
-        // expect permission error
-        assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
-            ome.getResult(), "Permission check failed");
-      }
+      e = assertThrows(OMException.class, () -> ozoneBucket.renameKey("a/b1", "a/b1_renamed"));
+      // expect permission error
+      assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
+          e.getResult(), "Permission check failed");
 
       // Test case 3
       // delete b3 and this should throw exception because user2 has no acls
-      try {
-        ozoneBucket.deleteDirectory("a/b3", true);
-        fail("Should throw permission denied !");
-      } catch (OMException ome) {
-        // expect permission error
-        assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
-            ome.getResult(), "Permission check failed");
-      }
+      e = assertThrows(OMException.class, () -> ozoneBucket.deleteDirectory("a/b3", true));
+      // expect permission error
+      assertEquals(OMException.ResultCodes.PERMISSION_DENIED,
+          e.getResult(), "Permission check failed");
+    }
+  }
+
+  @Test
+  public void testKeyDefaultACL() throws Exception {
+    String volumeName = "vol1";
+    try (OzoneClient client = cluster.newClient()) {
+      ObjectStore objectStore = client.getObjectStore();
+      objectStore.createVolume(volumeName);
+      addVolumeAcl(objectStore, volumeName, "world::a");
+
+      // verify volume ACLs. This volume will have 2 default ACLs, plus above one added
+      OzoneObj obj = OzoneObjInfo.Builder.newBuilder().setVolumeName(volumeName)
+          .setResType(OzoneObj.ResourceType.VOLUME)
+          .setStoreType(OZONE).build();
+      List<OzoneAcl> acls = objectStore.getAcl(obj);
+      assertEquals(3, acls.size());
+      assertEquals(adminUser.getShortUserName(), acls.get(0).getName());
+      OzoneAclConfig aclConfig = cluster.getConf().getObject(OzoneAclConfig.class);
+      assertArrayEquals(aclConfig.getUserDefaultRights(), acls.get(0).getAclList().toArray());
+      assertEquals(adminUser.getPrimaryGroupName(), acls.get(1).getName());
+      assertArrayEquals(aclConfig.getGroupDefaultRights(), acls.get(1).getAclList().toArray());
+      assertEquals("WORLD", acls.get(2).getName());
+      assertArrayEquals(aclConfig.getUserDefaultRights(), acls.get(2).getAclList().toArray());
+    }
+
+    // set LoginUser as user3
+    UserGroupInformation.setLoginUser(user3);
+    try (OzoneClient client = cluster.newClient()) {
+      ObjectStore objectStore = client.getObjectStore();
+      OzoneVolume volume = objectStore.getVolume(volumeName);
+      BucketArgs omBucketArgs =
+          BucketArgs.newBuilder().setStorageType(StorageType.DISK).build();
+      String bucketName = "bucket";
+      volume.createBucket(bucketName, omBucketArgs);
+      OzoneBucket ozoneBucket = volume.getBucket(bucketName);
+
+      // verify bucket default ACLs
+      OzoneObj obj = OzoneObjInfo.Builder.newBuilder().setVolumeName(volume.getName())
+          .setBucketName(ozoneBucket.getName()).setResType(OzoneObj.ResourceType.BUCKET)
+          .setStoreType(OZONE).build();
+      List<OzoneAcl> acls = objectStore.getAcl(obj);
+      assertEquals(2, acls.size());
+      assertEquals(user3.getShortUserName(), acls.get(0).getName());
+      OzoneAclConfig aclConfig = cluster.getConf().getObject(OzoneAclConfig.class);
+      assertArrayEquals(aclConfig.getUserDefaultRights(), acls.get(0).getAclList().toArray());
+      assertEquals(user3.getPrimaryGroupName(), acls.get(1).getName());
+      assertArrayEquals(aclConfig.getGroupDefaultRights(), acls.get(1).getAclList().toArray());
+
+      // verify key default ACLs
+      int length = 10;
+      byte[] input = new byte[length];
+      Arrays.fill(input, (byte) 96);
+      String keyName = UUID.randomUUID().toString();
+      createKey(ozoneBucket, keyName, length, input);
+      obj = OzoneObjInfo.Builder.newBuilder().setVolumeName(volume.getName())
+          .setBucketName(ozoneBucket.getName()).setKeyName(keyName)
+          .setResType(OzoneObj.ResourceType.KEY).setStoreType(OZONE).build();
+      acls = objectStore.getAcl(obj);
+      assertEquals(2, acls.size());
+      assertEquals(user3.getShortUserName(), acls.get(0).getName());
+      assertArrayEquals(aclConfig.getUserDefaultRights(), acls.get(0).getAclList().toArray());
+      assertEquals(user3.getPrimaryGroupName(), acls.get(1).getName());
+      assertArrayEquals(aclConfig.getGroupDefaultRights(), acls.get(1).getAclList().toArray());
     }
   }
 
@@ -253,9 +301,6 @@ public class TestRecursiveAclWithFSO {
   private void startCluster() throws Exception {
 
     OzoneConfiguration conf = new OzoneConfiguration();
-    String clusterId = UUID.randomUUID().toString();
-    String scmId = UUID.randomUUID().toString();
-    String omId = UUID.randomUUID().toString();
 
     // Use native impl here, default impl doesn't do actual checks
     conf.set(OZONE_ACL_AUTHORIZER_CLASS, OZONE_ACL_AUTHORIZER_CLASS_NATIVE);
@@ -264,9 +309,7 @@ public class TestRecursiveAclWithFSO {
 
     OMRequestTestUtils.configureFSOptimizedPaths(conf, true);
 
-    cluster =
-        MiniOzoneCluster.newBuilder(conf).setClusterId(clusterId)
-            .setScmId(scmId).setOmId(omId).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
 
   }
@@ -295,6 +338,16 @@ public class TestRecursiveAclWithFSO {
     OzoneObj obj = OzoneObjInfo.Builder.newBuilder().setVolumeName(volumeName)
         .setResType(OzoneObj.ResourceType.VOLUME).setStoreType(OZONE).build();
     assertTrue(objectStore.setAcl(obj, OzoneAcl.parseAcls(aclString)));
+  }
+
+  /**
+   * Helper function to add volume ACL.
+   */
+  private void addVolumeAcl(ObjectStore objectStore, String volumeName,
+      String aclString) throws IOException {
+    OzoneObj obj = OzoneObjInfo.Builder.newBuilder().setVolumeName(volumeName)
+        .setResType(OzoneObj.ResourceType.VOLUME).setStoreType(OZONE).build();
+    assertTrue(objectStore.addAcl(obj, OzoneAcl.parseAcl(aclString)));
   }
 
   /**

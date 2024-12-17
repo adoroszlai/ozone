@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.transport.server;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -96,11 +96,11 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
 
     this.id = datanodeDetails.getUuid();
     this.datanodeDetails = datanodeDetails;
-    this.port = conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    this.port = conf.getInt(OzoneConfigKeys.HDDS_CONTAINER_IPC_PORT,
+        OzoneConfigKeys.HDDS_CONTAINER_IPC_PORT_DEFAULT);
 
-    if (conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
-        OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
+    if (conf.getBoolean(OzoneConfigKeys.HDDS_CONTAINER_IPC_RANDOM_PORT,
+        OzoneConfigKeys.HDDS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
       this.port = 0;
     }
 
@@ -114,11 +114,14 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(),
         new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("ChunkReader-%d")
+            .setNameFormat(datanodeDetails.threadNamePrefix() +
+                "ChunkReader-%d")
             .build());
 
-    ThreadFactory factory = new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("ChunkReader-ELG-%d")
+    ThreadFactory factory = new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat(datanodeDetails.threadNamePrefix() +
+            "ChunkReader-ELG-%d")
         .build();
 
     if (Epoll.isAvailable()) {
@@ -130,6 +133,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
     }
 
     LOG.info("GrpcServer channel type {}", channelType.getSimpleName());
+    GrpcXceiverService xceiverService = new GrpcXceiverService(dispatcher);
     NettyServerBuilder nettyServerBuilder = NettyServerBuilder.forPort(port)
         .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
         .bossEventLoopGroup(eventLoopGroup)
@@ -137,13 +141,14 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         .channelType(channelType)
         .executor(readExecutors)
         .addService(ServerInterceptors.intercept(
-            new GrpcXceiverService(dispatcher), new GrpcServerInterceptor()));
+            xceiverService.bindServiceWithZeroCopy(),
+            new GrpcServerInterceptor()));
 
     SecurityConfig secConf = new SecurityConfig(conf);
     if (secConf.isSecurityEnabled() && secConf.isGrpcTlsEnabled()) {
       try {
         SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(
-            caClient.getServerKeyStoresFactory().getKeyManagers()[0]);
+            caClient.getKeyManager());
         SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
             sslClientContextBuilder, secConf.getGrpcSslProvider());
         nettyServerBuilder.sslContext(sslContextBuilder.build());
@@ -173,7 +178,16 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
   @Override
   public void start() throws IOException {
     if (!isStarted) {
-      server.start();
+      try {
+        server.start();
+      } catch (IOException e) {
+        LOG.error("Error while starting the server", e);
+        if (e.getMessage().contains("Failed to bind to address")) {
+          throw new BindException(e.getMessage());
+        } else {
+          throw e;
+        }
+      }
       int realPort = server.getPort();
 
       if (port == 0) {
@@ -183,9 +197,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
       }
 
       //register the real port to the datanode details.
-      datanodeDetails.setPort(DatanodeDetails
-          .newPort(Name.STANDALONE,
-              realPort));
+      datanodeDetails.setPort(DatanodeDetails.newStandalonePort(realPort));
 
       isStarted = true;
     }

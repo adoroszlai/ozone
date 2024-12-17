@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.ozone.s3.exception.S3ErrorTable.MALFORMED_HEADER;
 
 /**
- * Parser to process AWS V2 & V4 auth request. Creates string to sign and auth
+ * Parser to process AWS V2 and V4 auth request. Creates string to sign and auth
  * header. For more details refer to AWS documentation https://docs.aws
  * .amazon.com/general/latest/gr/sigv4-create-canonical-request.html.
  **/
@@ -95,6 +95,8 @@ public class AWSSignatureProcessor implements SignatureProcessor {
           "", "", "", "", "", "", "", false
       );
     }
+    signatureInfo.setUnfilteredURI(
+        context.getUriInfo().getRequestUri().getPath());
     return signatureInfo;
   }
 

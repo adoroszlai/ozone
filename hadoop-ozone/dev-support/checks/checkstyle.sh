@@ -13,6 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+#checks:basic
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
@@ -21,24 +24,25 @@ REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/checkstyle"}
 mkdir -p "$REPORT_DIR"
 REPORT_FILE="$REPORT_DIR/summary.txt"
 
-MAVEN_OPTIONS='-B -fae -Dskip.npx -Dskip.installnpx -Dcheckstyle.failOnViolation=false --no-transfer-progress'
+MAVEN_OPTIONS='-B -fae -DskipRecon -Dcheckstyle.failOnViolation=false --no-transfer-progress'
 
 declare -i rc
 mvn ${MAVEN_OPTIONS} checkstyle:check > "${REPORT_DIR}/output.log"
 rc=$?
 if [[ ${rc} -ne 0 ]]; then
-  mvn ${MAVEN_OPTIONS} clean test-compile checkstyle:check
+  mvn ${MAVEN_OPTIONS} clean test-compile checkstyle:check > output.log
   rc=$?
   mkdir -p "$REPORT_DIR" # removed by mvn clean
-else
-  cat "${REPORT_DIR}/output.log"
+  mv output.log "${REPORT_DIR}"/
 fi
+
+cat "${REPORT_DIR}/output.log"
 
 #Print out the exact violations with parsing XML results with sed
 find "." -name checkstyle-errors.xml -print0 \
   | xargs -0 sed '$!N; /<file.*\n<\/file/d;P;D' \
   | sed \
-      -e '/<\?xml.*>/d' \
+      -e '/<?xml.*>/d' \
       -e '/<checkstyle.*/d' \
       -e '/<\/.*/d' \
       -e 's/<file name="\([^"]*\)".*/\1/' \
@@ -52,7 +56,5 @@ find "." -name checkstyle-errors.xml -print0 \
 ## generate counter
 grep -c ':' "$REPORT_FILE" > "$REPORT_DIR/failures"
 
-if [[ -s "${REPORT_FILE}" ]]; then
-   exit 1
-fi
-exit ${rc}
+ERROR_PATTERN="\[ERROR\]"
+source "${DIR}/_post_process.sh"

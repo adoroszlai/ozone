@@ -102,14 +102,15 @@ public class OmKeyGenerator extends BaseFreonGenerator
 
   private void createKey(long counter) throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String ownerName = ugi.getShortUserName();
     OmKeyArgs keyArgs = new Builder()
         .setBucketName(bucketName)
         .setVolumeName(volumeName)
         .setKeyName(generateObjectName(counter))
         .setReplicationConfig(replicationConfig)
         .setLocationInfoList(new ArrayList<>())
-        .setAcls(OzoneAclUtil.getAclList(ugi.getUserName(), ugi.getGroupNames(),
-            ALL, ALL))
+        .setAcls(OzoneAclUtil.getAclList(ugi, ALL, ALL))
+        .setOwnerName(ownerName)
         .build();
 
     timer.time(() -> {

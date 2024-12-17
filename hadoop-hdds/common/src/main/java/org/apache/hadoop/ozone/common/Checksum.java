@@ -67,7 +67,7 @@ public class Checksum {
   private static Function<ByteBuffer, ByteString> newChecksumByteBufferFunction(
       Supplier<ChecksumByteBuffer> constructor) {
     final ChecksumByteBuffer algorithm = constructor.get();
-    return  data -> {
+    return data -> {
       algorithm.reset();
       algorithm.update(data);
       return int2ByteString((int)algorithm.getValue());
@@ -101,6 +101,23 @@ public class Checksum {
 
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
+  /**
+   * Caches computeChecksum() result when requested.
+   * This must be manually cleared when a new block chunk has been started.
+   */
+  private final ChecksumCache checksumCache;
+
+  /**
+   * BlockOutputStream needs to call this method to clear the checksum cache
+   * whenever a block chunk has been established.
+   */
+  public boolean clearChecksumCache() {
+    if (checksumCache != null) {
+      checksumCache.clear();
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Constructs a Checksum object.
@@ -110,6 +127,24 @@ public class Checksum {
   public Checksum(ChecksumType type, int bytesPerChecksum) {
     this.checksumType = type;
     this.bytesPerChecksum = bytesPerChecksum;
+    this.checksumCache = null;
+  }
+
+  /**
+   * Constructs a Checksum object.
+   * @param type type of Checksum
+   * @param bytesPerChecksum number of bytes of data per checksum
+   * @param allowChecksumCache true to enable checksum cache
+   */
+  public Checksum(ChecksumType type, int bytesPerChecksum, boolean allowChecksumCache) {
+    this.checksumType = type;
+    this.bytesPerChecksum = bytesPerChecksum;
+    LOG.debug("allowChecksumCache = {}", allowChecksumCache);
+    if (allowChecksumCache) {
+      this.checksumCache = new ChecksumCache(bytesPerChecksum);
+    } else {
+      this.checksumCache = null;
+    }
   }
 
   /**
@@ -133,12 +168,24 @@ public class Checksum {
   }
 
   /**
+   * The default implementation of computeChecksum(ByteBuffer) that does not use cache, even if cache is initialized.
+   * This is a stop-gap solution before the protocol change.
+   * @param data ByteBuffer
+   * @return ChecksumData
+   * @throws OzoneChecksumException
+   */
+  public ChecksumData computeChecksum(ByteBuffer data)
+      throws OzoneChecksumException {
+    return computeChecksum(data, false);
+  }
+
+  /**
    * Computes checksum for give data.
    * @param data input data.
    * @return ChecksumData computed for input data.
    * @throws OzoneChecksumException thrown when ChecksumType is not recognized
    */
-  public ChecksumData computeChecksum(ByteBuffer data)
+  public ChecksumData computeChecksum(ByteBuffer data, boolean useChecksumCache)
       throws OzoneChecksumException {
     // If type is set to NONE, we do not need to compute the checksums. We also
     // need to avoid unnecessary conversions.
@@ -148,7 +195,7 @@ public class Checksum {
     if (!data.isReadOnly()) {
       data = data.asReadOnlyBuffer();
     }
-    return computeChecksum(ChunkBuffer.wrap(data));
+    return computeChecksum(ChunkBuffer.wrap(data), useChecksumCache);
   }
 
   public ChecksumData computeChecksum(List<ByteString> byteStrings)
@@ -158,7 +205,19 @@ public class Checksum {
     return computeChecksum(ChunkBuffer.wrap(buffers));
   }
 
+  /**
+   * The default implementation of computeChecksum(ChunkBuffer) that does not use cache, even if cache is initialized.
+   * This is a stop-gap solution before the protocol change.
+   * @param data ChunkBuffer
+   * @return ChecksumData
+   * @throws OzoneChecksumException
+   */
   public ChecksumData computeChecksum(ChunkBuffer data)
+      throws OzoneChecksumException {
+    return computeChecksum(data, false);
+  }
+
+  public ChecksumData computeChecksum(ChunkBuffer data, boolean useCache)
       throws OzoneChecksumException {
     if (checksumType == ChecksumType.NONE) {
       // Since type is set to NONE, we do not need to compute the checksums
@@ -172,12 +231,20 @@ public class Checksum {
       throw new OzoneChecksumException(checksumType);
     }
 
-    // Checksum is computed for each bytesPerChecksum number of bytes of data
-    // starting at offset 0. The last checksum might be computed for the
-    // remaining data with length less than bytesPerChecksum.
-    final List<ByteString> checksumList = new ArrayList<>();
-    for (ByteBuffer b : data.iterate(bytesPerChecksum)) {
-      checksumList.add(computeChecksum(b, function, bytesPerChecksum));
+    final List<ByteString> checksumList;
+    if (checksumCache == null || !useCache) {
+      // When checksumCache is not enabled:
+      // Checksum is computed for each bytesPerChecksum number of bytes of data
+      // starting at offset 0. The last checksum might be computed for the
+      // remaining data with length less than bytesPerChecksum.
+      checksumList = new ArrayList<>();
+      for (ByteBuffer b : data.iterate(bytesPerChecksum)) {
+        checksumList.add(computeChecksum(b, function, bytesPerChecksum));  // merge this?
+      }
+    } else {
+      // When checksumCache is enabled:
+      // We only need to update the last checksum in the cache, then pass it along.
+      checksumList = checksumCache.computeChecksum(data, function);
     }
     return new ChecksumData(checksumType, bytesPerChecksum, checksumList);
   }
@@ -189,7 +256,7 @@ public class Checksum {
    * @param maxLength the max length of data
    * @return computed checksum ByteString
    */
-  private static ByteString computeChecksum(ByteBuffer data,
+  protected static ByteString computeChecksum(ByteBuffer data,
       Function<ByteBuffer, ByteString> function, int maxLength) {
     final int limit = data.limit();
     try {
@@ -231,6 +298,11 @@ public class Checksum {
     return verifyChecksum(ByteBuffer.wrap(data), checksumData, 0);
   }
 
+  private static boolean verifyChecksum(ByteBuffer data,
+      ChecksumData checksumData, int startIndex) throws OzoneChecksumException {
+    return verifyChecksum(ChunkBuffer.wrap(data), checksumData, startIndex);
+  }
+
   /**
    * Computes the ChecksumData for the input data and verifies that it
    * matches with that of the input checksumData.
@@ -240,7 +312,7 @@ public class Checksum {
    *                   data's computed checksum.
    * @throws OzoneChecksumException is thrown if checksums do not match
    */
-  private static boolean verifyChecksum(ByteBuffer data,
+  public static boolean verifyChecksum(ChunkBuffer data,
       ChecksumData checksumData,
       int startIndex) throws OzoneChecksumException {
     ChecksumType checksumType = checksumData.getChecksumType();

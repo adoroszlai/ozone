@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#checks:basic
+
 set -u -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -31,10 +33,5 @@ rc=$?
 
 grep -o 'ERROR.*' "${REPORT_DIR}/output.log" > "${REPORT_FILE}"
 
-wc -l "${REPORT_FILE}" | awk '{ print $1 }' > "${REPORT_DIR}/failures"
-
-if [[ -s "${REPORT_FILE}" ]]; then
-   exit 1
-fi
-
-exit ${rc}
+ERROR_PATTERN=""
+source "${DIR}/_post_process.sh"

@@ -17,7 +17,10 @@
 
 start_docker_env 5
 
-execute_robot_test scm -v BUCKET:erasure s3
+## Exclude virtual-host tests. This is tested separately as it requires additional config.
+execute_robot_test scm -v BUCKET:erasure --exclude virtual-host s3
+
+execute_robot_test scm ec/rewrite.robot
 
 prefix=${RANDOM}
 execute_robot_test scm -v PREFIX:${prefix} ec/basic.robot

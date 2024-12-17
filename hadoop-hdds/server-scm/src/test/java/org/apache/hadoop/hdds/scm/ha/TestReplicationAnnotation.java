@@ -23,16 +23,21 @@ import org.apache.hadoop.hdds.scm.AddSCMRequest;
 import org.apache.hadoop.hdds.scm.RemoveSCMRequest;
 import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.ratis.grpc.GrpcTlsConfig;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
 import org.apache.ratis.server.RaftServer;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests on {@link org.apache.hadoop.hdds.scm.metadata.Replicate}.
@@ -108,6 +113,11 @@ public class TestReplicationAnnotation {
       public GrpcTlsConfig getGrpcTlsConfig() {
         return null;
       }
+
+      @Override
+      public RaftPeerId getLeaderId() {
+        return RaftPeerId.valueOf(UUID.randomUUID().toString());
+      }
     };
   }
 
@@ -122,13 +132,10 @@ public class TestReplicationAnnotation {
             SCMHAInvocationHandler.class.getClassLoader(),
             new Class<?>[]{ContainerStateManager.class},
             scmhaInvocationHandler);
-
-    try {
-      proxy.addContainer(HddsProtos.ContainerInfoProto.getDefaultInstance());
-      Assertions.fail("Cannot reach here: should have seen a IOException");
-    } catch (IOException e) {
-      Assertions.assertNotNull(e.getMessage());
-      Assertions.assertTrue(e.getMessage().contains("submitRequest is called"));
-    }
+    IOException e =
+        assertThrows(IOException.class,
+            () -> proxy.addContainer(HddsProtos.ContainerInfoProto.getDefaultInstance()));
+    assertNotNull(e.getMessage());
+    assertThat(e.getMessage()).contains("submitRequest is called");
   }
 }

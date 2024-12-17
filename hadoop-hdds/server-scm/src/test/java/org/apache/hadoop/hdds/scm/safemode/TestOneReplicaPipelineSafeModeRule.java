@@ -35,6 +35,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
@@ -53,10 +54,13 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.ozone.test.GenericTestUtils;
 
 import org.apache.ozone.test.TestClock;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This class tests OneReplicaPipelineSafeModeRule.
@@ -85,7 +89,8 @@ public class TestOneReplicaPipelineSafeModeRule {
     List<ContainerInfo> containers = new ArrayList<>();
     containers.addAll(HddsTestUtils.getContainerInfo(1));
     mockNodeManager = new MockNodeManager(true, nodes);
-
+    ContainerManager containerManager = mock(ContainerManager.class);
+    when(containerManager.getContainers()).thenReturn(containers);
     eventQueue = new EventQueue();
     serviceManager = new SCMServiceManager();
     scmContext = SCMContext.emptyContext();
@@ -115,7 +120,7 @@ public class TestOneReplicaPipelineSafeModeRule {
         HddsProtos.ReplicationFactor.ONE);
 
     SCMSafeModeManager scmSafeModeManager =
-        new SCMSafeModeManager(ozoneConfiguration, containers, null,
+        new SCMSafeModeManager(ozoneConfiguration, containers, containerManager,
             pipelineManager, eventQueue, serviceManager, scmContext);
 
     rule = scmSafeModeManager.getOneReplicaPipelineSafeModeRule();
@@ -145,7 +150,7 @@ public class TestOneReplicaPipelineSafeModeRule {
     GenericTestUtils.waitFor(() -> logCapturer.getOutput().contains(
         "reported count is 6"), 1000, 5000);
 
-    Assertions.assertFalse(rule.validate());
+    assertFalse(rule.validate());
 
     //Fire last pipeline event from datanode.
     firePipelineEvent(pipelines.subList(pipelineFactorThreeCount - 1,
@@ -179,7 +184,7 @@ public class TestOneReplicaPipelineSafeModeRule {
         "reported count is 0"), 1000, 5000);
 
     // fired events for one node ratis pipeline, so we will be still false.
-    Assertions.assertFalse(rule.validate());
+    assertFalse(rule.validate());
 
     pipelines =
         pipelineManager.getPipelines(

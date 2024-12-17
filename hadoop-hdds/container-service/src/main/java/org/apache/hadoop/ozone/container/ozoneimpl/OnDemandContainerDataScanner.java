@@ -37,6 +37,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.ozone.container.common.interfaces.Container.ScanResult.FailureType.DELETED_CONTAINER;
+
 /**
  * Class for performing on demand scans of containers.
  */
@@ -78,6 +80,9 @@ public final class OnDemandContainerDataScanner {
   }
 
   private static boolean shouldScan(Container<?> container) {
+    if (container == null) {
+      return false;
+    }
     long containerID = container.getContainerData().getContainerID();
     if (instance == null) {
       LOG.debug("Skipping on demand scan for container {} since scanner was " +
@@ -133,6 +138,12 @@ public final class OnDemandContainerDataScanner {
 
       ScanResult result =
           container.scanData(instance.throttler, instance.canceler);
+      // Metrics for skipped containers should not be updated.
+      if (result.getFailureType() == DELETED_CONTAINER) {
+        LOG.error("Container [{}] has been deleted.",
+            containerId, result.getException());
+        return;
+      }
       if (!result.isHealthy()) {
         LOG.error("Corruption detected in container [{}]." +
                 "Marking it UNHEALTHY.", containerId, result.getException());

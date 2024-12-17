@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.ozone.om.response.volume;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -30,51 +28,22 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.storage.proto.OzoneManagerStorageProtos.PersistedUserVolumeInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.hdds.utils.db.Table;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.UUID;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class tests OMVolumeCreateResponse.
  */
-public class TestOMVolumeSetOwnerResponse {
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OMMetadataManager omMetadataManager;
-  private BatchOperation batchOperation;
-
-  @Before
-  public void setup() throws Exception {
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration, null);
-    batchOperation = omMetadataManager.getStore().initBatchOperation();
-  }
-
-  @After
-  public void tearDown() {
-    if (batchOperation != null) {
-      batchOperation.close();
-    }
-  }
-
+public class TestOMVolumeSetOwnerResponse extends TestOMVolumeResponse {
 
   @Test
   public void testAddToDBBatch() throws Exception {
-
+    OMMetadataManager omMetadataManager = getOmMetadataManager();
+    BatchOperation batchOperation = getBatchOperation();
     String volumeName = UUID.randomUUID().toString();
     String oldOwner = "user1";
     PersistedUserVolumeInfo volumeList = PersistedUserVolumeInfo.newBuilder()
@@ -96,25 +65,24 @@ public class TestOMVolumeSetOwnerResponse {
         new OMVolumeCreateResponse(omResponse, omVolumeArgs, volumeList);
 
 
-
     String newOwner = "user2";
     PersistedUserVolumeInfo newOwnerVolumeList =
         PersistedUserVolumeInfo.newBuilder()
-        .setObjectID(1)
-        .setUpdateID(1)
-        .addVolumeNames(volumeName).build();
+            .setObjectID(1)
+            .setUpdateID(1)
+            .addVolumeNames(volumeName).build();
     PersistedUserVolumeInfo oldOwnerVolumeList =
         PersistedUserVolumeInfo.newBuilder()
-        .setObjectID(2)
-        .setUpdateID(2)
-        .build();
+            .setObjectID(2)
+            .setUpdateID(2)
+            .build();
     OmVolumeArgs newOwnerVolumeArgs = OmVolumeArgs.newBuilder()
         .setOwnerName(newOwner).setAdminName(newOwner)
         .setVolume(volumeName).setCreationTime(omVolumeArgs.getCreationTime())
         .build();
 
     OMVolumeSetOwnerResponse omVolumeSetOwnerResponse =
-        new OMVolumeSetOwnerResponse(omResponse, oldOwner,  oldOwnerVolumeList,
+        new OMVolumeSetOwnerResponse(omResponse, oldOwner, oldOwnerVolumeList,
             newOwnerVolumeList, newOwnerVolumeArgs);
 
     omVolumeCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
@@ -124,24 +92,25 @@ public class TestOMVolumeSetOwnerResponse {
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
 
-    Assert.assertEquals(1,
+    assertEquals(1,
         omMetadataManager.countRowsInTable(omMetadataManager.getVolumeTable()));
 
     Table.KeyValue<String, OmVolumeArgs> keyValue =
         omMetadataManager.getVolumeTable().iterator().next();
 
-    Assert.assertEquals(omMetadataManager.getVolumeKey(volumeName),
+    assertEquals(omMetadataManager.getVolumeKey(volumeName),
         keyValue.getKey());
-    Assert.assertEquals(newOwnerVolumeArgs, keyValue.getValue());
+    assertEquals(newOwnerVolumeArgs, keyValue.getValue());
 
-    Assert.assertEquals(volumeList,
+    assertEquals(volumeList,
         omMetadataManager.getUserTable().get(
             omMetadataManager.getUserKey(newOwner)));
   }
 
   @Test
-  public void testAddToDBBatchNoOp() throws Exception {
-
+  void testAddToDBBatchNoOp() throws Exception {
+    OMMetadataManager omMetadataManager = getOmMetadataManager();
+    BatchOperation batchOperation = getBatchOperation();
     OMResponse omResponse = OMResponse.newBuilder()
         .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
         .setStatus(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND)
@@ -152,16 +121,9 @@ public class TestOMVolumeSetOwnerResponse {
     OMVolumeSetOwnerResponse omVolumeSetOwnerResponse =
         new OMVolumeSetOwnerResponse(omResponse);
 
-    try {
-      omVolumeSetOwnerResponse.checkAndUpdateDB(omMetadataManager,
-          batchOperation);
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getVolumeTable()) == 0);
-    } catch (IOException ex) {
-      fail("testAddToDBBatchFailure failed");
-    }
-
+    omVolumeSetOwnerResponse.checkAndUpdateDB(omMetadataManager,
+        batchOperation);
+    assertEquals(0, omMetadataManager.countRowsInTable(
+        omMetadataManager.getVolumeTable()));
   }
-
-
 }

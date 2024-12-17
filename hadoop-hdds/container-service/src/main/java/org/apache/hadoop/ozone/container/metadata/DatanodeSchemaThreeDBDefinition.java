@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.utils.db.FixedLengthStringCodec;
 import org.apache.hadoop.hdds.utils.db.Proto2Codec;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedColumnFamilyOptions;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
-import org.apache.hadoop.ozone.container.common.helpers.ChunkInfoList;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeConfiguration;
 import org.apache.hadoop.ozone.container.common.utils.db.DatanodeDBProfile;
 
@@ -60,37 +59,36 @@ public class DatanodeSchemaThreeDBDefinition
       BLOCK_DATA =
       new DBColumnFamilyDefinition<>(
           "block_data",
-          String.class,
           FixedLengthStringCodec.get(),
-          BlockData.class,
           BlockData.getCodec());
 
   public static final DBColumnFamilyDefinition<String, Long>
       METADATA =
       new DBColumnFamilyDefinition<>(
           "metadata",
-          String.class,
           FixedLengthStringCodec.get(),
-          Long.class,
           LongCodec.get());
-
-  public static final DBColumnFamilyDefinition<String, ChunkInfoList>
-      DELETED_BLOCKS =
-      new DBColumnFamilyDefinition<>(
-          "deleted_blocks",
-          String.class,
-          FixedLengthStringCodec.get(),
-          ChunkInfoList.class,
-          ChunkInfoList.getCodec());
 
   public static final DBColumnFamilyDefinition<String, DeletedBlocksTransaction>
       DELETE_TRANSACTION =
       new DBColumnFamilyDefinition<>(
           "delete_txns",
-          String.class,
           FixedLengthStringCodec.get(),
-          DeletedBlocksTransaction.class,
-          Proto2Codec.get(DeletedBlocksTransaction.class));
+          Proto2Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
+
+  public static final DBColumnFamilyDefinition<String, Long>
+      FINALIZE_BLOCKS =
+      new DBColumnFamilyDefinition<>(
+          "finalize_blocks",
+          FixedLengthStringCodec.get(),
+          LongCodec.get());
+
+  public static final DBColumnFamilyDefinition<String, BlockData>
+      LAST_CHUNK_INFO =
+      new DBColumnFamilyDefinition<>(
+          "last_chunk_info",
+          FixedLengthStringCodec.get(),
+          BlockData.getCodec());
 
   private static String separator = "";
 
@@ -98,8 +96,9 @@ public class DatanodeSchemaThreeDBDefinition
       COLUMN_FAMILIES = DBColumnFamilyDefinition.newUnmodifiableMap(
          BLOCK_DATA,
          METADATA,
-         DELETED_BLOCKS,
-         DELETE_TRANSACTION);
+         DELETE_TRANSACTION,
+         FINALIZE_BLOCKS,
+         LAST_CHUNK_INFO);
 
   public DatanodeSchemaThreeDBDefinition(String dbPath,
       ConfigurationSource config) {
@@ -120,8 +119,9 @@ public class DatanodeSchemaThreeDBDefinition
 
     BLOCK_DATA.setCfOptions(cfOptions);
     METADATA.setCfOptions(cfOptions);
-    DELETED_BLOCKS.setCfOptions(cfOptions);
     DELETE_TRANSACTION.setCfOptions(cfOptions);
+    FINALIZE_BLOCKS.setCfOptions(cfOptions);
+    LAST_CHUNK_INFO.setCfOptions(cfOptions);
   }
 
   @Override
@@ -141,14 +141,20 @@ public class DatanodeSchemaThreeDBDefinition
   }
 
   @Override
-  public DBColumnFamilyDefinition<String, ChunkInfoList>
-      getDeletedBlocksColumnFamily() {
-    return DELETED_BLOCKS;
+  public DBColumnFamilyDefinition<String, BlockData>
+      getLastChunkInfoColumnFamily() {
+    return LAST_CHUNK_INFO;
   }
 
   public DBColumnFamilyDefinition<String, DeletedBlocksTransaction>
       getDeleteTransactionsColumnFamily() {
     return DELETE_TRANSACTION;
+  }
+
+  @Override
+  public DBColumnFamilyDefinition<String, Long>
+      getFinalizeBlocksColumnFamily() {
+    return FINALIZE_BLOCKS;
   }
 
   public static int getContainerKeyPrefixLength() {

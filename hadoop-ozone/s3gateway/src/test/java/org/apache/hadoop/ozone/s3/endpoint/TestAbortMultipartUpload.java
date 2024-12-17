@@ -25,16 +25,15 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-import org.junit.Test;
-import org.mockito.Mockito;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -51,7 +50,7 @@ public class TestAbortMultipartUpload {
     OzoneClient client = new OzoneClientStub();
     client.getObjectStore().createS3Bucket(bucket);
 
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    HttpHeaders headers = mock(HttpHeaders.class);
     when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn(
         "STANDARD");
 
@@ -70,13 +69,13 @@ public class TestAbortMultipartUpload {
 
 
     // Abort multipart upload
-    response = rest.delete(bucket, key, uploadID);
+    response = rest.delete(bucket, key, uploadID, null);
 
     assertEquals(204, response.getStatus());
 
     // test with unknown upload Id.
     try {
-      rest.delete(bucket, key, "random");
+      rest.delete(bucket, key, "random", null);
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.NO_SUCH_UPLOAD.getCode(), ex.getCode());
       assertEquals(S3ErrorTable.NO_SUCH_UPLOAD.getErrorMessage(),

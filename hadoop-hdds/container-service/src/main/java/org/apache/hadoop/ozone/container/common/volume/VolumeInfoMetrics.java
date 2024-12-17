@@ -22,7 +22,9 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.ozone.OzoneConsts;
+
 
 /**
  * This class is used to track Volume Info stats for each HDDS Volume.
@@ -32,15 +34,16 @@ import org.apache.hadoop.ozone.OzoneConsts;
 public class VolumeInfoMetrics {
 
   private String metricsSourceName = VolumeInfoMetrics.class.getSimpleName();
-  private String volumeRootStr;
-  private HddsVolume volume;
+  private final HddsVolume volume;
+  @Metric("Returns the RocksDB compact times of the Volume")
+  private MutableRate dbCompactLatency;
+  private long containers;
 
   /**
-   * @param identifier Typically, path to volume root. e.g. /data/hdds
+   * @param identifier Typically, path to volume root. E.g. /data/hdds
    */
   public VolumeInfoMetrics(String identifier, HddsVolume ref) {
     this.metricsSourceName += '-' + identifier;
-    this.volumeRootStr = identifier;
     this.volume = ref;
     init();
   }
@@ -142,4 +145,20 @@ public class VolumeInfoMetrics {
     return (getUsed() + getAvailable() + getReserved());
   }
 
+  @Metric("Returns the Committed bytes of the Volume")
+  public long getCommitted() {
+    return volume.getCommittedBytes();
+  }
+
+  public void dbCompactTimesNanoSecondsIncr(long time) {
+    dbCompactLatency.add(time);
+  }
+
+  /**
+   * Return the Container Count of the Volume.
+   */
+  @Metric("Returns the Container Count of the Volume")
+  public long getContainers() {
+    return volume.getContainers();
+  }
 }

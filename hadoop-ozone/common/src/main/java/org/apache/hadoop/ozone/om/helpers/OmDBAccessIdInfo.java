@@ -31,9 +31,10 @@ import java.io.IOException;
  */
 public final class OmDBAccessIdInfo {
   private static final Codec<OmDBAccessIdInfo> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(ExtendedUserAccessIdInfo.class),
+      Proto2Codec.get(ExtendedUserAccessIdInfo.getDefaultInstance()),
       OmDBAccessIdInfo::getFromProtobuf,
       OmDBAccessIdInfo::getProtobuf,
+      OmDBAccessIdInfo.class,
       DelegatedCodec.CopyType.SHALLOW);
 
   public static Codec<OmDBAccessIdInfo> getCodec() {
@@ -111,7 +112,6 @@ public final class OmDBAccessIdInfo {
   /**
    * Builder for OmDBAccessIdInfo.
    */
-  @SuppressWarnings("checkstyle:hiddenfield")
   public static final class Builder {
     private String tenantId;
     private String userPrincipal;

@@ -74,7 +74,10 @@ public class ReplicationManagerReport {
         "OpenUnhealthyContainers"),
     QUASI_CLOSED_STUCK(
         "Containers QuasiClosed with insufficient datanode origins",
-        "StuckQuasiClosedContainers");
+        "StuckQuasiClosedContainers"),
+    OPEN_WITHOUT_PIPELINE(
+        "Containers in OPEN state without any healthy Pipeline",
+        "OpenContainersWithoutPipeline");
 
     private String description;
     private String metricName;
@@ -129,11 +132,6 @@ public class ReplicationManagerReport {
     incrementAndSample(stat.toString(), container);
   }
 
-  public void incrementAndSample(HddsProtos.LifeCycleState stat,
-      ContainerID container) {
-    incrementAndSample(stat.toString(), container);
-  }
-
   public void setComplete() {
     reportTimeStamp = System.currentTimeMillis();
   }
@@ -148,7 +146,6 @@ public class ReplicationManagerReport {
 
   /**
    * Return a map of all stats and their value as a long.
-   * @return
    */
   public Map<String, Long> getStats() {
     Map<String, Long> result = new HashMap<>();
@@ -161,7 +158,6 @@ public class ReplicationManagerReport {
   /**
    * Return a map of all samples, with the stat as the key and the samples
    * for the stat as a List of Long.
-   * @return
    */
   public Map<String, List<Long>> getSamples() {
     Map<String, List<Long>> result = new HashMap<>();
@@ -236,10 +232,6 @@ public class ReplicationManagerReport {
           + " is not expected to have existing samples");
     }
     containerSample.put(stat, sample);
-  }
-
-  public List<ContainerID> getSample(HddsProtos.LifeCycleState stat) {
-    return getSample(stat.toString());
   }
 
   public List<ContainerID> getSample(HealthState stat) {

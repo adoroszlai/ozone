@@ -20,14 +20,14 @@ package org.apache.hadoop.ozone.client.io;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.ratis.util.function.CheckedFunction;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
 /**
  * An {@link OutputStream} first write data to a buffer up to the capacity.
- * Then, select {@link Underlying} by the number of bytes written.
+ * Then, select {@code Underlying} by the number of bytes written.
  * When {@link #flush()}, {@link #hflush()}, {@link #hsync()}
  * or {@link #close()} is invoked,
  * it will force flushing the buffer and {@link OutputStream} selection.

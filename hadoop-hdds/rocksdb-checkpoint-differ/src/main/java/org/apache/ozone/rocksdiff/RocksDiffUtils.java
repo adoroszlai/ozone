@@ -17,23 +17,22 @@
  */
 package org.apache.ozone.rocksdiff;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hdds.utils.db.managed.ManagedSstFileReader;
-import org.apache.hadoop.hdds.utils.db.managed.ManagedSstFileReaderIterator;
-import org.rocksdb.SstFileReader;
-import org.rocksdb.TableProperties;
-import org.rocksdb.Options;
-import org.rocksdb.ReadOptions;
-import org.rocksdb.RocksDBException;
+import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksDB;
+import org.apache.ozone.compaction.log.CompactionFileInfo;
+import org.rocksdb.LiveFileMetaData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
 /**
@@ -48,9 +47,12 @@ public final class RocksDiffUtils {
   }
 
   public static boolean isKeyWithPrefixPresent(String prefixForColumnFamily,
-      String firstDbKey, String lastDbKey) {
-    return firstDbKey.compareTo(prefixForColumnFamily) <= 0
-        && prefixForColumnFamily.compareTo(lastDbKey) <= 0;
+                                               String firstDbKey,
+                                               String lastDbKey) {
+    String firstKeyPrefix = constructBucketKey(firstDbKey);
+    String endKeyPrefix = constructBucketKey(lastDbKey);
+    return firstKeyPrefix.compareTo(prefixForColumnFamily) <= 0
+        && prefixForColumnFamily.compareTo(endKeyPrefix) <= 0;
   }
 
   public static String constructBucketKey(String keyName) {
@@ -71,40 +73,68 @@ public final class RocksDiffUtils {
   }
 
   public static void filterRelevantSstFiles(Set<String> inputFiles,
-      Map<String, String> tableToPrefixMap) throws IOException {
+                                            Map<String, String> tableToPrefixMap,
+                                            ManagedRocksDB... dbs) {
+    filterRelevantSstFiles(inputFiles, tableToPrefixMap, Collections.emptyMap(), dbs);
+  }
+
+  /**
+   * Filter sst files based on prefixes.
+   */
+  public static void filterRelevantSstFiles(Set<String> inputFiles,
+                                            Map<String, String> tableToPrefixMap,
+                                            Map<String, CompactionNode> preExistingCompactionNodes,
+                                            ManagedRocksDB... dbs) {
+    Map<String, LiveFileMetaData> liveFileMetaDataMap = new HashMap<>();
+    int dbIdx = 0;
     for (Iterator<String> fileIterator =
          inputFiles.iterator(); fileIterator.hasNext();) {
-      String filepath = fileIterator.next();
-      if (!RocksDiffUtils.doesSstFileContainKeyRange(filepath,
-          tableToPrefixMap)) {
+      String filename = FilenameUtils.getBaseName(fileIterator.next());
+      while (!preExistingCompactionNodes.containsKey(filename) && !liveFileMetaDataMap.containsKey(filename)
+          && dbIdx < dbs.length) {
+        liveFileMetaDataMap.putAll(dbs[dbIdx].getLiveMetadataForSSTFiles());
+        dbIdx += 1;
+      }
+      CompactionNode compactionNode = preExistingCompactionNodes.get(filename);
+      if (compactionNode == null) {
+        compactionNode = new CompactionNode(new CompactionFileInfo.Builder(filename)
+            .setValues(liveFileMetaDataMap.get(filename)).build());
+      }
+      if (shouldSkipNode(compactionNode, tableToPrefixMap)) {
         fileIterator.remove();
       }
     }
   }
 
-  public static boolean doesSstFileContainKeyRange(String filepath,
-      Map<String, String> tableToPrefixMap) throws IOException {
-    try (ManagedSstFileReader sstFileReader = ManagedSstFileReader.managed(
-        new SstFileReader(new Options()))) {
-      sstFileReader.get().open(filepath);
-      TableProperties properties = sstFileReader.get().getTableProperties();
-      String tableName = new String(properties.getColumnFamilyName(), UTF_8);
-      if (tableToPrefixMap.containsKey(tableName)) {
-        String prefix = tableToPrefixMap.get(tableName);
-        try (ManagedSstFileReaderIterator iterator =
-            ManagedSstFileReaderIterator.managed(sstFileReader.get()
-                .newIterator(new ReadOptions()))) {
-          iterator.get().seek(prefix.getBytes(UTF_8));
-          String seekResultKey = new String(iterator.get().key(), UTF_8);
-          return seekResultKey.startsWith(prefix);
-        }
-      }
+  @VisibleForTesting
+  static boolean shouldSkipNode(CompactionNode node,
+                                Map<String, String> columnFamilyToPrefixMap) {
+    // This is for backward compatibility. Before the compaction log table
+    // migration, startKey, endKey and columnFamily information is not persisted
+    // in compaction log files.
+    // Also for the scenario when there is an exception in reading SST files
+    // for the file node.
+    if (node.getStartKey() == null || node.getEndKey() == null ||
+        node.getColumnFamily() == null) {
+      LOG.debug("Compaction node with fileName: {} doesn't have startKey, " +
+          "endKey and columnFamily details.", node.getFileName());
       return false;
-    } catch (RocksDBException e) {
-      LOG.error("Failed to read SST File ", e);
-      throw new IOException(e);
     }
+
+    if (MapUtils.isEmpty(columnFamilyToPrefixMap)) {
+      LOG.debug("Provided columnFamilyToPrefixMap is null or empty.");
+      return false;
+    }
+
+    if (!columnFamilyToPrefixMap.containsKey(node.getColumnFamily())) {
+      LOG.debug("SstFile node: {} is for columnFamily: {} while filter map " +
+              "contains columnFamilies: {}.", node.getFileName(),
+          node.getColumnFamily(), columnFamilyToPrefixMap.keySet());
+      return true;
+    }
+
+    String keyPrefix = columnFamilyToPrefixMap.get(node.getColumnFamily());
+    return !isKeyWithPrefixPresent(keyPrefix, node.getStartKey(),
+        node.getEndKey());
   }
-
-
 }

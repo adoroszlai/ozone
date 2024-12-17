@@ -20,7 +20,10 @@ package org.apache.hadoop.fs.ozone;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 
 /**
  * Class to hold the internal information of a FileStatus.
@@ -30,7 +33,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * information can be converted to this class, and this class can be used to
  * create hadoop 2.x FileStatus.
  * <p>
- * FileStatus (Hadoop 3.x) --> FileStatusAdapter --> FileStatus (Hadoop 2.x)
+ * FileStatus (Hadoop 3.x) --&gt; FileStatusAdapter --&gt; FileStatus (Hadoop 2.x)
  */
 public final class FileStatusAdapter {
 
@@ -46,7 +49,7 @@ public final class FileStatusAdapter {
   private final String owner;
   private final String group;
   private final Path symlink;
-  private final BlockLocation[] blockLocations;
+  private final List<BlockLocation> blockLocations;
 
   private final boolean isEncrypted;
 
@@ -71,7 +74,7 @@ public final class FileStatusAdapter {
     this.owner = owner;
     this.group = group;
     this.symlink = symlink;
-    this.blockLocations = locations.clone();
+    this.blockLocations = new ArrayList<>(Arrays.asList(locations));
     this.isEncrypted = isEncrypted;
     this.isErasureCoded = isErasureCoded;
   }
@@ -137,9 +140,8 @@ public final class FileStatusAdapter {
     return isErasureCoded;
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP")
   public BlockLocation[] getBlockLocations() {
-    return blockLocations;
+    return blockLocations.toArray(new BlockLocation[0]);
   }
 
   @Override

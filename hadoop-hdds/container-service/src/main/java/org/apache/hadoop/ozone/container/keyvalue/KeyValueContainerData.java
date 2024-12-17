@@ -41,6 +41,8 @@ import org.yaml.snakeyaml.nodes.Tag;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.max;
@@ -51,6 +53,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETE_TRANSACTION_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA_PATH;
+import static org.apache.hadoop.ozone.OzoneConsts.SCHEMA_V1;
+import static org.apache.hadoop.ozone.OzoneConsts.SCHEMA_V2;
 import static org.apache.hadoop.ozone.OzoneConsts.SCHEMA_V3;
 import static org.apache.hadoop.ozone.OzoneConsts.SCHEMA_VERSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_BYTES_USED;
@@ -90,6 +94,8 @@ public class KeyValueContainerData extends ContainerData {
 
   private long blockCommitSequenceId;
 
+  private final Set<Long> finalizedBlockSet;
+
   static {
     // Initialize YAML fields
     KV_YAML_FIELDS = Lists.newArrayList();
@@ -112,6 +118,7 @@ public class KeyValueContainerData extends ContainerData {
         size, originPipelineId, originNodeId);
     this.numPendingDeletionBlocks = new AtomicLong(0);
     this.deleteTransactionId = 0;
+    finalizedBlockSet =  ConcurrentHashMap.newKeySet();
   }
 
   public KeyValueContainerData(KeyValueContainerData source) {
@@ -121,6 +128,7 @@ public class KeyValueContainerData extends ContainerData {
     this.numPendingDeletionBlocks = new AtomicLong(0);
     this.deleteTransactionId = 0;
     this.schemaVersion = source.getSchemaVersion();
+    finalizedBlockSet = ConcurrentHashMap.newKeySet();
   }
 
   /**
@@ -137,6 +145,25 @@ public class KeyValueContainerData extends ContainerData {
    */
   public String getSchemaVersion() {
     return schemaVersion;
+  }
+
+  /**
+   * Returns schema version or the default value when the
+   * {@link KeyValueContainerData#schemaVersion} is null. The default value can
+   * be referred to {@link KeyValueContainerUtil#isSameSchemaVersion}.
+   *
+   * @return Schema version as a string.
+   * @throws UnsupportedOperationException If no valid schema version is found.
+   */
+  public String getSupportedSchemaVersionOrDefault() {
+    String[] versions = {SCHEMA_V1, SCHEMA_V2, SCHEMA_V3};
+
+    for (String version : versions) {
+      if (this.hasSchema(version)) {
+        return version;
+      }
+    }
+    throw new UnsupportedOperationException("No valid schema version found.");
   }
 
   /**
@@ -252,6 +279,34 @@ public class KeyValueContainerData extends ContainerData {
    */
   public long getDeleteTransactionId() {
     return deleteTransactionId;
+  }
+
+  /**
+   * Add the given localID of a block to the finalizedBlockSet.
+   */
+  public void addToFinalizedBlockSet(long localID) {
+    finalizedBlockSet.add(localID);
+  }
+
+  public Set<Long> getFinalizedBlockSet() {
+    return finalizedBlockSet;
+  }
+
+  public boolean isFinalizedBlockExist(long localID) {
+    return finalizedBlockSet.contains(localID);
+  }
+
+  public void clearFinalizedBlock(DBHandle db) throws IOException {
+    if (!finalizedBlockSet.isEmpty()) {
+      // delete from db and clear memory
+      // Should never fail.
+      Preconditions.checkNotNull(db, "DB cannot be null here");
+      try (BatchOperation batch = db.getStore().getBatchHandler().initBatchOperation()) {
+        db.getStore().getFinalizeBlocksTable().deleteBatchWithPrefix(batch, containerPrefix());
+        db.getStore().getBatchHandler().commitBatchOperation(batch);
+      }
+      finalizedBlockSet.clear();
+    }
   }
 
   /**
@@ -375,7 +430,6 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Schema v3 use a prefix as startKey,
    * for other schemas just return null.
-   * @return
    */
   public String startKeyEmpty() {
     if (hasSchema(SCHEMA_V3)) {
@@ -387,7 +441,6 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Schema v3 use containerID as key prefix,
    * for other schemas just return null.
-   * @return
    */
   public String containerPrefix() {
     if (hasSchema(SCHEMA_V3)) {

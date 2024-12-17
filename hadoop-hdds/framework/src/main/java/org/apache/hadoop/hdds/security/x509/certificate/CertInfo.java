@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
 import org.apache.hadoop.hdds.utils.db.Proto2Codec;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
@@ -37,9 +37,10 @@ import java.util.Objects;
  */
 public final class CertInfo implements Comparable<CertInfo>, Serializable {
   private static final Codec<CertInfo> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(CertInfoProto.class),
+      Proto2Codec.get(CertInfoProto.getDefaultInstance()),
       CertInfo::fromProtobuf,
-      CertInfo::getProtobuf);
+      CertInfo::getProtobuf,
+      CertInfo.class);
 
   public static Codec<CertInfo> getCodec() {
     return CODEC;
@@ -133,7 +134,6 @@ public final class CertInfo implements Comparable<CertInfo>, Serializable {
   /**
    * Builder class for CertInfo.
    */
-  @SuppressWarnings("checkstyle:hiddenfield")
   public static class Builder {
     private X509Certificate x509Certificate;
     private long timestamp;

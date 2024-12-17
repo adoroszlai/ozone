@@ -33,9 +33,10 @@ import java.util.Objects;
  */
 public class MoveDataNodePair {
   private static final Codec<MoveDataNodePair> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(MoveDataNodePairProto.class),
+      Proto2Codec.get(MoveDataNodePairProto.getDefaultInstance()),
       MoveDataNodePair::getFromProtobuf,
       pair -> pair.getProtobufMessage(ClientVersion.CURRENT_VERSION),
+      MoveDataNodePair.class,
       DelegatedCodec.CopyType.SHALLOW);
 
   public static Codec<MoveDataNodePair> getCodec() {

@@ -17,19 +17,15 @@
  */
 package org.apache.hadoop.ozone.s3;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.net.InetSocketAddress;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.s3.metrics.S3GatewayMetrics;
 import org.apache.hadoop.ozone.util.OzoneNetUtils;
@@ -44,8 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 
-import static org.apache.hadoop.hdds.StringUtils.startupShutdownMessage;
 import static org.apache.hadoop.hdds.ratis.RatisHelper.newJvmPauseMonitor;
+import static org.apache.hadoop.hdds.server.http.HttpServer2.setHttpBaseDir;
 import static org.apache.hadoop.ozone.conf.OzoneServiceConfig.DEFAULT_SHUTDOWN_HOOK_PRIORITY;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_KERBEROS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_KERBEROS_PRINCIPAL_KEY;
@@ -63,7 +59,6 @@ public class Gateway extends GenericCli {
 
   private S3GatewayHttpServer httpServer;
   private S3GatewayMetrics metrics;
-  private OzoneConfiguration ozoneConfiguration;
 
   private final JvmPauseMonitor jvmPauseMonitor = newJvmPauseMonitor("S3G");
 
@@ -73,37 +68,18 @@ public class Gateway extends GenericCli {
     new Gateway().run(args);
   }
 
-  private void setHttpBaseDir()
-      throws IOException {
-    if (StringUtils.isEmpty(ozoneConfiguration.get(
-        OzoneConfigKeys.OZONE_HTTP_BASEDIR))) {
-      //Setting ozone.http.basedir to cwd if not set so that server setup
-      // doesn't fail.
-      File tmpMetaDir = Files.createTempDirectory(Paths.get(""),
-          "ozone_s3g_tmp_base_dir").toFile();
-      ShutdownHookManager.get().addShutdownHook(() -> {
-        try {
-          FileUtils.deleteDirectory(tmpMetaDir);
-        } catch (IOException e) {
-          LOG.error("Failed to cleanup temporary S3 Gateway Metadir {}",
-              tmpMetaDir.getAbsolutePath(), e);
-        }
-      }, 0);
-      ozoneConfiguration.set(OzoneConfigKeys.OZONE_HTTP_BASEDIR,
-          tmpMetaDir.getAbsolutePath());
-    }
-  }
+
 
   @Override
   public Void call() throws Exception {
-    ozoneConfiguration = createOzoneConfiguration();
-    TracingUtil.initTracing("S3gateway", ozoneConfiguration);
+    OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
     OzoneConfigurationHolder.setConfiguration(ozoneConfiguration);
-    UserGroupInformation.setConfiguration(ozoneConfiguration);
-    loginS3GUser(ozoneConfiguration);
-    setHttpBaseDir();
-    httpServer = new S3GatewayHttpServer(ozoneConfiguration, "s3gateway");
-    metrics = S3GatewayMetrics.create();
+    TracingUtil.initTracing("S3gateway", OzoneConfigurationHolder.configuration());
+    UserGroupInformation.setConfiguration(OzoneConfigurationHolder.configuration());
+    loginS3GUser(OzoneConfigurationHolder.configuration());
+    setHttpBaseDir(OzoneConfigurationHolder.configuration());
+    httpServer = new S3GatewayHttpServer(OzoneConfigurationHolder.configuration(), "s3gateway");
+    metrics = S3GatewayMetrics.create(OzoneConfigurationHolder.configuration());
     start();
 
     ShutdownHookManager.get().addShutdownHook(() -> {
@@ -119,11 +95,11 @@ public class Gateway extends GenericCli {
   public void start() throws IOException {
     String[] originalArgs = getCmd().getParseResult().originalArgs()
         .toArray(new String[0]);
-    startupShutdownMessage(OzoneVersionInfo.OZONE_VERSION_INFO,
-        Gateway.class, originalArgs, LOG, ozoneConfiguration);
+    HddsServerUtil.startupShutdownMessage(OzoneVersionInfo.OZONE_VERSION_INFO,
+        Gateway.class, originalArgs, LOG, OzoneConfigurationHolder.configuration());
 
     LOG.info("Starting Ozone S3 gateway");
-    HddsServerUtil.initializeMetrics(ozoneConfiguration, "S3Gateway");
+    HddsServerUtil.initializeMetrics(OzoneConfigurationHolder.configuration(), "S3Gateway");
     jvmPauseMonitor.start();
     httpServer.start();
   }
@@ -156,6 +132,16 @@ public class Gateway extends GenericCli {
       }
       LOG.info("S3Gateway login successful.");
     }
+  }
+
+  @VisibleForTesting
+  public InetSocketAddress getHttpAddress() {
+    return this.httpServer.getHttpAddress();
+  }
+
+  @VisibleForTesting
+  public InetSocketAddress getHttpsAddress() {
+    return this.httpServer.getHttpsAddress();
   }
 
 }

@@ -35,7 +35,6 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import org.apache.http.client.methods.HttpRequestBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,23 +126,12 @@ public final class ServerUtils {
     return updatedAddr;
   }
 
-
-  /**
-   * Releases a http connection if the request is not null.
-   * @param request
-   */
-  public static void releaseConnection(HttpRequestBase request) {
-    if (request != null) {
-      request.releaseConnection();
-    }
-  }
-
   /**
    * Get the location where SCM should store its metadata directories.
    * Fall back to OZONE_METADATA_DIRS if not defined.
    *
    * @param conf
-   * @return
+   * @return File
    */
   public static File getScmDbDir(ConfigurationSource conf) {
     File metadataDir = getDirectoryFromConfig(conf,
