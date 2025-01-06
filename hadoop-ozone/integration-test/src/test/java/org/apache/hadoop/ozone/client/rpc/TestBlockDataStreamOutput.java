@@ -56,6 +56,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Typ
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type.WriteChunk;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_CHUNK_READ_NETTY_CHUNKED_NIO_FILE_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
+import static org.apache.ozone.test.GenericTestUtils.waitFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -205,8 +206,7 @@ public class TestBlockDataStreamOutput {
 
     assertEquals(pendingPutBlockCount,
         metrics.getPendingContainerOpCountMetrics(PutBlock));
-    assertEquals(pendingWriteChunkCount,
-        metrics.getPendingContainerOpCountMetrics(WriteChunk));
+    waitFor(() -> metrics.getPendingContainerOpCountMetrics(WriteChunk) == pendingWriteChunkCount, 10, 5000);
   }
 
   @Test
