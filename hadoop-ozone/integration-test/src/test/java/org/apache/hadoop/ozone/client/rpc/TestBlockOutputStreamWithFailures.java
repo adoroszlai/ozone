@@ -19,11 +19,13 @@ package org.apache.hadoop.ozone.client.rpc;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.storage.RatisBlockOutputStream;
+import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
@@ -51,14 +53,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.ratis.protocol.exceptions.GroupMismatchException;
 import org.apache.ratis.protocol.exceptions.RaftRetryFailureException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.util.stream.Stream;
 
 /**
@@ -70,12 +73,12 @@ class TestBlockOutputStreamWithFailures {
 
   private MiniOzoneCluster cluster;
 
-  @BeforeEach
+  @BeforeAll
   void init() throws Exception {
-    cluster = createCluster();
+    cluster = createCluster(25);
   }
 
-  @AfterEach
+  @AfterAll
   void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -246,7 +249,7 @@ class TestBlockOutputStreamWithFailures {
           (XceiverClientRatis) blockOutputStream.getXceiverClient();
       assertEquals(3, raftClient.getCommitInfoMap().size());
       Pipeline pipeline = raftClient.getPipeline();
-      cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
+      stopAndRemove(pipeline.getNodes().get(0));
 
       // again write data with more than max buffer limit. This will call
       // watchForCommit again. Since the commit will happen 2 way, the
@@ -329,8 +332,8 @@ class TestBlockOutputStreamWithFailures {
           (XceiverClientRatis) blockOutputStream.getXceiverClient();
       assertEquals(3, raftClient.getCommitInfoMap().size());
       Pipeline pipeline = raftClient.getPipeline();
-      cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
-      cluster.shutdownHddsDatanode(pipeline.getNodes().get(1));
+      stopAndRemove(pipeline.getNodes().get(0));
+      stopAndRemove(pipeline.getNodes().get(1));
       // again write data with more than max buffer limit. This will call
       // watchForCommit again. Since the commit will happen 2 way, the
       // commitInfoMap will get updated for servers which are alive
@@ -759,6 +762,12 @@ class TestBlockOutputStreamWithFailures {
       byte[] bytes = ArrayUtils.addAll(data1, data1);
       validateData(keyName, bytes, client.getObjectStore(), VOLUME, BUCKET);
     }
+  }
+
+  private void stopAndRemove(DatanodeDetails dn) throws IOException {
+    HddsDatanodeService datanode = cluster.getHddsDatanodes().remove(cluster.getHddsDatanodeIndex(dn));
+    datanode.stop();
+    datanode.join();
   }
 
 }
