@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.ozone;
+package org.apache.hadoop.ozone.debug.om;
 
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -28,7 +28,6 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.debug.om.PrefixParser;
 import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.junit.jupiter.api.AfterAll;
@@ -45,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Test Ozone Prefix Parser.
  */
 @Timeout(120)
-public class TestOzoneFileSystemPrefixParser {
+public class TestPrefixParser {
 
   private static MiniOzoneCluster cluster = null;
 

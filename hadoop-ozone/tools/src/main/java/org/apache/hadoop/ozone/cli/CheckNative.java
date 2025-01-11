@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.shell.checknative;
+package org.apache.hadoop.ozone.cli;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.utils.NativeLibraryLoader;

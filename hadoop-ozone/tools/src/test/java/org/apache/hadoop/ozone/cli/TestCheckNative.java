@@ -16,9 +16,8 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.checknative;
+package org.apache.hadoop.ozone.cli;
 
-import org.apache.hadoop.ozone.shell.checknative.CheckNative;
 import org.apache.ozone.test.tag.Native;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterEach;

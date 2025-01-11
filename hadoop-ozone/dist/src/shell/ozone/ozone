@@ -206,7 +206,7 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
     genconf)
-      OZONE_CLASSNAME=org.apache.hadoop.ozone.genconf.GenerateOzoneRequiredConfigurations
+      OZONE_CLASSNAME=org.apache.hadoop.ozone.cli.GenerateOzoneRequiredConfigurations
       OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
     dtutil)
@@ -230,7 +230,7 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
     checknative)
-        OZONE_CLASSNAME=org.apache.hadoop.ozone.shell.checknative.CheckNative
+        OZONE_CLASSNAME=org.apache.hadoop.ozone.cli.CheckNative
         OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
     ratis)

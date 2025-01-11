@@ -2221,6 +2221,7 @@
                 <include>org.apache.hadoop.hdds.**</include>
               </includes>
               <excludes>
+                <exclude>org.apache.hadoop.hdds.scm.cli.**</exclude>
                 <exclude>org.apache.hadoop.hdds.scm.container.**</exclude>
               </excludes>
               <excludedGroups>${unstable-test-groups}</excludedGroups>
@@ -2242,12 +2243,14 @@
                 <include>org.apache.hadoop.ozone.**</include>
               </includes>
               <excludes>
+                <exclude>org.apache.hadoop.ozone.admin.**</exclude>
                 <exclude>org.apache.hadoop.ozone.client.**</exclude>
                 <exclude>org.apache.hadoop.ozone.container.**</exclude>
                 <exclude>org.apache.hadoop.ozone.debug.**</exclude>
                 <exclude>org.apache.hadoop.ozone.freon.**</exclude>
                 <exclude>org.apache.hadoop.ozone.om.**</exclude>
                 <exclude>org.apache.hadoop.ozone.recon.**</exclude>
+                <exclude>org.apache.hadoop.ozone.repair.**</exclude>
                 <exclude>org.apache.hadoop.ozone.shell.**</exclude>
               </excludes>
               <excludedGroups>${unstable-test-groups}</excludedGroups>
@@ -2282,8 +2285,11 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <includes>
+                <include>org.apache.hadoop.hdds.scm.cli.**</include>
+                <include>org.apache.hadoop.ozone.admin.**</include>
                 <include>org.apache.hadoop.ozone.debug.**</include>
                 <include>org.apache.hadoop.ozone.freon.**</include>
+                <include>org.apache.hadoop.ozone.repair.**</include>
                 <include>org.apache.hadoop.ozone.shell.**</include>
               </includes>
               <excludedGroups>${unstable-test-groups}</excludedGroups>

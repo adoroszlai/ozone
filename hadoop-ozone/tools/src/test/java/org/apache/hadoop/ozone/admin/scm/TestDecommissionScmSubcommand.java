@@ -15,12 +15,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.scm;
+package org.apache.hadoop.ozone.admin.scm;
 
 import org.apache.hadoop.ozone.admin.OzoneAdmin;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.DecommissionScmResponseProto;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.ozone.admin.scm.DecommissionScmSubcommand;
 import org.apache.ozone.test.GenericTestUtils;
 
 import java.io.IOException;

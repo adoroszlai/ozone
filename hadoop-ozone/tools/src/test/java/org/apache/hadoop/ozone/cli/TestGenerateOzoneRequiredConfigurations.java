@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.genconf;
+package org.apache.hadoop.ozone.cli;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import static org.assertj.core.api.Assertions.assertThat;
