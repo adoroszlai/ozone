@@ -123,6 +123,21 @@ services:
       - ${OZONE_VOLUME}/scm:/data
       - ../..:${OZONE_DIR}
       - ../../libexec/transformation.py:/opt/hadoop/libexec/transformation.py
+  repair:
+    command: ["sleep","1000000"]
+    <<: *common-config
+    networks:
+      net:
+        ipv4_address: 10.9.0.18
+    volumes:
+      - ${OZONE_VOLUME}/dn1:/data/dn1
+      - ${OZONE_VOLUME}/dn2:/data/dn2
+      - ${OZONE_VOLUME}/dn3:/data/dn3
+      - ${OZONE_VOLUME}/om:/data/om
+      - ${OZONE_VOLUME}/recon:/data/recon
+      - ${OZONE_VOLUME}/scm:/data/scm
+      - ../..:${OZONE_DIR}
+      - ../../libexec/transformation.py:/opt/hadoop/libexec/transformation.py
 
 networks:
   net:
