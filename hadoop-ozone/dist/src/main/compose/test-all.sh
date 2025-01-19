@@ -50,6 +50,9 @@ fi
 if [[ "${OZONE_ACCEPTANCE_TEST_TYPE}" == "robot" ]]; then
   # does not apply to JUnit tests run via Maven
   generate_report "acceptance" "${ALL_RESULT_DIR}" "${XUNIT_RESULT_DIR}"
+  if grep -qr 'TimeoutIOException: client' "${ALL_RESULT_DIR}"; then
+    RESULT=1
+  fi
 fi
 
 exit $RESULT

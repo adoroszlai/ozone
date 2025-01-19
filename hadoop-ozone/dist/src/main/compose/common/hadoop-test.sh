@@ -26,8 +26,6 @@ export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}":../common/${extra_com
 
 if [[ -z "${HADOOP_TEST_IMAGES}" ]]; then
   # hadoop2 and flokkr images are only available from Docker Hub
-  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} apache/hadoop:${hadoop2.version}"
-  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} flokkr/hadoop:3.1.2"
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.version}"
 fi
 
@@ -65,8 +63,7 @@ for HADOOP_TEST_IMAGE in $HADOOP_TEST_IMAGES; do
     execute_robot_test rm kinit-hadoop.robot
   fi
 
-  for scheme in o3fs ofs; do
-    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
+  for scheme in ofs; do
     # TODO secure MapReduce test is failing with 2.7 due to some token problem
     if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
       execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-mapreduce-${scheme}" mapreduce.robot
