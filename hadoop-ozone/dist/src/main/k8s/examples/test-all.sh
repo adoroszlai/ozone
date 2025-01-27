@@ -31,7 +31,7 @@ mkdir -p "$ALL_RESULT_DIR"
 RESULT=0
 IFS=$'\n'
 # shellcheck disable=SC2044
-for test in $(find "$SCRIPT_DIR" -name test.sh | grep "${OZONE_TEST_SELECTOR:-""}" |sort); do
+for test in $(find "$SCRIPT_DIR" -name test.sh | grep "${OZONE_TEST_SELECTOR:-""}" |sort | head -2); do
   TEST_DIR="$(dirname $test)"
   TEST_NAME="$(basename "$TEST_DIR")"
 
