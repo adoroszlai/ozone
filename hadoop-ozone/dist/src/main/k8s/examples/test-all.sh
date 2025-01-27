@@ -22,7 +22,7 @@ set -u -o pipefail
 #
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )
 
-source "${SCRIPT_DIR}/../testlib.sh"
+source "${SCRIPT_DIR}/testlib.sh"
 
 ALL_RESULT_DIR="$SCRIPT_DIR/result"
 rm "$ALL_RESULT_DIR"/* || true
