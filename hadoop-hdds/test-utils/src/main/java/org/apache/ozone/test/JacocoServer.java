@@ -24,6 +24,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import org.apache.commons.io.IOUtils;
 import org.jacoco.core.data.ExecutionDataWriter;
 import org.jacoco.core.data.IExecutionDataVisitor;
 import org.jacoco.core.data.ISessionInfoVisitor;
@@ -52,10 +53,10 @@ public final class JacocoServer {
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
         destination.flush();
-        serverSocket.close();
       } catch (Exception ex) {
         ex.printStackTrace();
       }
+      IOUtils.closeQuietly(output, serverSocket);
     }));
 
     while (true) {
@@ -79,11 +80,7 @@ public final class JacocoServer {
         } catch (Exception ex) {
           ex.printStackTrace();
         } finally {
-          try {
-            socket.close();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
+          IOUtils.closeQuietly(socket);
         }
       }).start();
     }
