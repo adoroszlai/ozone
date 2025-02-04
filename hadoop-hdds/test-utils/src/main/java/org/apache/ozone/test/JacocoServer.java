@@ -36,20 +36,18 @@ import org.jacoco.core.runtime.RemoteControlWriter;
  */
 public final class JacocoServer {
 
-  private static Object lockMonitor = new Object();
-
-  private static int port = 6300;
-
-  private static String destinationFile = "/tmp/jacoco-combined.exec";
+  private static final Object LOCK_MONITOR = new Object();
+  private static final int PORT = 6300;
+  private static final String DESTINATION_FILE = "/tmp/jacoco-combined.exec";
 
   private JacocoServer() {
   }
 
   @SuppressWarnings("checkstyle:EmptyStatement")
   public static void main(String[] args) throws IOException {
-    final BufferedOutputStream output = new BufferedOutputStream(Files.newOutputStream(Paths.get(destinationFile)));
+    final BufferedOutputStream output = new BufferedOutputStream(Files.newOutputStream(Paths.get(DESTINATION_FILE)));
     ExecutionDataWriter destination = new ExecutionDataWriter(output);
-    ServerSocket serverSocket = new ServerSocket(port);
+    ServerSocket serverSocket = new ServerSocket(PORT);
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
         destination.flush();
@@ -74,7 +72,7 @@ public final class JacocoServer {
           while (reader.read()) {
             ;//read until the end of the stream.
           }
-          synchronized (lockMonitor) {
+          synchronized (LOCK_MONITOR) {
             destination.flush();
           }
         } catch (Exception ex) {
@@ -93,7 +91,7 @@ public final class JacocoServer {
   public static ISessionInfoVisitor synchronizedCall(
       ISessionInfoVisitor origin) {
     return data -> {
-      synchronized (lockMonitor) {
+      synchronized (LOCK_MONITOR) {
         origin.visitSessionInfo(data);
       }
     };
@@ -105,7 +103,7 @@ public final class JacocoServer {
   public static IExecutionDataVisitor synchronizedCall(
       IExecutionDataVisitor origin) {
     return data -> {
-      synchronized (lockMonitor) {
+      synchronized (LOCK_MONITOR) {
         origin.visitClassExecution(data);
       }
     };
