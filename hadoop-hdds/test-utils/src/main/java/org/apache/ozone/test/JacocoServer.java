@@ -17,10 +17,12 @@
  */
 package org.apache.ozone.test;
 
-import java.io.FileOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.jacoco.core.data.ExecutionDataWriter;
 import org.jacoco.core.data.IExecutionDataVisitor;
@@ -44,8 +46,8 @@ public final class JacocoServer {
 
   @SuppressWarnings("checkstyle:EmptyStatement")
   public static void main(String[] args) throws IOException {
-    ExecutionDataWriter destination =
-        new ExecutionDataWriter(new FileOutputStream(destinationFile));
+    final BufferedOutputStream output = new BufferedOutputStream(Files.newOutputStream(Paths.get(destinationFile)));
+    ExecutionDataWriter destination = new ExecutionDataWriter(output);
     ServerSocket serverSocket = new ServerSocket(port);
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
