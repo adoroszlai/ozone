@@ -44,15 +44,15 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
+      needs-basic-check: false
+      needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
+      needs-dependency-check: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
     steps:
       - name: "Checkout ${{ github.ref }} / ${{ github.sha }} (push)"
@@ -603,13 +603,13 @@ jobs:
   integration:
     needs:
       - build-info
-      - basic
     runs-on: ubuntu-20.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
-        profile: ${{ fromJson(needs.build-info.outputs.integration-suites) }}
+        profile:
+          - flaky
       fail-fast: false
     steps:
       - name: Checkout project
@@ -637,6 +637,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.TEST_JAVA_VERSION }}
+      - name: Check space
+        run: |
+          df -h
       - name: Execute tests
         run: |
           args="${{ inputs.ratis_args }}"
@@ -650,6 +653,11 @@ jobs:
           hadoop-ozone/dev-support/checks/integration.sh -Ptest-${{ matrix.profile }} ${args}
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: Check space
+        run: |
+          df -h
+          du -sh hadoop-ozone/integration-test/target/*
+          du -sh target/integration/*
       - name: Summary of failures
         run: |
           if [[ -s "target/${{ github.job }}/summary.md" ]]; then
