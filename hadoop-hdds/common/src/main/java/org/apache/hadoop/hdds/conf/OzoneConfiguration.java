@@ -410,9 +410,7 @@ public class OzoneConfiguration extends Configuration
         new DeprecationDelta("dfs.datanode.kerberos.keytab.file",
             DFSConfigKeysLegacy.DFS_DATANODE_KERBEROS_KEYTAB_FILE_KEY),
         new DeprecationDelta("dfs.metrics.percentiles.intervals",
-            DFSConfigKeysLegacy.DFS_METRICS_PERCENTILES_INTERVALS_KEY),
-        new DeprecationDelta("dfs.web.authentication.kerberos.keytab",
-            DFSConfigKeysLegacy.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY)
+            DFSConfigKeysLegacy.DFS_METRICS_PERCENTILES_INTERVALS_KEY)
     });
   }
 
