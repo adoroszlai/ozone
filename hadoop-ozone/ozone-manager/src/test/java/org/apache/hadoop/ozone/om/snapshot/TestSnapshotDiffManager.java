@@ -77,9 +77,11 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1364,88 +1366,91 @@ public class TestSnapshotDiffManager {
         TimeUnit.MILLISECONDS, new SynchronousQueue<>()
     );
 
-    List<SnapshotInfo> snapshotInfos = new ArrayList<>();
+    try {
+      List<SnapshotInfo> snapshotInfos = new ArrayList<>();
 
-    for (int i = 0; i < 10; i++) {
-      UUID snapshotId = UUID.randomUUID();
-      String snapshotName = "snap-" + snapshotId;
-      SnapshotInfo snapInfo = new SnapshotInfo.Builder()
-          .setSnapshotId(snapshotId)
-          .setVolumeName(VOLUME_NAME)
-          .setBucketName(BUCKET_NAME)
-          .setName(snapshotName)
-          .setSnapshotPath("fromSnapshotPath")
-          .setCheckpointDir("fromSnapshotCheckpointDir")
-          .build();
-      snapshotInfos.add(snapInfo);
+      for (int i = 0; i < 10; i++) {
+        UUID snapshotId = UUID.randomUUID();
+        String snapshotName = "snap-" + snapshotId;
+        SnapshotInfo snapInfo = new SnapshotInfo.Builder()
+            .setSnapshotId(snapshotId)
+            .setVolumeName(VOLUME_NAME)
+            .setBucketName(BUCKET_NAME)
+            .setName(snapshotName)
+            .setSnapshotPath("fromSnapshotPath")
+            .setCheckpointDir("fromSnapshotCheckpointDir")
+            .build();
+        snapshotInfos.add(snapInfo);
 
-      when(snapshotInfoTable.get(getTableKey(VOLUME_NAME, BUCKET_NAME,
-          snapshotName))).thenReturn(snapInfo);
-    }
-
-    SnapshotDiffManager spy = spy(snapshotDiffManager);
-
-    for (int i = 0; i < snapshotInfos.size(); i++) {
-      for (int j = i + 1; j < snapshotInfos.size(); j++) {
-        String fromSnapshotName = snapshotInfos.get(i).getName();
-        String toSnapshotName = snapshotInfos.get(j).getName();
-
-        doAnswer(invocation -> {
-          Thread.sleep(250L);
-          return null;
-        }).when(spy).generateSnapshotDiffReport(anyString(), anyString(),
-            eq(VOLUME_NAME), eq(BUCKET_NAME), eq(fromSnapshotName),
-            eq(toSnapshotName), eq(false), eq(false));
+        when(snapshotInfoTable.get(getTableKey(VOLUME_NAME, BUCKET_NAME,
+            snapshotName))).thenReturn(snapInfo);
       }
-    }
 
-    List<Future<SnapshotDiffResponse>> futures = new ArrayList<>();
-    for (int i = 0; i < snapshotInfos.size(); i++) {
-      for (int j = i + 1; j < snapshotInfos.size(); j++) {
-        String fromSnapshotName = snapshotInfos.get(i).getName();
-        String toSnapshotName = snapshotInfos.get(j).getName();
+      SnapshotDiffManager spy = spy(snapshotDiffManager);
 
-        Future<SnapshotDiffResponse> future = executorService.submit(
-            () -> submitJob(spy, fromSnapshotName, toSnapshotName));
-        futures.add(future);
-      }
-      Thread.sleep(waitBetweenBatches);
-    }
+      for (int i = 0; i < snapshotInfos.size(); i++) {
+        for (int j = i + 1; j < snapshotInfos.size(); j++) {
+          String fromSnapshotName = snapshotInfos.get(i).getName();
+          String toSnapshotName = snapshotInfos.get(j).getName();
 
-    // Wait to make sure that all jobs finish before assertion.
-    Thread.sleep(1000L);
-    int inProgressJobsCount = 0;
-    int rejectedJobsCount = 0;
-
-    for (Future<SnapshotDiffResponse> future : futures) {
-      SnapshotDiffResponse response = future.get();
-      if (response.getJobStatus() == IN_PROGRESS) {
-        inProgressJobsCount++;
-      } else if (response.getJobStatus() == REJECTED) {
-        rejectedJobsCount++;
-      } else {
-        throw new IllegalStateException("Unexpected job status.");
-      }
-    }
-
-    assertEquals(expectInProgressJobsCount, inProgressJobsCount);
-    assertEquals(expectRejectedJobsCount, rejectedJobsCount);
-
-    int notFoundJobs = 0;
-    for (int i = 0; i < snapshotInfos.size(); i++) {
-      for (int j = i + 1; j < snapshotInfos.size(); j++) {
-        SnapshotDiffJob diffJob =
-            getSnapshotDiffJobFromDb(snapshotInfos.get(i),
-                snapshotInfos.get(j));
-        if (diffJob == null) {
-          notFoundJobs++;
+          doAnswer(invocation -> {
+            Thread.sleep(250L);
+            return null;
+          }).when(spy).generateSnapshotDiffReport(anyString(), anyString(),
+              eq(VOLUME_NAME), eq(BUCKET_NAME), eq(fromSnapshotName),
+              eq(toSnapshotName), eq(false), eq(false));
         }
       }
-    }
 
-    // assert that rejected jobs were removed from the job table as well.
-    assertEquals(expectRejectedJobsCount, notFoundJobs);
-    executorService.shutdown();
+      List<Future<SnapshotDiffResponse>> futures = new ArrayList<>();
+      for (int i = 0; i < snapshotInfos.size(); i++) {
+        for (int j = i + 1; j < snapshotInfos.size(); j++) {
+          String fromSnapshotName = snapshotInfos.get(i).getName();
+          String toSnapshotName = snapshotInfos.get(j).getName();
+
+          Future<SnapshotDiffResponse> future = executorService.submit(
+              () -> submitJob(spy, fromSnapshotName, toSnapshotName));
+          futures.add(future);
+        }
+        Thread.sleep(waitBetweenBatches);
+      }
+
+      // Wait to make sure that all jobs finish before assertion.
+      Thread.sleep(1000L);
+      int inProgressJobsCount = 0;
+      int rejectedJobsCount = 0;
+
+      for (Future<SnapshotDiffResponse> future : futures) {
+        SnapshotDiffResponse response = future.get();
+        if (response.getJobStatus() == IN_PROGRESS) {
+          inProgressJobsCount++;
+        } else if (response.getJobStatus() == REJECTED) {
+          rejectedJobsCount++;
+        } else {
+          throw new IllegalStateException("Unexpected job status.");
+        }
+      }
+
+      assertEquals(expectInProgressJobsCount, inProgressJobsCount);
+      assertEquals(expectRejectedJobsCount, rejectedJobsCount);
+
+      int notFoundJobs = 0;
+      for (int i = 0; i < snapshotInfos.size(); i++) {
+        for (int j = i + 1; j < snapshotInfos.size(); j++) {
+          SnapshotDiffJob diffJob =
+              getSnapshotDiffJobFromDb(snapshotInfos.get(i),
+                  snapshotInfos.get(j));
+          if (diffJob == null) {
+            notFoundJobs++;
+          }
+        }
+      }
+
+      // assert that rejected jobs were removed from the job table as well.
+      assertEquals(expectRejectedJobsCount, notFoundJobs);
+    } finally {
+      MoreExecutors.shutdownAndAwaitTermination(executorService, Duration.ofMinutes(1));
+    }
   }
 
   private SnapshotDiffResponse submitJob(SnapshotDiffManager diffManager,
