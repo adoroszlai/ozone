@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
    contributor license agreements.  See the NOTICE file distributed with
@@ -15,18 +16,4 @@
    limitations under the License.
 -->
 <FindBugsFilter>
-  <Match>
-    <Class name="org.apache.hadoop.hdds.utils.ProtocolMessageMetrics"></Class>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT" />
-  </Match>
-
-  <!-- Test -->
-  <Match>
-    <Class name="org.apache.hadoop.hdds.server.http.TestRatisDropwizardExports"></Class>
-    <Bug pattern="DLS_DEAD_LOCAL_STORE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.hdds.utils.BufferedMetricsCollector$BufferedMetricsRecordBuilderImpl"></Class>
-    <Bug pattern="URF_UNREAD_FIELD" />
-  </Match>
 </FindBugsFilter>

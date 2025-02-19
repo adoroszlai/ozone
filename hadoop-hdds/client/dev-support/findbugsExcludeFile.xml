@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
    contributor license agreements.  See the NOTICE file distributed with
@@ -15,21 +16,4 @@
    limitations under the License.
 -->
 <FindBugsFilter>
-  <!-- Test -->
-  <Match>
-    <Class name="org.apache.hadoop.hdds.scm.storage.ByteArrayReader"></Class>
-    <Bug pattern="EI_EXPOSE_REP2" /> <!-- "Deep copy byte[] has bad impact on performance" -->
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.hdds.scm.storage.TestBufferPool"></Class>
-    <Bug pattern="DLS_DEAD_LOCAL_STORE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.hdds.scm.storage.TestChunkInputStream"></Class>
-    <Bug pattern="RR_NOT_CHECKED" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.hdds.scm.storage.TestBlockInputStream"></Class>
-    <Bug pattern="RR_NOT_CHECKED" />
-  </Match>
 </FindBugsFilter>
