@@ -98,7 +98,6 @@ import org.apache.hadoop.hdds.utils.db.managed.ManagedRawSSTFileReader;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksDB;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.ozone.OFSPath;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OmSnapshot;
@@ -891,8 +890,8 @@ public class SnapshotDiffManager implements AutoCloseable {
         tsDirTable = null;
       }
 
-      final Optional<Map<Long, Path>> oldParentIdPathMap;
-      final Optional<Map<Long, Path>> newParentIdPathMap;
+      final Optional<Map<Long, String>> oldParentIdPathMap;
+      final Optional<Map<Long, String>> newParentIdPathMap;
       if (bucketLayout.isFileSystemOptimized()) {
         oldParentIdPathMap = Optional.of(Maps.newHashMap());
         newParentIdPathMap = Optional.of(Maps.newHashMap());
@@ -1187,7 +1186,7 @@ public class SnapshotDiffManager implements AutoCloseable {
   }
 
   private String resolveBucketRelativePath(boolean isFSOBucket,
-      final Optional<Map<Long, Path>> parentIdMap, byte[] keyVal,
+      final Optional<Map<Long, String>> parentIdMap, byte[] keyVal,
       boolean skipUnresolvedObjIds)
       throws IOException {
     String key = codecRegistry.asObject(keyVal, String.class);
@@ -1204,11 +1203,10 @@ public class SnapshotDiffManager implements AutoCloseable {
         }
 
       }
-      return parentIdMap.map(m -> m.get(parentId).resolve(splitKey[1]))
+      return parentIdMap.map(m -> m.get(parentId) + OM_KEY_PREFIX + splitKey[1])
           .get().toString().substring(1);
     }
-    return OzoneConsts.ROOT_PATH.resolve(key).toString()
-        .substring(1);
+    return key;
   }
 
   @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:MethodLength"})
@@ -1226,8 +1224,8 @@ public class SnapshotDiffManager implements AutoCloseable {
       final String fromSnapshotName,
       final String toSnapshotName,
       final boolean isFSOBucket,
-      final Optional<Map<Long, Path>> oldParentIdPathMap,
-      final Optional<Map<Long, Path>> newParentIdPathMap,
+      final Optional<Map<Long, String>> oldParentIdPathMap,
+      final Optional<Map<Long, String>> newParentIdPathMap,
       final Map<String, String> tablePrefix) {
     LOG.info("Starting diff report generation for jobId: {}.", jobId);
     ColumnFamilyHandle deleteDiffColumnFamily = null;

@@ -18,11 +18,10 @@
 package org.apache.hadoop.ozone.om.snapshot;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.ROOT_PATH;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_ROOT;
 
 import com.google.common.collect.Sets;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -51,8 +50,8 @@ public class FSODirectoryPathResolver implements ObjectPathResolver {
     this.bucketId = bucketId;
   }
 
-  private void addToPathMap(Pair<Long, Path> objectIDPath,
-                            Set<Long> dirObjIds, Map<Long, Path> pathMap) {
+  private void addToPathMap(Pair<Long, String> objectIDPath,
+                            Set<Long> dirObjIds, Map<Long, String> pathMap) {
     if (dirObjIds.contains(objectIDPath.getKey())) {
       pathMap.put(objectIDPath.getKey(), objectIDPath.getValue());
       dirObjIds.remove(objectIDPath.getKey());
@@ -68,7 +67,7 @@ public class FSODirectoryPathResolver implements ObjectPathResolver {
    * @return Map of Path corresponding to provided directory object IDs
    */
   @Override
-  public Map<Long, Path> getAbsolutePathForObjectIDs(
+  public Map<Long, String> getAbsolutePathForObjectIDs(
       Optional<Set<Long>> dirObjIds, boolean skipUnresolvedObjs)
       throws IOException {
     // Root of a bucket would always have the
@@ -77,22 +76,22 @@ public class FSODirectoryPathResolver implements ObjectPathResolver {
       return Collections.emptyMap();
     }
     Set<Long> objIds = Sets.newHashSet(dirObjIds.get());
-    Map<Long, Path> objectIdPathMap = new HashMap<>();
-    Queue<Pair<Long, Path>> objectIdPathVals = new LinkedList<>();
-    Pair<Long, Path> root = Pair.of(bucketId, ROOT_PATH);
+    Map<Long, String> objectIdPathMap = new HashMap<>();
+    Queue<Pair<Long, String>> objectIdPathVals = new LinkedList<>();
+    Pair<Long, String> root = Pair.of(bucketId, OZONE_ROOT);
     objectIdPathVals.add(root);
     addToPathMap(root, objIds, objectIdPathMap);
 
     while (!objectIdPathVals.isEmpty() && objIds.size() > 0) {
-      Pair<Long, Path> parent = objectIdPathVals.poll();
+      Pair<Long, String> parent = objectIdPathVals.poll();
       try (TableIterator<String,
               ? extends Table.KeyValue<String, OmDirectoryInfo>>
               subDirIter = dirInfoTable.iterator(
                   prefix + parent.getKey() + OM_KEY_PREFIX)) {
         while (objIds.size() > 0 && subDirIter.hasNext()) {
           OmDirectoryInfo childDir = subDirIter.next().getValue();
-          Pair<Long, Path> pathVal = Pair.of(childDir.getObjectID(),
-              parent.getValue().resolve(childDir.getName()));
+          Pair<Long, String> pathVal = Pair.of(childDir.getObjectID(),
+              parent.getValue() + OM_KEY_PREFIX + childDir.getName());
           addToPathMap(pathVal, objIds, objectIdPathMap);
           objectIdPathVals.add(pathVal);
         }

@@ -28,8 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -129,7 +127,7 @@ public class TestFSODirectoryPathResolver {
     Set<Long> objIds = Sets.newHashSet(17L, 9L, 10L, 15L, 4L, 3L, 1L);
     Set<Long> invalidObjIds = Sets.newHashSet(17L, 9L, 10L, 15L, 4L, 3L, 1L,
         19L);
-    Map<Long, Path> absolutePathMap = fsoDirectoryPathResolver
+    Map<Long, String> absolutePathMap = fsoDirectoryPathResolver
         .getAbsolutePathForObjectIDs(Optional.of(objIds));
 
     Map<Long, String> pathMapping = ImmutableMap.<Long, String>builder()
@@ -142,13 +140,7 @@ public class TestFSODirectoryPathResolver {
         .put(1L, "/")
         .build();
 
-    Map<Long, Path> expectedPaths = pathMapping.entrySet().stream()
-        .collect(ImmutableMap.toImmutableMap(
-            Map.Entry::getKey,
-            e -> Paths.get(e.getValue())
-        ));
-
-    assertEquals(expectedPaths, absolutePathMap);
+    assertEquals(pathMapping, absolutePathMap);
     assertEquals(objIds.size(), absolutePathMap.size());
     // Invalid Obj Id 19 with dirInfo dir19 which is not present in the bucket.
     assertThrows(IllegalArgumentException.class,
