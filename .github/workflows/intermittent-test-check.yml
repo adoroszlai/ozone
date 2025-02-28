@@ -28,6 +28,10 @@ on:
         description: Test Name
         default:  ALL
         required: false
+      module:
+        description: Limit run to specific submodule (e.g. hdds-tools)
+        default: ''
+        required: false
       iterations:
         description: Number of Iterations per split
         default: 10
@@ -116,6 +120,11 @@ jobs:
       - name: Build (most) of Ozone
         run: |
           args="-DskipRecon -DskipShade -Dmaven.javadoc.skip=true"
+
+          if [[ "${{ github.event.inputs.module }}" != "" ]]; then
+            args="$args -am -pl :${{ github.event.inputs.module }}"
+          fi
+
           if [[ "${{ github.event.inputs.ratis-ref }}" != "" ]]; then
             args="$args -Dratis.version=${{ needs.ratis.outputs.ratis-version }}"
             args="$args -Dratis.thirdparty.version=${{ needs.ratis.outputs.thirdparty-version }}"
@@ -184,6 +193,11 @@ jobs:
           fi
 
           args="-DexcludedGroups=native|slow|unhealthy -DskipShade"
+
+          if [[ "${{ github.event.inputs.module }}" != "" ]]; then
+            args="$args -pl :${{ github.event.inputs.module }}"
+          fi
+
           if [[ "${{ github.event.inputs.ratis-ref }}" != "" ]]; then
             args="$args -Dratis.version=${{ needs.ratis.outputs.ratis-version }}"
             args="$args -Dratis.thirdparty.version=${{ needs.ratis.outputs.thirdparty-version }}"
