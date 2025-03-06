@@ -609,3 +609,28 @@ wait_for_root_certificate(){
   echo "Timed out waiting on $count root certificates. Current timestamp " $(date +"%T")
   return 1
 }
+
+download_if_not_exists() {
+  local url="$1"
+  local f="$2"
+
+  if [[ -e "${f}" ]]; then
+    echo "${f} already downloaded"
+  else
+    echo "Downloading ${f} from ${url}"
+    curl --fail --location --output "${f}" --show-error --silent "${url}" || rm -fv "${f}"
+  fi
+}
+
+download_and_verify_apache_release() {
+  local remote_path="$1"
+
+  local f="$(basename "${remote_path}")"
+  local base_url="${APACHE_MIRROR_URL:-https://www.apache.org/dyn/closer.lua?action=download&filename=}"
+  local checksum_base_url="${APACHE_OFFICIAL_URL:-https://downloads.apache.org/}"
+  local download_dir="${DOWNLOAD_DIR:-/tmp}"
+
+  download_if_not_exists "${base_url}${remote_path}" "${download_dir}/${f}"
+  download_if_not_exists "${checksum_base_url}${remote_path}.asc"  "${download_dir}/${f}.asc"
+  gpg --verify "${download_dir}/${f}.asc" "${download_dir}/${f}" || exit 1
+}
