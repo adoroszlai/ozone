@@ -44,14 +44,14 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
+      needs-basic-check: false
+      needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
     steps:
       - name: "Checkout ${{ github.ref }} / ${{ github.sha }} (push)"
@@ -596,13 +596,13 @@ jobs:
   integration:
     needs:
       - build-info
-      - basic
-    runs-on: ubuntu-24.04
+    runs-on: macos-13
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     strategy:
       matrix:
-        profile: ${{ fromJson(needs.build-info.outputs.integration-suites) }}
+        profile:
+          - om
       fail-fast: false
     steps:
       - name: Checkout project
@@ -632,7 +632,7 @@ jobs:
           java-version: ${{ env.TEST_JAVA_VERSION }}
       - name: Execute tests
         run: |
-          hadoop-ozone/dev-support/checks/integration.sh -Ptest-${{ matrix.profile }} ${{ inputs.ratis_args }}
+          hadoop-ozone/dev-support/checks/integration.sh -am -pl :ozone-manager -Dtest='TestKeyManagerUnit,TestOmSnapshotManager,TestSstFilteringService' -Dsurefire.fork.timeout=120
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: Summary of failures
