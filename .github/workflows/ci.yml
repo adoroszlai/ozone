@@ -632,7 +632,7 @@ jobs:
           java-version: ${{ env.TEST_JAVA_VERSION }}
       - name: Execute tests
         run: |
-          hadoop-ozone/dev-support/checks/integration.sh -am -pl :ozone-manager -Dtest='TestKeyManagerUnit,TestOmSnapshotManager,TestSstFilteringService' -Dsurefire.fork.timeout=120
+          hadoop-ozone/dev-support/checks/integration.sh -am -pl :ozone-manager -Dtest='TestKeyManagerUnit,TestOmSnapshotManager,TestSstFilteringService' -Dsurefire.fork.timeout=120 -Dnetty.version=4.1.100.Final
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: Summary of failures
