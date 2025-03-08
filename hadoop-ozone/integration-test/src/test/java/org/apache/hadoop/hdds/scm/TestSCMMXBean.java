@@ -164,7 +164,7 @@ public abstract class TestSCMMXBean implements NonHATests.TestCase {
       String value = it.next().toString();
       int num = Integer.parseInt(value);
       assertThat(expectedData).containsKey(key);
-      assertEquals(expectedData.remove(key).intValue(), num);
+      assertEquals(expectedData.remove(key).intValue(), num, key);
     }
     assertThat(expectedData).isEmpty();
   }
