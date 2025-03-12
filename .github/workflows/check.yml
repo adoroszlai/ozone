@@ -241,9 +241,21 @@ jobs:
         run: |
           df -h
 
-      - name: Big Files
+      - name: Log Space Usage
         run: |
-          find . -type f -size '+25M' | xargs ls -hlS
+          ls -hlS h*/*/target/surefire-reports
+
+      - name: Dir Space Usage
+        run: |
+          du -sh h*/*/target/test-dir/* | sort -h
+
+      - name: Match dir to test
+        run: |
+          for d in $(find h* -name test-dir); do
+            b=$(basename $d)
+            echo -n "$b: "
+            grep -lr --include '*-output.txt' "$b" h*/*/target/surefire-reports target/integration | head
+          done
 
       - name: Execute post-failure steps
         if: ${{ failure() && inputs.post-failure }}
