@@ -143,6 +143,11 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
+      - name: Initial space
+        run: |
+          pwd -P
+          df -h
+
       - name: Checkout project
         if: ${{ !inputs.needs-ozone-source-tarball }}
         uses: actions/checkout@v4
@@ -231,6 +236,14 @@ jobs:
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           OZONE_WITH_COVERAGE: ${{ inputs.with-coverage }}
+
+      - name: Space after tests
+        run: |
+          df -h
+
+      - name: Big Files
+        run: |
+          find . -type f -size '+25M' | xargs ls -hlS
 
       - name: Execute post-failure steps
         if: ${{ failure() && inputs.post-failure }}
