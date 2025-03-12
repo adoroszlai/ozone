@@ -132,12 +132,53 @@ jobs:
           path: |
             ~/.m2/repository/org/apache/ozone
           retention-days: 1
+  find-tests:
+    if: ${{ always() }}
+    needs:
+      - prepare-job
+    runs-on: ubuntu-24.04
+    outputs:
+      modules: ${{ steps.modules.outputs.modules }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+      - name: Cache for maven dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.m2/repository/*/*/*
+            !~/.m2/repository/org/apache/ozone
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-repo-
+      - name: Setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 8
+      - name: Execute tests
+        run: |
+          hadoop-ozone/dev-support/checks/junit.sh -DexcludedGroups="native|slow|unhealthy" -DskipShade \
+              -Dtest="$TEST_CLASS,Abstract*Test*\$*" \
+              -Dsurefire.fork.timeout=1 -Dmaven-surefire-plugin.version=3.0.0-M4
+        continue-on-error: true
+        env:
+          ITERATIONS: 1
+      - name: Find modules
+        id: modules
+        run: |
+          grep -e 'surefire:3.0.0-M4:test' -e 'Running org.apache' target/unit/output.log | grep -B1 'Running org.apache'
+          modules=$(grep -e 'surefire:3.0.0-M4:test' -e 'Running org.apache' target/unit/output.log | grep -B1 'Running org.apache' | grep surefire | cut -f2 -d'@' | awk '{ print $1 }' | sed 's/^/:/' | xargs | sed -e 's/ /,/g')
+          echo "modules=$modules" >> $GITHUB_OUTPUT
+        if: ${{ !cancelled() }}
   run-test:
     if: ${{ always() }}
     needs:
       - prepare-job
       - ratis
       - build
+      - find-tests
     name: Run-Split
     runs-on: ubuntu-24.04
     strategy:
@@ -190,6 +231,10 @@ jobs:
             args="$args -Dio.grpc.version=${{ needs.ratis.outputs.grpc-version }}"
             args="$args -Dnetty.version=${{ needs.ratis.outputs.netty-version }}"
             args="$args -Dgrpc.protobuf-compile.version=${{ needs.ratis.outputs.protobuf-version }}"
+          fi
+
+          if [[ -n "${{ needs.find-tests.outputs.modules }}" ]]; then
+            args="$args -pl ${{ needs.find-tests.outputs.modules }}"
           fi
 
           if [ "$TEST_METHOD" = "ALL" ]; then
