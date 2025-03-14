@@ -15,25 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.debug.replicas;
-
-import org.apache.hadoop.hdds.cli.DebugSubcommand;
-import org.apache.hadoop.ozone.debug.replicas.chunk.ChunkKeyHandler;
-import org.kohsuke.MetaInfServices;
-import picocli.CommandLine;
-
 /**
- * Replicas debug related commands.
+ * OM related repair tools.
  */
-@CommandLine.Command(
-    name = "replicas",
-    description = "Debug commands for replica-related issues, retrieving replica information from the OM and " +
-            "performing checks over the network against a running cluster.",
-    subcommands = {
-        ChunkKeyHandler.class,
-        ReplicasVerify.class
-    }
-)
-@MetaInfServices(DebugSubcommand.class)
-public class ReplicasDebug implements DebugSubcommand {
-}
+package org.apache.hadoop.ozone.repair.ldb;

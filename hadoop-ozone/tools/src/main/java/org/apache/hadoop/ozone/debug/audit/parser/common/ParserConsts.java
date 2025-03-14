@@ -15,25 +15,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.debug.replicas;
-
-import org.apache.hadoop.hdds.cli.DebugSubcommand;
-import org.apache.hadoop.ozone.debug.replicas.chunk.ChunkKeyHandler;
-import org.kohsuke.MetaInfServices;
-import picocli.CommandLine;
+package org.apache.hadoop.ozone.debug.audit.parser.common;
 
 /**
- * Replicas debug related commands.
+ * Constants used for ozone audit parser.
  */
-@CommandLine.Command(
-    name = "replicas",
-    description = "Debug commands for replica-related issues, retrieving replica information from the OM and " +
-            "performing checks over the network against a running cluster.",
-    subcommands = {
-        ChunkKeyHandler.class,
-        ReplicasVerify.class
-    }
-)
-@MetaInfServices(DebugSubcommand.class)
-public class ReplicasDebug implements DebugSubcommand {
+public final class ParserConsts {
+
+  private ParserConsts() {
+    //Never constructed
+  }
+
+  public static final String DRIVER = "org.sqlite.JDBC";
+  public static final String CONNECTION_PREFIX = "jdbc:sqlite:";
+  public static final String DATE_REGEX = "^\\d{4}-\\d{2}-\\d{2}.*$";
+  public static final String PROPS_FILE = "commands.properties";
+  public static final String INSERT_AUDITS = "insertAuditEntry";
+  public static final String CREATE_AUDIT_TABLE = "createAuditTable";
+
 }
