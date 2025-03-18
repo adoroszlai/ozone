@@ -150,8 +150,8 @@ public final class OzoneAcl {
   }
 
   public OzoneAcl withScope(final AclScope scope) {
-    return scope == aclScope ? this
-        : new OzoneAcl(type, name, scope, aclBits);
+    return scope == getAclScope() ? this
+        : new OzoneAcl(getType(), getName(), scope, getBits());
   }
 
   /**
@@ -276,13 +276,18 @@ public final class OzoneAcl {
   }
 
   @JsonIgnore
+  int getBits() {
+    return aclBits;
+  }
+
+  @JsonIgnore
   public boolean isEmpty() {
-    return aclBits == 0;
+    return getBits() == 0;
   }
 
   @VisibleForTesting
   public boolean isSet(ACLType acl) {
-    return (aclBits & toInt(acl)) != 0;
+    return (getBits() & toInt(acl)) != 0;
   }
 
   public boolean checkAccess(ACLType acl) {
@@ -290,36 +295,36 @@ public final class OzoneAcl {
   }
 
   public OzoneAcl add(OzoneAcl other) {
-    return apply(bits -> bits | other.aclBits);
+    return apply(bits -> bits | other.getBits());
   }
 
   public OzoneAcl remove(OzoneAcl other) {
-    return apply(bits -> bits & ~other.aclBits);
+    return apply(bits -> bits & ~other.getBits());
   }
 
   private OzoneAcl apply(IntFunction<Integer> op) {
-    int applied = op.apply(aclBits);
-    return applied == aclBits
+    int applied = op.apply(getBits());
+    return applied == getBits()
         ? this
-        : new OzoneAcl(type, name, aclScope, applied);
+        : new OzoneAcl(getType(), getName(), getAclScope(), applied);
   }
 
   @JsonIgnore
   public ByteString getAclByteString() {
     // only first 9 bits are used currently
-    final byte first = (byte) aclBits;
-    final byte second = (byte) (aclBits >>> 8);
+    final byte first = (byte) getBits();
+    final byte second = (byte) (getBits() >>> 8);
     final byte[] bytes = second != 0 ? new byte[]{first, second} : new byte[]{first};
     return Proto2Utils.unsafeByteString(bytes);
   }
 
   @JsonIgnore
   public List<String> getAclStringList() {
-    return getAclList(aclBits, ACLType::name);
+    return getAclList(getBits(), ACLType::name);
   }
 
   public List<ACLType> getAclList() {
-    return getAclList(aclBits, Function.identity());
+    return getAclList(getBits(), Function.identity());
   }
 
   private static <T> List<T> getAclList(int aclBits, Function<ACLType, T> converter) {
@@ -363,7 +368,7 @@ public final class OzoneAcl {
     OzoneAcl otherAcl = (OzoneAcl) obj;
     return otherAcl.getName().equals(this.getName()) &&
         otherAcl.getType().equals(this.getType()) &&
-        this.aclBits == otherAcl.aclBits &&
+        this.getBits() == otherAcl.getBits() &&
         otherAcl.getAclScope().equals(this.getAclScope());
   }
 
