@@ -229,6 +229,7 @@ public interface OzoneAcl {
     DEFAULT,
   }
 
+  /** Implementation using domain objects. */
   @Immutable
   class Impl implements OzoneAcl {
 
@@ -289,6 +290,7 @@ public interface OzoneAcl {
     }
   }
 
+  /** Wraps a protobuf object to be lazily converted. */
   @Immutable
   class ProtoWrapper implements OzoneAcl {
 
