@@ -24,7 +24,6 @@ import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.REA
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.WRITE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Proto2Utils;
 import java.util.ArrayList;
@@ -56,57 +55,38 @@ import org.apache.ratis.util.MemoizedSupplier;
  * </ul>
  */
 @Immutable
-public final class OzoneAcl {
+public interface OzoneAcl {
 
-  private static final String ACL_SCOPE_REGEX = ".*\\[(ACCESS|DEFAULT)\\]";
+  String ACL_SCOPE_REGEX = ".*\\[(ACCESS|DEFAULT)\\]";
+
   /**
    * Link bucket default acl defined [world::rw]
    * which is similar to Linux POSIX symbolic.
    */
-  public static final OzoneAcl LINK_BUCKET_DEFAULT_ACL =
+  OzoneAcl LINK_BUCKET_DEFAULT_ACL =
       OzoneAcl.of(IAccessAuthorizer.ACLIdentityType.WORLD, "", ACCESS, READ, WRITE);
 
-  private final ACLIdentityType type;
-  private final String name;
-  @JsonIgnore
-  private final int aclBits;
-  private final AclScope aclScope;
-
-  @JsonIgnore
-  private final Supplier<String> toStringMethod;
-  @JsonIgnore
-  private final Supplier<Integer> hashCodeMethod;
-
-  public static OzoneAcl of(ACLIdentityType type, String name, AclScope scope, ACLType... acls) {
-    return new OzoneAcl(type, name, scope, toInt(acls));
+  static OzoneAcl of(ACLIdentityType type, String name, AclScope scope, ACLType... acls) {
+    return new Impl(type, name, scope, toInt(acls));
   }
 
-  public static OzoneAcl of(ACLIdentityType type, String name, AclScope scope, EnumSet<ACLType> acls) {
-    return new OzoneAcl(type, name, scope, toInt(acls));
+  static OzoneAcl of(ACLIdentityType type, String name, AclScope scope, EnumSet<ACLType> acls) {
+    return new Impl(type, name, scope, toInt(acls));
   }
 
-  private OzoneAcl(ACLIdentityType type, String name, AclScope scope, int acls) {
-    this.name = validateNameAndType(type, name);
-    this.type = type;
-    this.aclScope = scope;
-    this.aclBits = acls;
-
-    this.toStringMethod = MemoizedSupplier.valueOf(() -> getType() + ":" + getName() + ":"
-        + ACLType.getACLString(BitSet.valueOf(getAclByteString().asReadOnlyByteBuffer())) + "[" + getAclScope() + "]");
-    this.hashCodeMethod = MemoizedSupplier.valueOf(() -> Objects.hash(getName(),
-        BitSet.valueOf(getAclByteString().asReadOnlyByteBuffer()), getType().toString(), getAclScope()));
+  static OzoneAcl of(ACLIdentityType type, String name, AclScope scope, int acls) {
+    return new Impl(type, name, scope, acls);
   }
 
-
-  private static int toInt(int aclTypeOrdinal) {
+  static int toInt(int aclTypeOrdinal) {
     return 1 << aclTypeOrdinal;
   }
 
-  private static int toInt(ACLType acl) {
+  static int toInt(ACLType acl) {
     return toInt(acl.ordinal());
   }
 
-  private static int toInt(ACLType[] acls) {
+  static int toInt(ACLType[] acls) {
     if (acls == null) {
       return 0;
     }
@@ -117,7 +97,7 @@ public final class OzoneAcl {
     return value;
   }
 
-  private static int toInt(Iterable<ACLType> acls) {
+  static int toInt(Iterable<ACLType> acls) {
     if (acls == null) {
       return 0;
     }
@@ -128,7 +108,7 @@ public final class OzoneAcl {
     return value;
   }
 
-  private static String validateNameAndType(ACLIdentityType type, String name) {
+  static String validateNameAndType(ACLIdentityType type, String name) {
     Objects.requireNonNull(type);
 
     if (type == ACLIdentityType.WORLD || type == ACLIdentityType.ANONYMOUS) {
@@ -149,9 +129,9 @@ public final class OzoneAcl {
     return name;
   }
 
-  public OzoneAcl withScope(final AclScope scope) {
+  default OzoneAcl withScope(final AclScope scope) {
     return scope == getAclScope() ? this
-        : new OzoneAcl(getType(), getName(), scope, getBits());
+        : OzoneAcl.of(getType(), getName(), scope, getBits());
   }
 
   /**
@@ -162,7 +142,7 @@ public final class OzoneAcl {
    *
    * @return - Ozone ACLs
    */
-  public static OzoneAcl parseAcl(String acl)
+  static OzoneAcl parseAcl(String acl)
       throws IllegalArgumentException {
     if ((acl == null) || acl.isEmpty()) {
       throw new IllegalArgumentException("ACLs cannot be null or empty");
@@ -204,7 +184,7 @@ public final class OzoneAcl {
    *
    * @return - Ozone ACLs
    */
-  public static List<OzoneAcl> parseAcls(String acls)
+  static List<OzoneAcl> parseAcls(String acls)
       throws IllegalArgumentException {
     if ((acls == null) || acls.isEmpty()) {
       throw new IllegalArgumentException("ACLs cannot be null or empty");
@@ -221,7 +201,7 @@ public final class OzoneAcl {
     return ozAcls;
   }
 
-  public static OzoneAclInfo toProtobuf(OzoneAcl acl) {
+  static OzoneAclInfo toProtobuf(OzoneAcl acl) {
     OzoneAclInfo.Builder builder = OzoneAclInfo.newBuilder()
         .setName(acl.getName())
         .setType(OzoneAclType.valueOf(acl.getType().name()))
@@ -230,7 +210,7 @@ public final class OzoneAcl {
     return builder.build();
   }
 
-  public static OzoneAcl fromProtobuf(OzoneAclInfo protoAcl) {
+  static OzoneAcl fromProtobuf(OzoneAclInfo protoAcl) {
     final byte[] bytes = protoAcl.getRights().toByteArray();
     if (bytes.length > 4) {
       throw new AssertionError("Expected at most 4 bytes but got " + bytes.length);
@@ -239,78 +219,47 @@ public final class OzoneAcl {
     for (int i = 0; i < bytes.length; i++) {
       aclRights |= (bytes[i] & 0xff) << (i * 8);
     }
-    return new OzoneAcl(ACLIdentityType.valueOf(protoAcl.getType().name()), protoAcl.getName(),
+    return OzoneAcl.of(ACLIdentityType.valueOf(protoAcl.getType().name()), protoAcl.getName(),
         AclScope.valueOf(protoAcl.getAclScope().name()), aclRights);
   }
 
-  public AclScope getAclScope() {
-    return aclScope;
-  }
+  AclScope getAclScope();
 
-  @Override
-  public String toString() {
-    return toStringMethod.get();
-  }
-
-  /**
-   * Returns a hash code value for the object. This method is
-   * supported for the benefit of hash tables.
-   *
-   * @return a hash code value for this object.
-   *
-   * @see Object#equals(Object)
-   * @see System#identityHashCode
-   */
-  @Override
-  public int hashCode() {
-    return hashCodeMethod.get();
-  }
-
-  /**
-   * Returns name.
-   *
-   * @return name
-   */
-  public String getName() {
-    return name;
-  }
+  String getName();
 
   @JsonIgnore
-  int getBits() {
-    return aclBits;
-  }
+  int getBits();
 
   @JsonIgnore
-  public boolean isEmpty() {
+  default boolean isEmpty() {
     return getBits() == 0;
   }
 
-  @VisibleForTesting
-  public boolean isSet(ACLType acl) {
+  default boolean isSet(ACLType acl) {
     return (getBits() & toInt(acl)) != 0;
   }
 
-  public boolean checkAccess(ACLType acl) {
+  default boolean checkAccess(ACLType acl) {
     return (isSet(acl) || isSet(ALL)) && !isSet(NONE);
   }
 
-  public OzoneAcl add(OzoneAcl other) {
+  default OzoneAcl add(OzoneAcl other) {
     return apply(bits -> bits | other.getBits());
   }
 
-  public OzoneAcl remove(OzoneAcl other) {
+  default OzoneAcl remove(OzoneAcl other) {
     return apply(bits -> bits & ~other.getBits());
   }
 
-  private OzoneAcl apply(IntFunction<Integer> op) {
+  default OzoneAcl apply(IntFunction<Integer> op) {
     int applied = op.apply(getBits());
     return applied == getBits()
         ? this
-        : new OzoneAcl(getType(), getName(), getAclScope(), applied);
+        : OzoneAcl.of(getType(), getName(), getAclScope(), applied);
   }
 
   @JsonIgnore
-  public ByteString getAclByteString() {
+  default ByteString getAclByteString() {
     // only first 9 bits are used currently
     final byte first = (byte) getBits();
     final byte second = (byte) (getBits() >>> 8);
@@ -319,15 +268,15 @@ public final class OzoneAcl {
   }
 
   @JsonIgnore
-  public List<String> getAclStringList() {
+  default List<String> getAclStringList() {
     return getAclList(getBits(), ACLType::name);
   }
 
-  public List<ACLType> getAclList() {
+  default List<ACLType> getAclList() {
     return getAclList(getBits(), Function.identity());
   }
 
-  private static <T> List<T> getAclList(int aclBits, Function<ACLType, T> converter) {
+  static <T> List<T> getAclList(int aclBits, Function<ACLType, T> converter) {
     if (aclBits == 0) {
       return Collections.emptyList();
     }
@@ -345,38 +294,89 @@ public final class OzoneAcl {
    *
    * @return type
    */
-  public ACLIdentityType getType() {
-    return type;
-  }
-
-  /**
-   * Indicates whether some other object is "equal to" this one.
-   *
-   * @param obj the reference object with which to compare.
-   *
-   * @return {@code true} if this object is the same as the obj
-   * argument; {@code false} otherwise.
-   */
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    }
-    if (obj == null || getClass() != obj.getClass()) {
-      return false;
-    }
-    OzoneAcl otherAcl = (OzoneAcl) obj;
-    return otherAcl.getName().equals(this.getName()) &&
-        otherAcl.getType().equals(this.getType()) &&
-        this.getBits() == otherAcl.getBits() &&
-        otherAcl.getAclScope().equals(this.getAclScope());
-  }
+  ACLIdentityType getType();
 
   /**
    * Scope of ozone acl.
    * */
-  public enum AclScope {
+  enum AclScope {
     ACCESS,
-    DEFAULT;
+    DEFAULT,
+  }
+
+  class Impl implements OzoneAcl {
+
+    private final ACLIdentityType type;
+    private final String name;
+    @JsonIgnore
+    private final int aclBits;
+    private final AclScope aclScope;
+
+    @JsonIgnore
+    private final Supplier<String> toStringMethod;
+    @JsonIgnore
+    private final Supplier<Integer> hashCodeMethod;
+
+    private Impl(ACLIdentityType type, String name, AclScope scope, int acls) {
+      this.name = validateNameAndType(type, name);
+      this.type = type;
+      this.aclScope = scope;
+      this.aclBits = acls;
+
+      this.toStringMethod = MemoizedSupplier.valueOf(() -> getType() + ":" + getName() + ":"
+          + ACLType.getACLString(BitSet.valueOf(getAclByteString().asReadOnlyByteBuffer())) + "[" + getAclScope() + "]");
+      this.hashCodeMethod = MemoizedSupplier.valueOf(() -> Objects.hash(getName(),
+          BitSet.valueOf(getAclByteString().asReadOnlyByteBuffer()), getType().toString(), getAclScope()));
+    }
+
+    @Override
+    public String toString() {
+      return toStringMethod.get();
+    }
+
+    @Override
+    public int hashCode() {
+      return hashCodeMethod.get();
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    @JsonIgnore
+    public int getBits() {
+      return aclBits;
+    }
+
+    public AclScope getAclScope() {
+      return aclScope;
+    }
+
+    public ACLIdentityType getType() {
+      return type;
+    }
+
+    /**
+     * Indicates whether some other object is "equal to" this one.
+     *
+     * @param obj the reference object with which to compare.
+     *
+     * @return {@code true} if this object is the same as the obj
+     * argument; {@code false} otherwise.
+     */
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      OzoneAcl otherAcl = (OzoneAcl) obj;
+      return otherAcl.getName().equals(this.getName()) &&
+          otherAcl.getType().equals(this.getType()) &&
+          this.getBits() == otherAcl.getBits() &&
+          otherAcl.getAclScope().equals(this.getAclScope());
+    }
   }
 }
