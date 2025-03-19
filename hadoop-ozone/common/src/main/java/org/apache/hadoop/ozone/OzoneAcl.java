@@ -264,6 +264,11 @@ public interface OzoneAcl {
     }
 
     @Override
+    public ACLIdentityType getType() {
+      return type;
+    }
+
+    @Override
     public String getName() {
       return name;
     }
@@ -277,11 +282,6 @@ public interface OzoneAcl {
     @Override
     public AclScope getAclScope() {
       return aclScope;
-    }
-
-    @Override
-    public ACLIdentityType getType() {
-      return type;
     }
 
     @Override
@@ -309,13 +309,13 @@ public interface OzoneAcl {
     }
 
     @Override
-    public String getName() {
-      return proto.getName();
+    public ACLIdentityType getType() {
+      return converted.get().getType();
     }
 
     @Override
-    public ACLIdentityType getType() {
-      return converted.get().getType();
+    public String getName() {
+      return proto.getName();
     }
 
     @Override
