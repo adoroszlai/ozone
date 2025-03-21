@@ -17,6 +17,23 @@
 
 package org.apache.hadoop.ozone;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_PER_VOLUME;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HA_RAFT_LOG_APPENDER_QUEUE_BYTE_LIMIT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_RATIS_PIPELINE_LIMIT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_CONTAINER_RATIS_DATASTREAM_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_CLOSE_CONTAINER_WAIT_DURATION;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_S3_GPRC_SERVER_ENABLED;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SNAPSHOT_DIFF_JOB_DEFAULT_WAIT_TIME;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_TRANSPORT_CLASS;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -287,6 +304,35 @@ public interface MiniOzoneCluster extends AutoCloseable {
       // Use default SCM configurations if no override is provided.
       setSCMConfigurator(new SCMConfigurator());
       ExitUtils.disableSystemExit();
+      setDefaultConfig();
+    }
+
+    /** Set config defaults that better fit MiniOzoneCluster than real production ones. */
+    protected void setDefaultConfig() {
+      conf.setIfUnset(HDDS_CONTAINER_RATIS_DATASTREAM_ENABLED, "true");
+      conf.setIfUnset(HDDS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT, "32MB");
+      conf.setIfUnset(HDDS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_PER_VOLUME, "4");
+      conf.setIfUnset("hdds.datanode.du.factory.classname",
+          "org.apache.hadoop.hdds.fs.MockSpaceUsageCheckFactory$None");
+      conf.setIfUnset(HDDS_HEARTBEAT_INTERVAL, "1s");
+      conf.setIfUnset("ozone.client.datastream.buffer.flush.size", "4MB");
+      conf.setIfUnset("ozone.client.datastream.min.packet.size", "256KB");
+      conf.setIfUnset("ozone.client.datastream.window.size", "8MB");
+      conf.setIfUnset("ozone.client.stream.buffer.flush.size", "1MB");
+      conf.setIfUnset("ozone.client.stream.buffer.max.size", "2MB");
+      conf.setIfUnset("ozone.client.stream.buffer.size", "1MB");
+      conf.setIfUnset(OZONE_OM_HANDLER_COUNT_KEY, "20");
+      conf.setIfUnset(OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT, "4MB");
+      conf.setIfUnset(OZONE_OM_S3_GPRC_SERVER_ENABLED, "false");
+      conf.setIfUnset(OZONE_OM_SNAPSHOT_DIFF_JOB_DEFAULT_WAIT_TIME, "1s");
+      conf.setIfUnset(OZONE_OM_TRANSPORT_CLASS, "org.apache.hadoop.ozone.om.protocolPB.Hadoop3OmTransportFactory");
+      conf.setIfUnset(OZONE_SCM_BLOCK_SIZE, "4MB");
+      conf.setIfUnset(OZONE_SCM_CHUNK_SIZE_KEY, "1MB");
+      conf.setIfUnset(OZONE_SCM_CLOSE_CONTAINER_WAIT_DURATION, "1s");
+      conf.setIfUnset(OZONE_SCM_HANDLER_COUNT_KEY, "20");
+      conf.setIfUnset(OZONE_SCM_HA_RAFT_LOG_APPENDER_QUEUE_BYTE_LIMIT, "4MB");
+      conf.setIfUnset(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, "100ms");
+      conf.setIfUnset(OZONE_SCM_RATIS_PIPELINE_LIMIT, "3");
     }
 
     /** Prepare the builder for another call to {@link #build()}, avoiding conflict
