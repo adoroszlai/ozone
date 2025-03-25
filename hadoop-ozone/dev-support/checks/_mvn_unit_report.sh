@@ -28,6 +28,14 @@ _realpath() {
 
 tempfile="${REPORT_DIR}/summary.tmp"
 
+# gather space usage
+space=${REPORT_DIR}/space.txt
+if [[ "${CHECK:-unit}" == "integration" ]]; then
+  find hadoop-ozone/integration-test* -not -path '*/iteration*' -name '*-output.txt' -print0 \
+      | xargs -0 "grep" -E "====.*SPACE" \
+      > "${space}"
+fi
+
 ## generate summary txt file
 failures=${REPORT_DIR}/failures.txt
 find "." -not -path '*/iteration*' -name 'TEST*.xml' -print0 \
