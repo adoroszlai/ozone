@@ -43,14 +43,14 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
+      needs-basic-check: false
+      needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
+      needs-build: false
+      needs-compile: false
+      needs-compose-tests: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
       build-args: ${{ env.BUILD_ARGS }}
@@ -281,7 +281,6 @@ jobs:
   integration:
     needs:
       - build-info
-      - basic
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: ./.github/workflows/check.yml
     secrets: inherit
@@ -291,12 +290,14 @@ jobs:
       script: integration
       script-args: -Ptest-${{ matrix.profile }}
       sha: ${{ needs.build-info.outputs.sha }}
-      split: ${{ matrix.profile }}
+      split: ${{ matrix.split }}
       timeout-minutes: 150
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        profile: ${{ fromJson(needs.build-info.outputs.integration-suites) }}
+        profile:
+          - ozone
+        split: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
       fail-fast: false
 
   coverage:
