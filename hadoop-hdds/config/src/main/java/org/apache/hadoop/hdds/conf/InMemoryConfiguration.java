@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.conf;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,11 +43,6 @@ public class InMemoryConfiguration implements MutableConfigurationSource {
   @Override
   public Collection<String> getConfigKeys() {
     return configs.keySet();
-  }
-
-  @Override
-  public char[] getPassword(String key) throws IOException {
-    return configs.get(key).toCharArray();
   }
 
   @Override

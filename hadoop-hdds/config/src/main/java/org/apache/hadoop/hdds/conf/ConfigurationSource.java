@@ -35,7 +35,10 @@ public interface ConfigurationSource {
 
   Collection<String> getConfigKeys();
 
-  char[] getPassword(String key) throws IOException;
+  default char[] getPassword(String key) throws IOException {
+    String value = get(key);
+    return value != null ? value.toCharArray() : null;
+  }
 
   default String get(String key, String defaultValue) {
     String value = get(key);
