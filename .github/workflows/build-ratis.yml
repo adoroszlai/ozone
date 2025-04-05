@@ -38,6 +38,11 @@ on:
         default: master
         required: true
         type: string
+      thirdparty-ref:
+        description: Ratis Thidparty ref (branch, tag or commit SHA)
+        default: ''
+        required: false
+        type: string
     outputs:
       ratis-version:
         description: "Ratis Version"
@@ -115,7 +120,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: apache/ratis-thirdparty
-          ref: ${{ needs.ratis.outputs.thirdparty-version }}
+          ref: ${{ inputs.thirdparty-ref || needs.ratis.outputs.thirdparty-version }}
       - name: Get component versions
         id: versions
         run: |

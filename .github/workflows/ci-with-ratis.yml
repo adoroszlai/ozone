@@ -36,6 +36,10 @@ on:
         description: Ratis ref (branch, tag or commit SHA)
         default: 'master'
         required: true
+      ratis-thirdparty-ref:
+        description: Ratis Thirdparty ref (branch, tag or commit SHA)
+        default: ''
+        required: false
 run-name: Test Ozone ${{ inputs.ref }} with Ratis ${{ inputs.ratis-repo }} @ ${{ inputs.ratis-ref }}
 jobs:
   ratis:
@@ -43,6 +47,7 @@ jobs:
     with:
       repo: ${{ github.event.inputs.ratis-repo || format('{0}/ratis', github.repository_owner) }}
       ref: ${{ github.event.inputs.ratis-ref }}
+      thirdparty-ref: ${{ github.event.inputs.ratis-thirdparty-ref }}
   ozone:
     needs:
       - ratis
