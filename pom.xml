@@ -2077,12 +2077,12 @@
       <url>https://repository.apache.org/content/repositories/snapshots</url>
     </repository>
     <repository>
-      <id>${distMgmtStagingId}</id>
-      <name>${distMgmtStagingName}</name>
-      <url>${distMgmtStagingUrl}</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
+      <id>${distMgmtStagingId}</id>
+      <name>${distMgmtStagingName}</name>
+      <url>${distMgmtStagingUrl}</url>
     </repository>
   </repositories>
 
