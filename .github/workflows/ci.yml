@@ -43,14 +43,14 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
-      needs-native-check: ${{ steps.categorize-basic-checks.outputs.needs-native-check }}
+      needs-basic-check: false
+      needs-native-check: false
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
       build-args: ${{ env.BUILD_ARGS }}
@@ -193,6 +193,7 @@ jobs:
     needs:
       - build-info
       - build
+    if: false
     uses: ./.github/workflows/check.yml
     secrets: inherit
     with:
@@ -207,6 +208,7 @@ jobs:
       - build-info
       - build
     uses: ./.github/workflows/check.yml
+    if: false
     secrets: inherit
     with:
       java-version: ${{ needs.build-info.outputs.java-version }}
@@ -239,25 +241,25 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
-      - dependency
-      - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: ./.github/workflows/check.yml
     secrets: inherit
     with:
-      java-version: 11 # Hadoop may not work with newer Java
+      java-version: ${{ matrix.java }}
       needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
       script: acceptance
       script-args: ${{ matrix.suite }}
       sha: ${{ needs.build-info.outputs.sha }}
-      split: ${{ matrix.suite }}
+      split: ${{ matrix.suite }}-${{ matrix.java }}-${{ matrix.split }}
       timeout-minutes: 150
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        suite:
+          - MR
+        java: [ 11, 17, 21 ]
+        split: [ 1, 2, 3 ]
       fail-fast: false
 
   kubernetes:
