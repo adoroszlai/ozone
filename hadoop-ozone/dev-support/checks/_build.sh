@@ -39,6 +39,8 @@ export MAVEN_OPTS="-Xmx4096m ${MAVEN_OPTS:-}"
 mvn ${MAVEN_OPTIONS} clean "$@" | tee output.log
 rc=$?
 
+find ~/.m2/repository/org/apache/ozone | sort
+
 mkdir -p "$REPORT_DIR" # after `mvn clean`
 mv output.log "$REPORT_DIR"/
 

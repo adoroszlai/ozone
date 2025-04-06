@@ -54,6 +54,8 @@ if [[ ${ITERATIONS} -gt 1 ]] && [[ ${OZONE_REPO_CACHED} == "false" ]]; then
   mvn ${MAVEN_OPTIONS} -DskipTests clean install
 fi
 
+find ~/.m2/repository/org/apache/ozone | sort
+
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 REPORT_FILE="${REPORT_DIR}/summary.txt"
 mkdir -p "$REPORT_DIR"
