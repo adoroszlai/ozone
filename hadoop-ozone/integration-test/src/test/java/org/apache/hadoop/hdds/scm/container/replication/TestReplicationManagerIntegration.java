@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -68,20 +68,20 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneClusterProvider;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneKeyLocation;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -91,12 +91,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Integration test for ReplicationManager.
  */
-public class TestReplicationManagerIntegration {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+class TestReplicationManagerIntegration {
   private static final int DATANODE_COUNT = 5;
   private static final int HEALTHY_REPLICA_NUM = 3;
-  private static String bucketName = "bucket1";
-  private static String volName = "vol1";
-  private static RatisReplicationConfig ratisRepConfig = RatisReplicationConfig
+  private static final RatisReplicationConfig ratisRepConfig = RatisReplicationConfig
       .getInstance(HddsProtos.ReplicationFactor.THREE);
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationManagerIntegration.class);
 
@@ -109,10 +109,8 @@ public class TestReplicationManagerIntegration {
   private ContainerOperationClient scmClient;
   private OzoneBucket bucket;
 
-  private static MiniOzoneClusterProvider clusterProvider;
-
   @BeforeAll
-  public static void init() throws Exception {
+  void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
@@ -145,19 +143,7 @@ public class TestReplicationManagerIntegration {
     MiniOzoneCluster.Builder builder = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(DATANODE_COUNT);
 
-    clusterProvider = new MiniOzoneClusterProvider(builder, 9);
-  }
-
-  @AfterAll
-  public static void shutdown() throws InterruptedException {
-    if (clusterProvider != null) {
-      clusterProvider.shutdown();
-    }
-  }
-
-  @BeforeEach
-  public void setUp() throws Exception {
-    cluster = clusterProvider.provide();
+    cluster = builder.build();
     cluster.getConf().setTimeDuration(HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT, 0, SECONDS);
     cluster.waitForClusterToBeReady();
 
@@ -168,33 +154,33 @@ public class TestReplicationManagerIntegration {
 
     client = cluster.newClient();
     scmClient = new ContainerOperationClient(cluster.getConf());
-    bucket = TestDataUtil.createVolumeAndBucket(client, volName, bucketName);
+    bucket = TestDataUtil.createVolumeAndBucket(client);
   }
 
-  @AfterEach
-  public void tearDown() throws InterruptedException, IOException {
-    IOUtils.close(LOG, client, scmClient);
-    if (cluster != null) {
-      clusterProvider.destroy(cluster);
-    }
+  @AfterAll
+  void shutdown() {
+    IOUtils.close(LOG, client, scmClient, cluster);
   }
 
+  @Order(1)
+  @Test
+  void testReplicationManagerNotify() throws Exception {
+    // Test if RM notify works
+    replicationManager.getConfig().setInterval(Duration.ofSeconds(300));
+    GenericTestUtils.waitFor(() -> replicationManager.isThreadWaiting(), 1000, 30000);
+
+  }
+
+  @Order(Integer.MAX_VALUE)
   @Test
   public void testClosedContainerReplicationWhenNodeDies()
       throws Exception {
-    // Test if RM notify works
-    replicationManager.getConfig().setInterval(Duration.ofSeconds(300));
-    GenericTestUtils.waitFor(() -> {
-      return replicationManager.isThreadWaiting();
-    }, 1000, 30000);
-
     String keyName = "key-" + UUID.randomUUID();
     TestDataUtil.createKey(bucket, keyName, ratisRepConfig,
         "this is the content".getBytes(StandardCharsets.UTF_8));
 
     // Get the container ID for the key
-    OzoneKey key = bucket.getKey(keyName);
-    OzoneKeyDetails keyDetails = (OzoneKeyDetails) key;
+    OzoneKeyDetails keyDetails = bucket.getKey(keyName);
     List<OzoneKeyLocation> keyLocations = keyDetails.getOzoneKeyLocations();
     long containerID = keyLocations.get(0).getContainerID();
     ContainerID containerId = ContainerID.valueOf(containerID);
@@ -203,9 +189,7 @@ public class TestReplicationManagerIntegration {
 
     assertEquals(HEALTHY_REPLICA_NUM, containerManager.getContainerReplicas(containerId).size());
 
-    // Find a datanode that has a replica of this container
-    final DatanodeDetails targetDatanode = containerManager.getContainerReplicas(containerId).stream().findFirst().get()
-        .getDatanodeDetails();
+    final DatanodeDetails targetDatanode = findReplica(containerId);
 
     cluster.shutdownHddsDatanode(targetDatanode);
     waitForDnToReachHealthState(nodeManager, targetDatanode, DEAD);
@@ -225,6 +209,14 @@ public class TestReplicationManagerIntegration {
     }, 100, 30000);
   }
 
+  private DatanodeDetails findReplica(ContainerID containerId) throws ContainerNotFoundException {
+    // Find a datanode that has a replica of this container
+    return containerManager.getContainerReplicas(containerId).stream()
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Replica not found for " + containerId))
+        .getDatanodeDetails();
+  }
+
   private static Stream<Arguments> decommissionTransitionTestCases() {
     return Stream.of(
         // Test case 1: Node enters maintenance
@@ -232,7 +224,7 @@ public class TestReplicationManagerIntegration {
             "Node enters maintenance",
             (BiConsumer<ContainerOperationClient, DatanodeDetails>) (client, dn) -> {
               try {
-                client.startMaintenanceNodes(Arrays.asList(getDNHostAndPort(dn)), 0, false);
+                client.startMaintenanceNodes(Collections.singletonList(getDNHostAndPort(dn)), 0, false);
               } catch (IOException e) {
                 throw new RuntimeException(e);
               }
@@ -243,7 +235,7 @@ public class TestReplicationManagerIntegration {
             "Node is decommissioned",
             (BiConsumer<ContainerOperationClient, DatanodeDetails>) (client, dn) -> {
               try {
-                client.decommissionNodes(Arrays.asList(getDNHostAndPort(dn)), false);
+                client.decommissionNodes(Collections.singletonList(getDNHostAndPort(dn)), false);
               } catch (IOException e) {
                 throw new RuntimeException(e);
               }
@@ -253,25 +245,18 @@ public class TestReplicationManagerIntegration {
 
   @ParameterizedTest
   @MethodSource("decommissionTransitionTestCases")
-  public void testClosedContainerReplicationWhenNodeDecommissionAndBackToInService(
-      String testName,
+  void testClosedContainerReplicationWhenNodeDecommissionAndBackToInService(
+      String ignored,
       BiConsumer<ContainerOperationClient, DatanodeDetails> action,
       NodeOperationalState expectedOpState)
       throws Exception {
-
-    // Test if RM notify works
-    replicationManager.getConfig().setInterval(Duration.ofSeconds(300));
-    GenericTestUtils.waitFor(() -> {
-      return replicationManager.isThreadWaiting();
-    }, 1000, 30000);
 
     String keyName = "key-" + UUID.randomUUID();
     TestDataUtil.createKey(bucket, keyName, ratisRepConfig,
         "this is the content".getBytes(StandardCharsets.UTF_8));
 
-    OzoneKey key = bucket.getKey(keyName);
-    OzoneKeyDetails keyDetails = (OzoneKeyDetails) key;
-    List<OzoneKeyLocation> keyLocations = keyDetails.getOzoneKeyLocations();
+    OzoneKeyDetails key = bucket.getKey(keyName);
+    List<OzoneKeyLocation> keyLocations = key.getOzoneKeyLocations();
 
     long containerID = keyLocations.get(0).getContainerID();
     ContainerID containerId = ContainerID.valueOf(containerID);
@@ -280,8 +265,7 @@ public class TestReplicationManagerIntegration {
 
     assertEquals(containerManager.getContainerReplicas(containerId).size(), HEALTHY_REPLICA_NUM);
 
-    DatanodeDetails datanode = containerManager.getContainerReplicas(containerId).stream().findFirst().get()
-        .getDatanodeDetails();
+    DatanodeDetails datanode = findReplica(containerId);
 
     action.accept(scmClient, datanode);
 
@@ -297,7 +281,7 @@ public class TestReplicationManagerIntegration {
     }
 
     // bring the node back to service
-    scmClient.recommissionNodes(Arrays.asList(getDNHostAndPort(datanode)));
+    scmClient.recommissionNodes(Collections.singletonList(getDNHostAndPort(datanode)));
 
     waitForDnToReachOpState(nodeManager, datanode, IN_SERVICE);
     waitForDnToReachPersistedOpState(datanode, IN_SERVICE);
