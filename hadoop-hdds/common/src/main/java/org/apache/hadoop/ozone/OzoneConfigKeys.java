@@ -619,10 +619,6 @@ public final class OzoneConfigKeys {
   public static final String
       OZONE_FS_LISTING_PAGE_SIZE_MAX = "ozone.fs.listing.page.size.max";
 
-  public static final String FS_TRASH_CLASSNAME = "fs.trash.classname";
-  public static final String FS_TRASH_CLASSNAME_DEFAULT =
-      "org.apache.hadoop.ozone.om.TrashPolicyOzone";
-
   public static final String
       OZONE_OM_SNAPSHOT_COMPACTION_DAG_MAX_TIME_ALLOWED =
       "ozone.om.snapshot.compaction.dag.max.time.allowed";

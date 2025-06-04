@@ -2788,15 +2788,6 @@
   </property>
 
   <property>
-    <name>fs.trash.classname</name>
-    <value>org.apache.hadoop.ozone.om.TrashPolicyOzone</value>
-    <tag>OZONE, OZONEFS, CLIENT</tag>
-    <description>
-      Trash Policy to be used.
-    </description>
-  </property>
-
-  <property>
     <name>ozone.freon.http-address</name>
     <value>0.0.0.0:9884</value>
     <tag>OZONE, MANAGEMENT</tag>

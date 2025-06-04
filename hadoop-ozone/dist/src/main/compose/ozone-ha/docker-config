@@ -19,6 +19,7 @@ CORE-SITE.XML_hadoop.proxyuser.hadoop.hosts=*
 CORE-SITE.XML_hadoop.proxyuser.hadoop.groups=*
 
 CORE-SITE.XML_fs.defaultFS=ofs://omservice/
+CORE-SITE.XML_fs.trash.classname=org.apache.hadoop.fs.ozone.OzoneTrashPolicy
 CORE-SITE.XML_fs.trash.interval=1
 
 OZONE-SITE.XML_ozone.om.service.ids=omservice
