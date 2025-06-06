@@ -29,6 +29,9 @@ source "$COMPOSE_DIR/../testlib.sh"
 export SECURITY_ENABLED=true
 export COMPOSE_FILE=docker-compose.yaml:ranger.yaml:../common/ranger.yaml
 
+curl -LO https://downloads.apache.org/ranger/KEYS
+gpg --import KEYS
+
 download_and_verify_apache_release "ranger/${RANGER_VERSION}/apache-ranger-${RANGER_VERSION}.tar.gz"
 tar -C "${DOWNLOAD_DIR}" -x -z -f "${DOWNLOAD_DIR}/apache-ranger-${RANGER_VERSION}.tar.gz"
 export RANGER_SOURCE_DIR="${DOWNLOAD_DIR}/apache-ranger-${RANGER_VERSION}"
