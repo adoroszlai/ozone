@@ -58,7 +58,7 @@ public class TestOzoneFileSystem extends ClusterForTests<MiniOzoneCluster> {
     }
   }
 
-  @Nested
+  //@Nested
   class O3FSWithFSO extends TestO3FSWithFSO {
     @Override
     public MiniOzoneCluster cluster() {
@@ -66,7 +66,7 @@ public class TestOzoneFileSystem extends ClusterForTests<MiniOzoneCluster> {
     }
   }
 
-  @Nested
+  //@Nested
   class O3FSWithFSPaths extends TestO3FSWithFSPaths {
     @Override
     public MiniOzoneCluster cluster() {

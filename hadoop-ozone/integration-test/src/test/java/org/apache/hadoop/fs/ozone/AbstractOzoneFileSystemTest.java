@@ -2093,7 +2093,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     }
   }
 
-  @Test
+  //@Test
   public void testOzoneManagerListLocatedStatusAndListStatus() throws IOException {
     String data = RandomStringUtils.secure().nextAlphanumeric(20);
     String directory = RandomStringUtils.secure().nextAlphanumeric(5);

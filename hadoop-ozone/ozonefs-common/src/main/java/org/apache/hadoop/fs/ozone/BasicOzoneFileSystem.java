@@ -586,10 +586,18 @@ public class BasicOzoneFileSystem extends FileSystem {
   }
 
   @Override
+  public boolean delete(Path f) throws IOException {
+    return super.delete(f);
+  }
+
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     incrementCounter(Statistic.INVOCATION_DELETE, 1);
     statistics.incrementWriteOps(1);
     LOG.debug("Delete path {} - recursive {}", f, recursive);
+    if (!OZONE_URI_SCHEME.equals(f.toUri().getScheme())) {
+      throw new IllegalArgumentException("Refuse to delete " + f);
+    }
 
     if (adapter.isFSOptimizedBucket()) {
       if (f.isRoot()) {

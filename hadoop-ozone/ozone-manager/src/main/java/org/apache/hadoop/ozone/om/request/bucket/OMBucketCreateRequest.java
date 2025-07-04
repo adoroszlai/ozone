@@ -186,6 +186,7 @@ public class OMBucketCreateRequest extends OMClientRequest {
     if (!bucketInfo.hasBucketLayout()) {
       BucketLayout defaultBucketLayout =
           ozoneManager.getOMDefaultBucketLayout();
+      LOG.info("ZZZ using default bucket layout {} to create {}", defaultBucketLayout, bucketName);
       omBucketInfo =
           OmBucketInfo.getFromProtobuf(bucketInfo, defaultBucketLayout);
     } else {
