@@ -21,7 +21,7 @@ import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TestO3FSWithFSPaths extends AbstractOzoneFileSystemTest {
+abstract class TestO3FSWithFSPaths extends AbstractOzoneFileSystemTest {
   TestO3FSWithFSPaths() {
     super(true, BucketLayout.LEGACY);
   }

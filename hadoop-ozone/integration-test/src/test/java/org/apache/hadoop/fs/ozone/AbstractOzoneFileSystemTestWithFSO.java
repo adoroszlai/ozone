@@ -333,7 +333,7 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
   @Test
   public void testRenameParentBucketModificationTime() throws IOException {
     OMMetadataManager omMgr =
-        getCluster().getOzoneManager().getMetadataManager();
+        cluster().getOzoneManager().getMetadataManager();
 
     // mv /file1 -> /renamedFile1, the bucket mtime should be changed
     Path file1 = new Path("/file1");
@@ -391,9 +391,9 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
   @Test
   public void testMultiLevelDirs() throws Exception {
     // reset metrics
-    long numKeys = getCluster().getOzoneManager().getMetrics().getNumKeys();
-    getCluster().getOzoneManager().getMetrics().decNumKeys(numKeys);
-    assertEquals(0, getCluster().getOzoneManager().getMetrics().getNumKeys());
+    long numKeys = cluster().getOzoneManager().getMetrics().getNumKeys();
+    cluster().getOzoneManager().getMetrics().decNumKeys(numKeys);
+    assertEquals(0, cluster().getOzoneManager().getMetrics().getNumKeys());
 
     // Op 1. create dir -> /d1/d2/d3/d4/
     // Op 2. create dir -> /d1/d2/d3/d4/d5
@@ -402,7 +402,7 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
     getFs().mkdirs(parent);
 
     OMMetadataManager omMgr =
-        getCluster().getOzoneManager().getMetadataManager();
+        cluster().getOzoneManager().getMetadataManager();
     OmBucketInfo omBucketInfo = omMgr.getBucketTable()
         .get(omMgr.getBucketKey(getVolumeName(), getBucketName()));
     assertNotNull(omBucketInfo, "Failed to find bucketInfo");
@@ -423,7 +423,7 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
         verifyDirKey(volumeId, bucketId, d3ObjectID,
                 "d4", "/d1/d2/d3/d4", dirKeys, omMgr);
 
-    assertEquals(4, getCluster().getOzoneManager().getMetrics().getNumKeys(), "Wrong OM numKeys metrics");
+    assertEquals(4, cluster().getOzoneManager().getMetrics().getNumKeys(), "Wrong OM numKeys metrics");
 
     // create sub-dirs under same parent
     Path subDir5 = new Path("/d1/d2/d3/d4/d5");
@@ -439,7 +439,7 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
     assertNotEquals(d5ObjectID, d6ObjectID, "Wrong objectIds for sub-dirs[" + d5ObjectID + "/d5, " + d6ObjectID
         + "/d6] of same parent!");
 
-    assertEquals(6, getCluster().getOzoneManager().getMetrics().getNumKeys(), "Wrong OM numKeys metrics");
+    assertEquals(6, cluster().getOzoneManager().getMetrics().getNumKeys(), "Wrong OM numKeys metrics");
   }
 
   @Test
@@ -452,7 +452,7 @@ abstract class AbstractOzoneFileSystemTestWithFSO extends AbstractOzoneFileSyste
     String openFileKey = "";
 
     OMMetadataManager omMgr =
-        getCluster().getOzoneManager().getMetadataManager();
+        cluster().getOzoneManager().getMetadataManager();
     OmBucketInfo omBucketInfo = omMgr.getBucketTable()
         .get(omMgr.getBucketKey(getVolumeName(), getBucketName()));
     assertNotNull(omBucketInfo, "Failed to find bucketInfo");

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.ozone;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TestO3FSWithFSO extends AbstractOzoneFileSystemTestWithFSO {
+abstract class TestO3FSWithFSO extends AbstractOzoneFileSystemTestWithFSO {
   TestO3FSWithFSO() {
     super();
   }
