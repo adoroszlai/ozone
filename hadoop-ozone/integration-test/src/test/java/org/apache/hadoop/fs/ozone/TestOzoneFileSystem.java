@@ -19,14 +19,15 @@ package org.apache.hadoop.fs.ozone;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OmConfig;
 import org.apache.ozone.test.ClusterForTests;
 import org.junit.jupiter.api.Nested;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.ozone.AbstractOzoneFileSystemTest.TRASH_INTERVAL;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 
 public class TestOzoneFileSystem extends ClusterForTests<MiniOzoneCluster> {
 
@@ -37,6 +38,8 @@ public class TestOzoneFileSystem extends ClusterForTests<MiniOzoneCluster> {
     conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, TRASH_INTERVAL / 2);
     conf.setInt(OmConfig.Keys.SERVER_LIST_MAX_SIZE, 2);
+    // set OFS as the default filesystem in the cluster for safety (avoid fallback to local filesystem)
+    conf.set(FS_DEFAULT_NAME_KEY, String.format("%s:///", OzoneConsts.OZONE_OFS_URI_SCHEME));
     return conf;
   }
 

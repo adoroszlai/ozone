@@ -168,6 +168,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
       .createUserForTesting(USER1,  new String[] {"usergroup"});
   private OzoneFileSystem userO3fs;
   private OmConfig originalOmConfig;
+  private OzoneConfiguration fsConf;
 
   AbstractOzoneFileSystemTest(boolean setDefaultFs, BucketLayout layout) {
     enabledFileSystemPaths = setDefaultFs;
@@ -178,7 +179,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
   void init() throws Exception {
     cluster = cluster();
 
-    OmConfig omConfig = cluster().getOzoneManager().getConfig();
+    OmConfig omConfig = cluster.getOzoneManager().getConfig();
     originalOmConfig = omConfig.copy();
     omConfig.setFileSystemPathEnabled(true);
 
@@ -195,14 +196,14 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     fsRoot = String.format("%s://%s.%s/",
         OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
 
-    OzoneConfiguration conf = new OzoneConfiguration(cluster.getConf());
+    fsConf = new OzoneConfiguration(cluster.getConf());
     // Set the fs.defaultFS and start the filesystem
-    conf.set(FS_DEFAULT_NAME_KEY, fsRoot);
+    fsConf.set(FS_DEFAULT_NAME_KEY, fsRoot);
     // Set the number of keys to be processed during batch operate.
-    conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
+    fsConf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
 
-    fs = FileSystem.get(conf);
-    trash = new Trash(conf);
+    fs = FileSystem.get(fsConf);
+    trash = new Trash(fsConf);
     o3fs = assertInstanceOf(OzoneFileSystem.class, fs);
     statistics = (OzoneFSStorageStatistics) o3fs.getOzoneFSOpsCountStatistics();
     assertEquals(OzoneConsts.OZONE_URI_SCHEME, fs.getUri().getScheme());
@@ -210,7 +211,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
 
     userO3fs = UGI_USER1.doAs(
         (PrivilegedExceptionAction<OzoneFileSystem>)()
-            -> (OzoneFileSystem) FileSystem.get(conf));
+            -> (OzoneFileSystem) FileSystem.get(fsConf));
   }
 
   @AfterAll
@@ -425,7 +426,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
   public void testCreateKeyWithECReplicationConfig() throws Exception {
     Path root = new Path("/" + volumeName + "/" + bucketName);
     Path testKeyPath = new Path(root, "testKey");
-    createKeyWithECReplicationConfiguration(cluster.getConf(), testKeyPath);
+    createKeyWithECReplicationConfiguration(fsConf, testKeyPath);
 
     OzoneKeyDetails key = getKey(testKeyPath, false);
     assertEquals(HddsProtos.ReplicationType.EC,
@@ -639,13 +640,13 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
       assertEquals(0, fileStatuses.length);
 
       UserGroupInformation.setLoginUser(user1);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       ContractTestUtils.touch(fs, file1);
       UserGroupInformation.setLoginUser(user2);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       fs.mkdirs(dir1);
       UserGroupInformation.setLoginUser(user3);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       ContractTestUtils.touch(fs, file2);
 
       assertEquals(2, o3fs.listStatus(root).length);
@@ -658,7 +659,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
           fs.getFileStatus(file2).getOwner());
     } finally {
       UserGroupInformation.setLoginUser(oldUser);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
     }
   }
 
@@ -688,13 +689,13 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
       assertEquals(0, fileStatuses.length);
 
       UserGroupInformation.setLoginUser(user1ProxyUser);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       ContractTestUtils.touch(fs, file1);
       UserGroupInformation.setLoginUser(user2ProxyUser);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       fs.mkdirs(dir1);
       UserGroupInformation.setLoginUser(user3ProxyUser);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
       ContractTestUtils.touch(fs, file2);
 
       assertEquals(2, o3fs.listStatus(root).length);
@@ -707,7 +708,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
           fs.getFileStatus(file2).getOwner());
     } finally {
       UserGroupInformation.setLoginUser(oldUser);
-      fs = FileSystem.get(cluster.getConf());
+      fs = FileSystem.get(fsConf);
     }
   }
 
@@ -1045,7 +1046,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
 
   @Test
   public void testListStatusIteratorOnPageSize() throws Exception {
-    OzoneFileSystemTests.listStatusIteratorOnPageSize(cluster.getConf(),
+    OzoneFileSystemTests.listStatusIteratorOnPageSize(fsConf,
         "/" + volumeName + "/" + bucketName);
   }
 
@@ -1557,7 +1558,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
             bucket.getVolumeName());
 
     // Set the fs.defaultFS and start the filesystem
-    Configuration conf = new OzoneConfiguration(cluster.getConf());
+    Configuration conf = new OzoneConfiguration(fsConf);
     conf.set(FS_DEFAULT_NAME_KEY, rootPath);
     // Set the number of keys to be processed during batch operate.
     try (FileSystem fileSystem = FileSystem.get(conf)) {
@@ -1646,7 +1647,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     Path root = new Path(OZONE_URI_DELIMITER);
     assertThrows(IOException.class, () -> trash.moveToTrash(root));
     // Also try with TrashPolicyDefault
-    OzoneConfiguration conf2 = new OzoneConfiguration(cluster.getConf());
+    OzoneConfiguration conf2 = new OzoneConfiguration(fsConf);
     conf2.setClass("fs.trash.classname", TrashPolicyDefault.class,
         TrashPolicy.class);
     try (FileSystem fs = FileSystem.get(conf2)) {
@@ -1813,7 +1814,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
         OzoneConsts.OZONE_URI_SCHEME, linkBucket1Name, linksVolume);
 
     try (FileSystem fileSystem = FileSystem.get(URI.create(rootPath),
-        cluster.getConf())) {
+        fsConf)) {
       fail("Should throw Exception due to loop in Link Buckets" +
           " while initialising fs with URI " + fileSystem.getUri());
     } catch (OMException oe) {
@@ -1839,7 +1840,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
 
     FileSystem fileSystem = null;
     try {
-      fileSystem = FileSystem.get(URI.create(rootPath2), cluster.getConf());
+      fileSystem = FileSystem.get(URI.create(rootPath2), fsConf);
     } catch (OMException oe) {
       // Expected exception
       fail("Should not throw Exception and show orphan buckets");
@@ -2264,9 +2265,9 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     Path file = new Path(fs.getUri().toString() + root
         + "/dummy");
     ContractTestUtils.touch(fs, file);
-    OzoneClientConfig clientConfig = cluster.getConf().getObject(OzoneClientConfig.class);
+    OzoneClientConfig clientConfig = fsConf.getObject(OzoneClientConfig.class);
     clientConfig.setChecksumCombineMode("NONE");
-    OzoneConfiguration conf = cluster.getConf();
+    OzoneConfiguration conf = new OzoneConfiguration(fsConf);
     conf.setFromObject(clientConfig);
     conf.setBoolean("fs.o3fs.impl.disable.cache", true);
     try (FileSystem fileSystem = FileSystem.get(conf)) {
