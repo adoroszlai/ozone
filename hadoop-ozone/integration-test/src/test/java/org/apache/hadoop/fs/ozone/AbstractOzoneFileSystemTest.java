@@ -899,7 +899,6 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
       return;
     }
     deleteRootRecursively(fileStatuses);
-    /* FIXME
     fileStatuses = fs.listStatus(ROOT);
     if (fileStatuses != null) {
       for (FileStatus fileStatus : fileStatuses) {
@@ -907,14 +906,14 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
       }
       assertEquals(0, fileStatuses.length, "Delete root failed!");
     }
-    */
   }
 
   private void deleteRootRecursively(FileStatus[] fileStatuses)
       throws IOException {
     for (FileStatus fStatus : fileStatuses) {
-      LOG.info("ZZZ delete {}", fStatus.getPath());
-      //fs.delete(fStatus.getPath(), true);
+      assertNotEquals("file", fStatus.getPath().toUri().getScheme());
+      LOG.info("deleting {}", fStatus.getPath());
+      fs.delete(fStatus.getPath(), true);
     }
   }
 
