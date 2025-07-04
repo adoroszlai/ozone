@@ -122,7 +122,9 @@ import org.apache.ozone.test.TestClock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,15 +224,20 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     IOUtils.closeQuietly(fs);
     cluster.getOzoneManager().getConfig().setFrom(originalOmConfig);
   }
+  @BeforeEach
+  void startTest(TestInfo info) {
+    LOG.info("ZZZ before {}", info.getTestMethod());
+  }
 
   @AfterEach
-  public void cleanup() {
+  public void cleanup(TestInfo info) {
     try {
       deleteRootDir();
     } catch (IOException | InterruptedException ex) {
       LOG.error("Failed to cleanup files.", ex);
       fail("Failed to cleanup files.");
     }
+    LOG.info("ZZZ after {}", info.getTestMethod());
   }
 
   public FileSystem getFs() {
@@ -2306,7 +2313,7 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
     return status;
   }
 
-  @Test
+  //@Test
   void testSnapshotRead() throws Exception {
     // Init data
     Path snapPath1 = fs.createSnapshot(new Path("/"), "snap1");

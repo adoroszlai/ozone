@@ -49,6 +49,7 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
    */
   protected static OzoneConfiguration createBaseConfiguration() {
     OzoneConfiguration conf = new OzoneConfiguration();
+    /*
     DatanodeRatisServerConfig ratisServerConfig =
         conf.getObject(DatanodeRatisServerConfig.class);
     ratisServerConfig.setRequestTimeOut(Duration.ofSeconds(3));
@@ -64,6 +65,7 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
     OzoneClientConfig clientConfig = conf.getObject(OzoneClientConfig.class);
     clientConfig.setStreamBufferFlushDelay(false);
     conf.setFromObject(clientConfig);
+     */
 
     conf.setBoolean(OZONE_HBASE_ENHANCEMENTS_ALLOWED, true);
     conf.setBoolean("ozone.client.hbase.enhancements.allowed", true);
