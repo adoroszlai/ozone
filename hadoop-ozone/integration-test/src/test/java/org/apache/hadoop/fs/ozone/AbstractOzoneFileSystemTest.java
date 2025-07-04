@@ -181,7 +181,9 @@ abstract class AbstractOzoneFileSystemTest implements NonHATests.TestCase {
 
     OmConfig omConfig = cluster.getOzoneManager().getConfig();
     originalOmConfig = omConfig.copy();
-    omConfig.setFileSystemPathEnabled(true);
+    if (!bucketLayout.equals(FILE_SYSTEM_OPTIMIZED)) {
+      omConfig.setFileSystemPathEnabled(enabledFileSystemPaths);
+    }
 
     omMetrics = cluster.getOzoneManager().getMetrics();
 
