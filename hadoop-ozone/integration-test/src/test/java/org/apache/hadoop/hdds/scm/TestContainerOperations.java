@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.cli.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.ha.SCMHAUtils;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -196,14 +198,16 @@ public abstract class TestContainerOperations implements NonHATests.TestCase {
             .getAllNodes();
 
     for (DatanodeDetails dn : dnList) {
-      final int expected = cluster().getStorageContainerManager().getScmNodeManager().getContainers(dn).size();
+      Set<ContainerID> containers = cluster().getStorageContainerManager().getScmNodeManager().getContainers(dn);
+      final int expected = containers.size();
 
       List<HddsProtos.DatanodeUsageInfoProto> usageInfoList =
               storageClient.getDatanodeUsageInfo(
                       dn.getIpAddress(), dn.getUuidString());
 
       assertEquals(1, usageInfoList.size());
-      assertEquals(expected, usageInfoList.get(0).getContainerCount());
+      assertEquals(expected, usageInfoList.get(0).getContainerCount(),
+          () -> "containers from SCM: " + containers + "; usage info from DN: " + usageInfoList);
     }
   }
 
