@@ -2530,6 +2530,13 @@
 
   <profiles>
     <profile>
+      <id>build-with-protobuf2</id>
+      <properties>
+        <proto2.hadooprpc.protobuf.version>2.5.0</proto2.hadooprpc.protobuf.version>
+        <skipShade>false</skipShade>
+      </properties>
+    </profile>
+    <profile>
       <id>dist</id>
       <build>
         <plugins>
