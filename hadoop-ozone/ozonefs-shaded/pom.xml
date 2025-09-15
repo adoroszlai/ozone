@@ -36,10 +36,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-resolver-dns-native-macos</artifactId>
       <classifier>osx-x86_64</classifier>
@@ -72,10 +68,6 @@
           <artifactId>reload4j</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>log4j</groupId>
           <artifactId>log4j</artifactId>
         </exclusion>
@@ -85,7 +77,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
+          <artifactId>hadoop-auth</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -150,6 +142,12 @@
               </artifactSet>
               <filters>
                 <filter>
+                  <artifact>org.apache.hadoop:hadoop-common</artifact>
+                  <includes>
+                    <include>org/apache/hadoop/ipc/**</include>
+                  </includes>
+                </filter>
+                <filter>
                   <artifact>*:*</artifact>
                   <excludes>
                     <!-- Exclude android (dependency from io.grpc:grpc-core) to reduce unnecessary dependencies and avoid potential conflicts -->
@@ -213,6 +211,10 @@
                   </excludes>
                 </relocation>
                 <relocation>
+                  <pattern>org.apache.hadoop.ipc</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.ipc</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>org.apache.ratis</pattern>
                   <shadedPattern>${shaded.prefix}.org.apache.ratis</shadedPattern>
                 </relocation>
@@ -220,7 +222,6 @@
                   <pattern>com</pattern>
                   <shadedPattern>${shaded.prefix}.com</shadedPattern>
                   <excludes>
-                    <exclude>com.google.protobuf.**</exclude>
                     <!-- These packages are the ones that are not shaded in the hadoop release package.
                     To prevent conflicts, we do not include these packages in the ozone client release package.
                     Ozone will use hadoop / JVM to provide these dependencies. -->
