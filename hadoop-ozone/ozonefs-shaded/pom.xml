@@ -140,7 +140,9 @@
                 <filter>
                   <artifact>org.apache.hadoop:hadoop-common</artifact>
                   <includes>
+                    <include>org/apache/hadoop/io/retry/**</include>
                     <include>org/apache/hadoop/ipc/**</include>
+                    <include>org/apache/hadoop/security/SaslRpcClient*</include>
                     <include>org/apache/hadoop/util/ProtoUtil*</include>
                   </includes>
                 </filter>
@@ -208,8 +210,16 @@
                   </excludes>
                 </relocation>
                 <relocation>
+                  <pattern>org.apache.hadoop.io.retry</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.io.retry</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>org.apache.hadoop.ipc</pattern>
                   <shadedPattern>${shaded.prefix}.org.apache.hadoop.ipc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.hadoop.security.SaslRpcClient</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.security.SaslRpcClient</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.hadoop.util.ProtoUtil</pattern>
