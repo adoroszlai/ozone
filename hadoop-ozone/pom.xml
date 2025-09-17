@@ -117,19 +117,15 @@
         </property>
       </activation>
       <modules>
+        <module>ozonefs-hadoop2</module>
         <module>ozonefs-hadoop3</module>
         <module>ozonefs-shaded</module>
       </modules>
     </profile>
     <profile>
-      <id>build-with-protobuf2</id>
-      <modules>
-        <module>ozonefs-hadoop2</module>
-      </modules>
-    </profile>
-    <profile>
       <id>go-offline</id>
       <modules>
+        <module>ozonefs-hadoop2</module>
         <module>ozonefs-shaded</module>
       </modules>
     </profile>
