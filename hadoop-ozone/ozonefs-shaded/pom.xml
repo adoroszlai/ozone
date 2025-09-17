@@ -141,6 +141,7 @@
                   <artifact>org.apache.hadoop:hadoop-common</artifact>
                   <includes>
                     <include>org/apache/hadoop/ipc/**</include>
+                    <include>org/apache/hadoop/util/ProtoUtil*</include>
                   </includes>
                 </filter>
                 <filter>
@@ -209,6 +210,10 @@
                 <relocation>
                   <pattern>org.apache.hadoop.ipc</pattern>
                   <shadedPattern>${shaded.prefix}.org.apache.hadoop.ipc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.hadoop.util.ProtoUtil</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.util.ProtoUtil</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.hadoop.thirdparty</pattern>
