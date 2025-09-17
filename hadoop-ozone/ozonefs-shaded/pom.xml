@@ -88,10 +88,6 @@
           <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.apache.hadoop.thirdparty</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
           <artifactId>*</artifactId>
         </exclusion>
@@ -213,6 +209,10 @@
                 <relocation>
                   <pattern>org.apache.hadoop.ipc</pattern>
                   <shadedPattern>${shaded.prefix}.org.apache.hadoop.ipc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.hadoop.thirdparty</pattern>
+                  <shadedPattern>${shaded.prefix}</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.ratis</pattern>
