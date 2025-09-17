@@ -28,43 +28,9 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.ozone</groupId>
       <artifactId>ozone-filesystem-shaded</artifactId>
       <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.ozone</groupId>
-          <artifactId>hadoop-hdfs-client</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ratis</groupId>
-      <artifactId>ratis-thirdparty-misc</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -73,6 +39,18 @@
     <dependency>
       <groupId>ch.qos.reload4j</groupId>
       <artifactId>reload4j</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+      <version>${hadoop2.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-auth</artifactId>
+      <version>${hadoop2.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -107,6 +85,11 @@
 
     <!-- Test dependencies -->
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.ozone</groupId>
       <artifactId>ozone-common</artifactId>
       <type>test-jar</type>
@@ -126,6 +109,12 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <configuration>
+          <ignoredUsedUndeclaredDependencies>
+            <ignoredUsedUndeclaredDependency>com.google.android:annotations</ignoredUsedUndeclaredDependency>
+            <ignoredUsedUndeclaredDependency>javax.annotation:javax.annotation-api</ignoredUsedUndeclaredDependency>
+            <ignoredUsedUndeclaredDependency>javax.servlet:servlet-api</ignoredUsedUndeclaredDependency>
+            <ignoredUsedUndeclaredDependency>org.apache.ratis:ratis-thirdparty-misc</ignoredUsedUndeclaredDependency>
+          </ignoredUsedUndeclaredDependencies>
           <ignoredUnusedDeclaredDependencies>
             <ignoredUnusedDeclaredDependency>org.assertj:*</ignoredUnusedDeclaredDependency>
             <ignoredUnusedDeclaredDependency>org.junit.jupiter:*</ignoredUnusedDeclaredDependency>
