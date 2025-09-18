@@ -30,14 +30,14 @@ REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/findbugs"}
 mkdir -p "$REPORT_DIR"
 REPORT_FILE="$REPORT_DIR/summary.txt"
 
-MAVEN_OPTIONS='-B -fae -DskipRecon --no-transfer-progress'
+MAVEN_OPTIONS='-B -fae -DskipRecon -DskipTests --no-transfer-progress'
 
 if [[ "${OZONE_WITH_COVERAGE}" != "true" ]]; then
   MAVEN_OPTIONS="${MAVEN_OPTIONS} -Djacoco.skip"
 fi
 
 #shellcheck disable=SC2086
-mvn ${MAVEN_OPTIONS} test-compile spotbugs:spotbugs "$@" | tee "${REPORT_DIR}/output.log"
+mvn ${MAVEN_OPTIONS} verify spotbugs:spotbugs "$@" | tee "${REPORT_DIR}/output.log"
 rc=$?
 
 touch "$REPORT_FILE"
