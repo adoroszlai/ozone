@@ -21,6 +21,7 @@ services:
     volumes:
       - ../..:/opt/ozone
       - ../../libexec/transformation.py:/opt/transformation.py
+      - ../common/hadoop.log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
     ports:
       - 8088:8088
     env_file:
@@ -36,6 +37,9 @@ services:
     volumes:
       - ../..:/opt/ozone
       - ../../libexec/transformation.py:/opt/transformation.py
+      - ../common/hadoop.log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    ports:
+      - 8042:8042
     env_file:
       - docker-config
       - ../common/hadoop.conf
