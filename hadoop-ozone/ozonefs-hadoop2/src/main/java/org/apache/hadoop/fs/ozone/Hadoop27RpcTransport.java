@@ -29,12 +29,12 @@ import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.ozone.shaded.com.google.protobuf.RpcController;
-import org.apache.ozone.shaded.com.google.protobuf.ServiceException;
-import org.apache.ozone.shaded.org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.ozone.shaded.org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.ozone.shaded.org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.ozone.shaded.org.apache.hadoop.ipc.RPC;
+import org.apache.ozone.thirdparty.com.google.protobuf.RpcController;
+import org.apache.ozone.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.ozone.thirdparty.org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.ozone.thirdparty.org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.ozone.thirdparty.org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.ozone.thirdparty.org.apache.hadoop.ipc.RPC;
 
 /**
  * Hadoop RPC based transport with failover support.
