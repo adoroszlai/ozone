@@ -143,6 +143,8 @@
                     <include>org/apache/hadoop/io/retry/**</include>
                     <include>org/apache/hadoop/ipc/**</include>
                     <include>org/apache/hadoop/security/SaslRpcClient*</include>
+                    <include>org/apache/hadoop/tracing/**</include>
+                    <include>org/apache/hadoop/util/Preconditions*</include>
                     <include>org/apache/hadoop/util/ProtoUtil*</include>
                   </includes>
                 </filter>
@@ -222,12 +224,20 @@
                   <shadedPattern>${shaded.prefix}.org.apache.hadoop.security.SaslRpcClient</shadedPattern>
                 </relocation>
                 <relocation>
+                  <pattern>org.apache.hadoop.util.Preconditions</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.util.Preconditions</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>org.apache.hadoop.util.ProtoUtil</pattern>
                   <shadedPattern>${shaded.prefix}.org.apache.hadoop.util.ProtoUtil</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.hadoop.thirdparty</pattern>
                   <shadedPattern>${shaded.prefix}</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.hadoop.tracing</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.tracing</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.ratis</pattern>
