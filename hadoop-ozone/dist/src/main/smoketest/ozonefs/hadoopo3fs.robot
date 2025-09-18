@@ -32,11 +32,11 @@ ${PREFIX}           ozone
 Test hadoop dfs
     ${dir} =          Format FS URL         ${SCHEME}     ${volume}    ${bucket}
     ${random} =        Generate Random String  5  [NUMBERS]
-    ${result} =        Execute                    hdfs dfs -put /opt/hadoop/NOTICE.txt ${dir}/${PREFIX}-${random}
+    ${result} =        Execute                    timeout 10 hdfs dfs -put /opt/hadoop/NOTICE.txt ${dir}/${PREFIX}-${random}
                        Should Not Contain         ${result}           multiple SLF4J bindings
-    ${result} =        Execute                    hdfs dfs -ls ${dir}
+    ${result} =        Execute                    timeout 10 hdfs dfs -ls ${dir}
                        Should contain             ${result}   ${PREFIX}-${random}
-    ${result} =        Execute                    hdfs dfs -cat ${dir}/${PREFIX}-${random}
+    ${result} =        Execute                    timeout 10 hdfs dfs -cat ${dir}/${PREFIX}-${random}
                        Should contain             ${result}   This product includes software developed
-    ${result} =        Execute                    hdfs dfs -checksum ${dir}/${PREFIX}-${random}
+    ${result} =        Execute                    timeout 10 hdfs dfs -checksum ${dir}/${PREFIX}-${random}
                        Should contain             ${result}   ${PREFIX}-${random}
