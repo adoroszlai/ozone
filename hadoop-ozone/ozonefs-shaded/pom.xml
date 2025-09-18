@@ -148,6 +148,9 @@
                   <includes>
                     <include>org/apache/hadoop/io/retry/**</include>
                     <include>org/apache/hadoop/ipc/**</include>
+                    <include>org/apache/hadoop/net/NetUtils*</include>
+                    <include>org/apache/hadoop/net/SocketInputWrapper*</include>
+                    <include>org/apache/hadoop/net/SocketIOWithTimeout*</include>
                     <include>org/apache/hadoop/security/FastSaslClientFactory*</include>
                     <include>org/apache/hadoop/security/SaslRpcClient*</include>
                     <include>org/apache/hadoop/tracing/**</include>
@@ -225,6 +228,9 @@
                     <include>org.apache.hadoop.classification.VisibleForTesting*</include>
                     <include>org.apache.hadoop.io.retry.**</include>
                     <include>org.apache.hadoop.ipc.**</include>
+                    <include>org.apache.hadoop.net.NetUtils*</include>
+                    <include>org.apache.hadoop.net.SocketInputWrapper*</include>
+                    <include>org.apache.hadoop.net.SocketIOWithTimeout*</include>
                     <include>org.apache.hadoop.security.FastSaslClientFactory*</include>
                     <include>org.apache.hadoop.security.SaslRpcClient*</include>
                     <include>org.apache.hadoop.tracing.**</include>
