@@ -138,10 +138,17 @@
               </artifactSet>
               <filters>
                 <filter>
+                  <artifact>org.apache.hadoop:hadoop-annotations</artifact>
+                  <includes>
+                    <include>org/apache/hadoop/classification/VisibleForTesting.class</include>
+                  </includes>
+                </filter>
+                <filter>
                   <artifact>org.apache.hadoop:hadoop-common</artifact>
                   <includes>
                     <include>org/apache/hadoop/io/retry/**</include>
                     <include>org/apache/hadoop/ipc/**</include>
+                    <include>org/apache/hadoop/security/FastSaslClientFactory*</include>
                     <include>org/apache/hadoop/security/SaslRpcClient*</include>
                     <include>org/apache/hadoop/tracing/**</include>
                     <include>org/apache/hadoop/util/Preconditions*</include>
@@ -212,32 +219,22 @@
                   </excludes>
                 </relocation>
                 <relocation>
-                  <pattern>org.apache.hadoop.io.retry</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.io.retry</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.hadoop.ipc</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.ipc</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.hadoop.security.SaslRpcClient</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.security.SaslRpcClient</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.hadoop.util.Preconditions</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.util.Preconditions</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.hadoop.util.ProtoUtil</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.util.ProtoUtil</shadedPattern>
+                  <pattern>org.apache.hadoop</pattern>
+                  <shadedPattern>${shaded.prefix}.org.apache.hadoop</shadedPattern>
+                  <includes>
+                    <include>org.apache.hadoop.classification.VisibleForTesting*</include>
+                    <include>org.apache.hadoop.io.retry.**</include>
+                    <include>org.apache.hadoop.ipc.**</include>
+                    <include>org.apache.hadoop.security.FastSaslClientFactory*</include>
+                    <include>org.apache.hadoop.security.SaslRpcClient*</include>
+                    <include>org.apache.hadoop.tracing.**</include>
+                    <include>org.apache.hadoop.util.Preconditions*</include>
+                    <include>org.apache.hadoop.util.ProtoUtil*</include>
+                  </includes>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.hadoop.thirdparty</pattern>
                   <shadedPattern>${shaded.prefix}</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>org.apache.hadoop.tracing</pattern>
-                  <shadedPattern>${shaded.prefix}.org.apache.hadoop.tracing</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.ratis</pattern>
