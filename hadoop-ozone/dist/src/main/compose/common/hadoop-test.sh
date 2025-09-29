@@ -25,8 +25,7 @@ export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}":../common/${extra_com
 : ${HADOOP_TEST_IMAGES:=""}
 
 if [[ -z "${HADOOP_TEST_IMAGES}" ]]; then
-  # hadoop2 image is only available from Docker Hub
-  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} apache/hadoop:${hadoop2.version}"
+  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:3.3.6"
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.version}"
 fi
 
@@ -66,10 +65,7 @@ for HADOOP_TEST_IMAGE in $HADOOP_TEST_IMAGES; do
 
   for scheme in o3fs ofs; do
     execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
-    # TODO secure MapReduce test is failing with 2.7 due to some token problem
-    if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
-      execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-mapreduce-${scheme}" mapreduce.robot
-    fi
+    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-mapreduce-${scheme}" mapreduce.robot
   done
 
   save_container_logs nm rm
