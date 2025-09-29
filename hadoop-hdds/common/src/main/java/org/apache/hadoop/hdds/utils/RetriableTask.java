@@ -19,8 +19,8 @@ package org.apache.hadoop.hdds.utils;
 
 import java.io.IOException;
 import java.util.concurrent.Callable;
-import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.ozone.thirdparty.hadoop.io.retry.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
