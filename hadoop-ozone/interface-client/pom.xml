@@ -67,7 +67,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
+      <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>
@@ -110,7 +110,7 @@
         <extensions>true</extensions>
         <executions>
           <execution>
-            <id>compile-protoc-OmGrpc</id>
+            <id>compile-proto</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
@@ -118,7 +118,7 @@
               <goal>test-compile-custom</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${proto2.hadooprpc.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protocArtifact>com.google.protobuf:protoc:${protobuf2.version}:exe:${os.detected.classifier}</protocArtifact>
               <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
               <outputDirectory>target/generated-sources/protobuf/java</outputDirectory>
               <clearOutputDirectory>false</clearOutputDirectory>
@@ -127,14 +127,14 @@
             </configuration>
           </execution>
           <execution>
-            <id>compile-protoc3</id>
+            <id>compile-proto-for-hadoop</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
             </goals>
             <configuration>
               <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
-              <protocArtifact>com.google.protobuf:protoc:${proto3.hadooprpc.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protocArtifact>com.google.protobuf:protoc:${hadoop-thirdparty.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
               <outputDirectory>target/generated-sources/protobuf/java/proto3</outputDirectory>
               <clearOutputDirectory>false</clearOutputDirectory>
             </configuration>
