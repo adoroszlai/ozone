@@ -29,7 +29,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.ZoneId;

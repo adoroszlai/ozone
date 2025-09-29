@@ -17,13 +17,13 @@
 
 package org.apache.hadoop.hdds.scm.protocolPB;
 
-import com.google.protobuf.ByteString;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.TokenProto;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
 
 /**
  * Helper class for converting protobuf objects.

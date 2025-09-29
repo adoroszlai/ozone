@@ -23,7 +23,6 @@ import static org.apache.hadoop.ozone.container.metadata.ContainerCreateInfo.INV
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Message;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.time.Clock;
@@ -53,6 +52,7 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.metadata.ContainerCreateInfo;
 import org.apache.hadoop.ozone.container.metadata.WitnessedContainerMetadataStore;
 import org.apache.hadoop.ozone.container.ozoneimpl.OnDemandContainerScanner;
+import org.apache.ozone.thirdparty.google.protobuf.Message; // TODO replace with specific message
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

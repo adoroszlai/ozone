@@ -23,8 +23,8 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Proto2Utils;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.Proto2Utils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

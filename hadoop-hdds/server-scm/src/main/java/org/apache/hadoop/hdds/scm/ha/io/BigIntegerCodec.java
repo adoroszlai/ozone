@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.hdds.scm.ha.io;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Proto2Utils;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.Proto2Utils;
 import java.math.BigInteger;
 
 /**

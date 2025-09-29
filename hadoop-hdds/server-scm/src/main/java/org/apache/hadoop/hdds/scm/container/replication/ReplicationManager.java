@@ -26,7 +26,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType.EC;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;

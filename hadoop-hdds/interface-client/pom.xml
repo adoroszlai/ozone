@@ -34,12 +34,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
+      <groupId>org.apache.ozone</groupId>
+      <artifactId>hdds-hadoop-shaded</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.ratis</groupId>
@@ -93,24 +89,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>compile-protoc-2</id>
-            <goals>
-              <goal>compile</goal>
-              <goal>test-compile</goal>
-            </goals>
-            <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${proto2.hadooprpc.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-              <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
-              <includes>
-                <include>hdds.proto</include>
-                <include>ReconfigureProtocol.proto</include>
-              </includes>
-              <outputDirectory>target/generated-sources/java</outputDirectory>
-              <clearOutputDirectory>false</clearOutputDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-protoc-3</id>
+            <id>compile-protoc</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
@@ -122,7 +101,7 @@
                 <include>hdds.proto</include>
                 <include>ReconfigureProtocol.proto</include>
               </includes>
-              <outputDirectory>target/generated-sources/java/proto3</outputDirectory>
+              <outputDirectory>target/generated-sources/java</outputDirectory>
               <clearOutputDirectory>false</clearOutputDirectory>
             </configuration>
           </execution>
@@ -142,10 +121,7 @@
                 <replace dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto" token="com.google.protobuf" value="org.apache.ratis.thirdparty.com.google.protobuf" />
                 <replace dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto" token="io.grpc" value="org.apache.ratis.thirdparty.io.grpc" />
                 <replace dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto" token="com.google.common" value="org.apache.ratis.thirdparty.com.google.common" />
-                <replace dir="target/generated-sources/java/proto3/org/apache/hadoop/hdds/protocol/proto" token="org.apache.hadoop.hdds.protocol.proto" value="org.apache.hadoop.hdds.protocol.proto3" />
-                <replace dir="target/generated-sources/java/proto3/org/apache/hadoop/hdds/protocol/proto" token="com.google.protobuf" value="org.apache.hadoop.thirdparty.protobuf" />
-                <move file="target/generated-sources/java/proto3/org/apache/hadoop/hdds/protocol/proto" tofile="target/generated-sources/java/proto3/org/apache/hadoop/hdds/protocol/proto3" />
-                <move file="target/generated-sources/java/proto3" tofile="target/generated-sources/java" />
+                <replace dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/proto" token="com.google.protobuf" value="org.apache.ozone.thirdparty.google.protobuf" />
               </target>
             </configuration>
           </execution>

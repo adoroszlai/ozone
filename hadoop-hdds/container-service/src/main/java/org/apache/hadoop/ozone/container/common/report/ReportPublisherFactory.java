@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.ozone.container.common.report;
 
-import com.google.protobuf.Message;
+import org.apache.ozone.thirdparty.google.protobuf.Message;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;

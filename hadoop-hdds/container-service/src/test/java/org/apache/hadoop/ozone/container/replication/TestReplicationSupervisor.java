@@ -40,7 +40,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.Proto2Utils;
+import org.apache.ozone.thirdparty.google.protobuf.Proto2Utils;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;

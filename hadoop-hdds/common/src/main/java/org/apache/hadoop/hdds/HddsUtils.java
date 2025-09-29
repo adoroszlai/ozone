@@ -39,8 +39,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_SERVICE_IDS_KEY
 
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ServiceException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.File;
@@ -82,6 +80,8 @@ import org.apache.hadoop.ozone.conf.OzoneServiceConfig;
 import org.apache.hadoop.ozone.ha.ConfUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.ozone.thirdparty.google.protobuf.InvalidProtocolBufferException;
+import org.apache.ozone.thirdparty.google.protobuf.ServiceException;
 import org.apache.ozone.thirdparty.hadoop.ipc.RPC;
 import org.apache.ozone.thirdparty.hadoop.ipc.RemoteException;
 import org.apache.ozone.thirdparty.hadoop.ipc.RpcException;

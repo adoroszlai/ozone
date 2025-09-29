@@ -21,8 +21,8 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeOperationalSt
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Proto2Utils;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.Proto2Utils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;

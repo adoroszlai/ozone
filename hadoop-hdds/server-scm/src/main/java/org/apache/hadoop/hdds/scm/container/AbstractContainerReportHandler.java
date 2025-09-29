@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.container;
 
-import com.google.protobuf.TextFormat;
+import org.apache.ozone.thirdparty.google.protobuf.TextFormat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

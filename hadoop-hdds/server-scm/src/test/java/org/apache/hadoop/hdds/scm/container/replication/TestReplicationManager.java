@@ -49,7 +49,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import com.google.protobuf.Proto2Utils;
+import org.apache.ozone.thirdparty.google.protobuf.Proto2Utils;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;

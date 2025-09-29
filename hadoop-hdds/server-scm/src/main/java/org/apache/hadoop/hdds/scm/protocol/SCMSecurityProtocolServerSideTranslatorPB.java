@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.hdds.scm.protocol;
 
-import com.google.protobuf.ProtocolMessageEnum;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.ozone.thirdparty.google.protobuf.ProtocolMessageEnum;
+import org.apache.ozone.thirdparty.google.protobuf.RpcController;
+import org.apache.ozone.thirdparty.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;

@@ -18,4 +18,4 @@
 /**
  * Classes using the protobuf internal APIs.
  */
-package com.google.protobuf;
+package org.apache.ozone.thirdparty.google.protobuf;

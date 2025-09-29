@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.hdds.scm.ha;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.Message;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 

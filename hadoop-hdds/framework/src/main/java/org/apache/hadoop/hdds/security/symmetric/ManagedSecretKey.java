@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.security.symmetric;
 
-import com.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

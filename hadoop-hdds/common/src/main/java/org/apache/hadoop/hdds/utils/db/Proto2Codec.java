@@ -17,9 +17,6 @@
 
 package org.apache.hadoop.hdds.utils.db;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.MessageLite;
-import com.google.protobuf.Parser;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +24,9 @@ import java.io.OutputStream;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hdds.utils.IOUtils;
+import org.apache.ozone.thirdparty.google.protobuf.InvalidProtocolBufferException;
+import org.apache.ozone.thirdparty.google.protobuf.MessageLite;
+import org.apache.ozone.thirdparty.google.protobuf.Parser;
 import org.apache.ratis.util.function.CheckedFunction;
 
 /**

@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.ha;
 
-import com.google.protobuf.ByteString;
+import org.apache.ozone.thirdparty.google.protobuf.ByteString;
 import java.io.IOException;
 import org.apache.hadoop.hdds.scm.metadata.Replicate;
 import org.apache.hadoop.hdds.utils.db.Table;

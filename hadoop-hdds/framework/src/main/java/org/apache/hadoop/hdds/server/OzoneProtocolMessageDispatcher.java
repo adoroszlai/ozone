@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdds.server;
 
-import com.google.protobuf.ServiceException;
+import org.apache.ozone.thirdparty.google.protobuf.ServiceException;
 import io.opentelemetry.api.trace.Span;
 import java.util.function.UnaryOperator;
 import org.apache.hadoop.hdds.tracing.TracingUtil;

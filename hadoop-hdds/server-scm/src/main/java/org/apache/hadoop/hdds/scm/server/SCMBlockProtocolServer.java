@@ -32,8 +32,8 @@ import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import static org.apache.hadoop.hdds.utils.HddsServerUtil.getRemoteUser;
 
 import com.google.common.collect.Maps;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.ProtocolMessageEnum;
+import org.apache.ozone.thirdparty.google.protobuf.BlockingService;
+import org.apache.ozone.thirdparty.google.protobuf.ProtocolMessageEnum;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;

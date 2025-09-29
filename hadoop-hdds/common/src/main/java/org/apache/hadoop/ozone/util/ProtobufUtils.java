@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.ozone.util;
 
-import com.google.protobuf.CodedOutputStream;
 import java.util.UUID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.ozone.thirdparty.google.protobuf.CodedOutputStream;
 
 /**
  * Contains utilities to ease common protobuf to java object conversions.

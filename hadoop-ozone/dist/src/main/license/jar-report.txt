@@ -72,6 +72,7 @@ share/ozone/lib/hdds-config.jar
 share/ozone/lib/hdds-container-service.jar
 share/ozone/lib/hdds-docs.jar
 share/ozone/lib/hdds-erasurecode.jar
+share/ozone/lib/hdds-hadoop-shaded.jar
 share/ozone/lib/hdds-interface-admin.jar
 share/ozone/lib/hdds-interface-client.jar
 share/ozone/lib/hdds-interface-server.jar
@@ -240,8 +241,6 @@ share/ozone/lib/ozone-tools.jar
 share/ozone/lib/perfmark-api.jar
 share/ozone/lib/picocli.jar
 share/ozone/lib/picocli-shell-jline3.jar
-share/ozone/lib/protobuf-java.jar
-share/ozone/lib/protobuf-java.jar
 share/ozone/lib/proto-google-common-protos.jar
 share/ozone/lib/ranger-intg.jar
 share/ozone/lib/ranger-plugin-classloader.jar

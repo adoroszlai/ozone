@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.hdds.protocolPB;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.ozone.thirdparty.google.protobuf.RpcController;
+import org.apache.ozone.thirdparty.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
