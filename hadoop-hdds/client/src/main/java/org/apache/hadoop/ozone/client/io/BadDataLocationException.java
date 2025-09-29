@@ -32,8 +32,7 @@ public class BadDataLocationException extends IOException {
   private int failedLocationIndex;
 
   /**
-   * Required for Unwrapping {@code RemoteException}. Used by
-   * {@link org.apache.hadoop.ipc.RemoteException#unwrapRemoteException()}
+   * Required by {@code RemoteException#unwrapRemoteException()}.
    */
   public BadDataLocationException(String message) {
     super(message);
