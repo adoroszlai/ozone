@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.google.protobuf;
+package org.apache.hadoop.thirdparty.protobuf;
 
 /** Utilities for protobuf v2. */
 public final class Proto2Utils {

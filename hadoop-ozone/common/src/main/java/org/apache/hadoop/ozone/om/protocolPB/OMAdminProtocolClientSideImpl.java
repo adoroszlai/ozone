@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -204,7 +204,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
       if (leaderNotReadyException != null) {
         throwException(leaderNotReadyException.getMessage());
       }
-      throw ProtobufHelper.getRemoteException(e);
+      throw ShadedProtobufHelper.getRemoteException(e);
     }
 
     if (!response.getSuccess()) {
@@ -223,7 +223,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
     try {
       response = rpcProxy.compactDB(NULL_RPC_CONTROLLER, compactRequest);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw ShadedProtobufHelper.getRemoteException(e);
     }
     if (!response.getSuccess()) {
       throwException("Request to compact \'" + columnFamily +

@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.ozone.protocol.commands;
 
-import com.google.protobuf.Message;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.DatanodeID;
 import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Command for the datanode with the destination address.

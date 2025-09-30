@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import com.google.protobuf.BlockingService;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -43,6 +42,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
  * Test Endpoint class.

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdds.scm.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hdds.utils.DBStoreHAManager;
 import org.apache.hadoop.hdds.utils.db.BatchOperationHandler;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.Table;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Generic interface for data stores for SCM.

@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.ozone.util;
 
-import com.google.protobuf.ByteString;
 import java.util.Objects;
 import net.jcip.annotations.Immutable;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Class to encapsulate and cache the conversion of a Java String to a ByteString.

@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.ozone.container.common.report;
 
-import com.google.protobuf.Message;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
@@ -25,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * Factory class to construct {@link ReportPublisher} for a report.

@@ -34,8 +34,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
     <!-- required to use common hdds.proto -->
     <dependency>
@@ -69,10 +69,27 @@
               <goal>test-compile</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf3.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protocArtifact>com.google.protobuf:protoc:${hadoop-thirdparty.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
               <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
               <outputDirectory>target/generated-sources/java</outputDirectory>
               <clearOutputDirectory>false</clearOutputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <replace dir="target/generated-sources/java" token="com.google.protobuf" value="org.apache.hadoop.thirdparty.protobuf" />
+              </target>
             </configuration>
           </execution>
         </executions>

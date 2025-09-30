@@ -24,8 +24,6 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PIPELINE_ACTION_MAX_LIM
 import static org.apache.hadoop.ozone.container.upgrade.UpgradeUtils.toLayoutVersionProto;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.LinkedList;
@@ -61,6 +59,8 @@ import org.apache.hadoop.ozone.protocol.commands.RefreshVolumeUsageCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.commands.SetNodeOperationalStateCommand;
+import org.apache.hadoop.thirdparty.protobuf.Descriptors;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -21,13 +21,13 @@ import static org.apache.hadoop.ozone.OzoneConsts.TRANSACTION_INFO_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.TRANSACTION_INFO_SPLIT_KEY;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.FileInfo;
 import org.apache.ratis.statemachine.SnapshotInfo;

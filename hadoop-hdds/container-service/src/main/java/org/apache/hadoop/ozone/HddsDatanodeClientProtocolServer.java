@@ -24,7 +24,6 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DATANODE_READ_THREADPOO
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DATANODE_READ_THREADPOOL_KEY;
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name.CLIENT_RPC;
 
-import com.google.protobuf.BlockingService;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.utils.VersionInfo;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.hdds.scm.ha;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * A StatefulService is an SCMService that persists configuration to RocksDB.
