@@ -956,6 +956,7 @@
         <version>${hadoop.version}</version>
       </dependency>
       <dependency>
+        <!-- not used directly, kept here to be able to upgrade in case of CVE -->
         <groupId>org.apache.hadoop.thirdparty</groupId>
         <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
         <version>${hadoop-thirdparty.version}</version>
