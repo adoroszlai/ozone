@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.hdds.utils.db.Proto2CodecTestBase;
+import org.apache.hadoop.hdds.utils.db.Proto3CodecTestBase;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test {@link OmKeyInfo#getCodec(boolean)} .
  */
-public class TestOmKeyInfoCodec extends Proto2CodecTestBase<OmKeyInfo> {
+public class TestOmKeyInfoCodec extends Proto3CodecTestBase<OmKeyInfo> {
   private static final String VOLUME = "hadoop";
   private static final String BUCKET = "ozone";
   private static final String KEYNAME =

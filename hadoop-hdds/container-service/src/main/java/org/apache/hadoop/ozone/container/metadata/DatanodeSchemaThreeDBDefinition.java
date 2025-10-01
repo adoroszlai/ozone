@@ -32,7 +32,7 @@ import org.apache.hadoop.hdds.utils.db.DBConfigFromFile;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.FixedLengthStringCodec;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedColumnFamilyOptions;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeConfiguration;
@@ -78,7 +78,7 @@ public class DatanodeSchemaThreeDBDefinition extends AbstractDatanodeDBDefinitio
       new DBColumnFamilyDefinition<>(
           "delete_txns",
           FixedLengthStringCodec.get(),
-          Proto2Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
+          Proto3Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
 
   public static final DBColumnFamilyDefinition<String, Long>
       FINALIZE_BLOCKS =

@@ -24,14 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.hdds.utils.db.Proto2CodecTestBase;
+import org.apache.hadoop.hdds.utils.db.Proto3CodecTestBase;
 import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link TransactionInfo#getCodec()}.
  */
 public class TestTransactionInfoCodec
-    extends Proto2CodecTestBase<TransactionInfo> {
+    extends Proto3CodecTestBase<TransactionInfo> {
   @Override
   public Codec<TransactionInfo> getCodec() {
     return TransactionInfo.getCodec();

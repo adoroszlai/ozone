@@ -22,14 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.UUID;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.hdds.utils.db.Proto2CodecTestBase;
+import org.apache.hadoop.hdds.utils.db.Proto3CodecTestBase;
 import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link S3SecretValue#getCodec()}.
  */
 public class TestS3SecretValueCodec
-    extends Proto2CodecTestBase<S3SecretValue> {
+    extends Proto3CodecTestBase<S3SecretValue> {
   @Override
   public Codec<S3SecretValue> getCodec() {
     return S3SecretValue.getCodec();

@@ -29,14 +29,14 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.CodecException;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 
 /**
  * Class that wraps Certificate Info.
  */
 public final class CertInfo implements Comparable<CertInfo>, Serializable {
   private static final Codec<CertInfo> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(CertInfoProto.getDefaultInstance()),
+      Proto3Codec.get(CertInfoProto.getDefaultInstance()),
       CertInfo::fromProtobuf,
       CertInfo::getProtobuf,
       CertInfo.class);

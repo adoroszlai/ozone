@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.CompactionLogEntryProto;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.CopyObject;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 
 /**
  * Compaction log entry Dao to write to the compaction log file.
@@ -34,7 +34,7 @@ import org.apache.hadoop.hdds.utils.db.Proto2Codec;
 public final class CompactionLogEntry implements
     CopyObject<CompactionLogEntry> {
   private static final Codec<CompactionLogEntry> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(CompactionLogEntryProto.getDefaultInstance()),
+      Proto3Codec.get(CompactionLogEntryProto.getDefaultInstance()),
       CompactionLogEntry::getFromProtobuf,
       CompactionLogEntry::getProtobuf,
       CompactionLogEntry.class);

@@ -26,7 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.hdds.utils.db.Proto2CodecTestBase;
+import org.apache.hadoop.hdds.utils.db.Proto3CodecTestBase;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  * Test {@link OmMultipartKeyInfo#getCodec()}.
  */
 public class TestOmMultipartKeyInfoCodec
-    extends Proto2CodecTestBase<OmMultipartKeyInfo> {
+    extends Proto3CodecTestBase<OmMultipartKeyInfo> {
   @Override
   public Codec<OmMultipartKeyInfo> getCodec() {
     return OmMultipartKeyInfo.getCodec();

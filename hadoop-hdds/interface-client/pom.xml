@@ -36,6 +36,7 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <version>${protobuf2.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
@@ -92,13 +93,29 @@
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto</id>
+            <id>compile-proto2</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
             </goals>
             <configuration>
               <protocArtifact>com.google.protobuf:protoc:${protobuf2.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
+              <includes>
+                <include>hdds.proto</include>
+              </includes>
+              <outputDirectory>target/generated-sources/java/proto2</outputDirectory>
+              <clearOutputDirectory>false</clearOutputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto3</id>
+            <goals>
+              <goal>compile</goal>
+              <goal>test-compile</goal>
+            </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${protobuf3.version}:exe:${os.detected.classifier}</protocArtifact>
               <protoSourceRoot>${basedir}/src/main/proto/</protoSourceRoot>
               <includes>
                 <include>hdds.proto</include>

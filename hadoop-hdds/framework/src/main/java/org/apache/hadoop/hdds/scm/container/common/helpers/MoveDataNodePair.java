@@ -22,7 +22,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.MoveDataNodePairProto;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 import org.apache.hadoop.ozone.ClientVersion;
 
 /**
@@ -33,7 +33,7 @@ import org.apache.hadoop.ozone.ClientVersion;
  */
 public class MoveDataNodePair {
   private static final Codec<MoveDataNodePair> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(MoveDataNodePairProto.getDefaultInstance()),
+      Proto3Codec.get(MoveDataNodePairProto.getDefaultInstance()),
       MoveDataNodePair::getFromProtobuf,
       pair -> pair.getProtobufMessage(ClientVersion.CURRENT_VERSION),
       MoveDataNodePair.class,

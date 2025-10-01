@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.utils.db.ByteStringCodec;
 import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
 
 /**
@@ -45,7 +45,7 @@ public class SCMDBDefinition extends DBDefinition.WithMap {
       new DBColumnFamilyDefinition<>(
           "deletedBlocks",
           LongCodec.get(),
-          Proto2Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
+          Proto3Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
 
   public static final DBColumnFamilyDefinition<BigInteger, X509Certificate>
       VALID_CERTS =

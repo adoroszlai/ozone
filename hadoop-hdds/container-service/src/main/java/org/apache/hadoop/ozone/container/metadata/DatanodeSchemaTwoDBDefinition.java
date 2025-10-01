@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.FixedLengthStringCodec;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 
@@ -55,7 +55,7 @@ public class DatanodeSchemaTwoDBDefinition extends AbstractDatanodeDBDefinition
       new DBColumnFamilyDefinition<>(
           "delete_txns",
           LongCodec.get(),
-          Proto2Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
+          Proto3Codec.get(DeletedBlocksTransaction.getDefaultInstance()));
 
   public static final DBColumnFamilyDefinition<String, Long>
       FINALIZE_BLOCKS =

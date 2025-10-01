@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.hdds.utils.db.Proto3Codec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
@@ -145,7 +145,7 @@ public final class OMDBDefinition extends DBDefinition.WithMap {
   public static final DBColumnFamilyDefinition<String, PersistedUserVolumeInfo> USER_TABLE_DEF
       = new DBColumnFamilyDefinition<>(USER_TABLE,
           StringCodec.get(),
-          Proto2Codec.get(PersistedUserVolumeInfo.getDefaultInstance()));
+          Proto3Codec.get(PersistedUserVolumeInfo.getDefaultInstance()));
 
   public static final String DELEGATION_TOKEN_TABLE = "dTokenTable";
   /** dTokenTable: OzoneTokenID :- renew_time. */
