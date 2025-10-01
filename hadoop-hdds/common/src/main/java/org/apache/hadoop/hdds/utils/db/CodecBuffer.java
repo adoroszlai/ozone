@@ -446,7 +446,7 @@ public class CodecBuffer implements UncheckedAutoCloseable {
    * @param source put bytes to a {@link ByteBuffer} and return the size.
    * @return this object.
    */
-  CodecBuffer put(ToIntFunction<ByteBuffer> source) {
+  public CodecBuffer put(ToIntFunction<ByteBuffer> source) {
     assertRefCnt(1);
     final int w = buf.writerIndex();
     final ByteBuffer buffer = buf.nioBuffer(w, buf.writableBytes());

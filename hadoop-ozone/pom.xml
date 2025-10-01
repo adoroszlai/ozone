@@ -55,6 +55,8 @@
 
   <properties>
     <docker.image>apache/ozone:${project.version}</docker.image>
+    <!-- only for OM storage currently -->
+    <protobuf.version>${protobuf3.version}</protobuf.version>
   </properties>
 
   <build>

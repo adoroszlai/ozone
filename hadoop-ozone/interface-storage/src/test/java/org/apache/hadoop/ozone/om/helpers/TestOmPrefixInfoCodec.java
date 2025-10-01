@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hdds.utils.db.Codec;
-import org.apache.hadoop.hdds.utils.db.Proto2CodecTestBase;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -33,7 +32,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test {@link OmPrefixInfo#getCodec()}.
  */
-public class TestOmPrefixInfoCodec extends Proto2CodecTestBase<OmPrefixInfo> {
+public class TestOmPrefixInfoCodec extends Proto3CodecTestBase<OmPrefixInfo> {
   @Override
   public Codec<OmPrefixInfo> getCodec() {
     return OmPrefixInfo.getCodec();

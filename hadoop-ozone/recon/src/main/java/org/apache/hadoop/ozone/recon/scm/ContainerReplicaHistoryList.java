@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerReplicaHistoryL
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerReplicaHistoryProto;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.ozone.om.helpers.Proto3Codec;
 
 /**
  * A list of ContainerReplicaHistory.
@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.utils.db.Proto2Codec;
  */
 public class ContainerReplicaHistoryList {
   private static final Codec<ContainerReplicaHistoryList> CODEC = new DelegatedCodec<>(
-      Proto2Codec.get(ContainerReplicaHistoryListProto.getDefaultInstance()),
+      Proto3Codec.get(ContainerReplicaHistoryListProto.getDefaultInstance()),
       ContainerReplicaHistoryList::fromProto,
       ContainerReplicaHistoryList::toProto,
       ContainerReplicaHistoryList.class);

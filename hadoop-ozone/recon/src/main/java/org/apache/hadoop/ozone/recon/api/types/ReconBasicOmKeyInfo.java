@@ -23,7 +23,7 @@ import java.util.Objects;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.hdds.utils.db.DelegatedCodec;
-import org.apache.hadoop.hdds.utils.db.Proto2Codec;
+import org.apache.hadoop.ozone.om.helpers.Proto3Codec;
 import org.apache.hadoop.ozone.om.helpers.QuotaUtil;
 import org.apache.hadoop.ozone.om.helpers.WithParentObjectId;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -63,7 +63,7 @@ public final class ReconBasicOmKeyInfo extends WithParentObjectId {
 
   public static Codec<ReconBasicOmKeyInfo> getCodec() {
     return DelegatedCodec.decodeOnly(
-        Proto2Codec.get(OzoneManagerProtocolProtos.KeyInfoProtoLight.getDefaultInstance()),
+        Proto3Codec.get(OzoneManagerProtocolProtos.KeyInfoProtoLight.getDefaultInstance()),
         ReconBasicOmKeyInfo::getFromProtobuf,
         ReconBasicOmKeyInfo.class);
   }

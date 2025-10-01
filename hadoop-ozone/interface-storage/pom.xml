@@ -24,9 +24,6 @@
   <packaging>jar</packaging>
   <name>Apache Ozone Storage Interface</name>
   <description>Apache Ozone Storage Interface</description>
-  <properties>
-    <protobuf.version>${protobuf2.version}</protobuf.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -35,6 +32,11 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>
