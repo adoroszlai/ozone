@@ -18,14 +18,12 @@
 package org.apache.hadoop.ozone.om.protocolPB;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -34,6 +32,8 @@ import org.apache.hadoop.ozone.om.ha.HadoopRpcOMFailoverProxyProvider;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * Full-featured Hadoop RPC implementation with failover support.
@@ -85,7 +85,7 @@ public class Hadoop3OmTransport implements OmTransport {
       OMNotLeaderException notLeaderException =
           HadoopRpcOMFailoverProxyProvider.getNotLeaderException(e);
       if (notLeaderException == null) {
-        throw ProtobufHelper.getRemoteException(e);
+        throw ShadedProtobufHelper.getRemoteException(e);
       }
       throw new IOException("Could not determine or connect to OM Leader.");
     }

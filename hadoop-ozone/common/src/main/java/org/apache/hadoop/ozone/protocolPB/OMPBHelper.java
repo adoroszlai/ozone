@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.protocolPB;
 import static org.apache.hadoop.hdds.scm.protocolPB.OzonePBHelper.getByteString;
 import static org.apache.hadoop.hdds.scm.protocolPB.OzonePBHelper.getFixedByteString;
 
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -52,6 +51,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRespo
 import org.apache.hadoop.ozone.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;

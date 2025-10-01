@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.ozone.om.protocolPB;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +26,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -48,6 +46,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OM
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OMConfigurationResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OMNodeInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -204,7 +204,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
       if (leaderNotReadyException != null) {
         throwException(leaderNotReadyException.getMessage());
       }
-      throw ProtobufHelper.getRemoteException(e);
+      throw ShadedProtobufHelper.getRemoteException(e);
     }
 
     if (!response.getSuccess()) {
@@ -223,7 +223,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
     try {
       response = rpcProxy.compactDB(NULL_RPC_CONTROLLER, compactRequest);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw ShadedProtobufHelper.getRemoteException(e);
     }
     if (!response.getSuccess()) {
       throwException("Request to compact \'" + columnFamily +

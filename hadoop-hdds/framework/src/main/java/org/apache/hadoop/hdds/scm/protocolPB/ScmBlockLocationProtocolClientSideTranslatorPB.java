@@ -20,8 +20,6 @@ package org.apache.hadoop.hdds.scm.protocolPB;
 import static org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Status.OK;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,11 +64,13 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.proxy.SCMBlockLocationFailoverProxyProvider;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,7 +142,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
           rpcProxy.send(NULL_RPC_CONTROLLER, req);
       return response;
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw ShadedProtobufHelper.getRemoteException(e);
     }
   }
 

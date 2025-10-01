@@ -21,14 +21,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Proto2Utils;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.security.SecurityConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.ProtoUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +63,7 @@ public class TestX509CertificateCodec {
   public void testCodecError() {
 
     X509CertificateCodec x509CertificateCodec = new X509CertificateCodec();
-    final ByteString byteString = Proto2Utils.unsafeByteString("dummy".getBytes(UTF_8));
+    final ByteString byteString = ProtoUtils.unsafeByteString("dummy".getBytes(UTF_8));
 
     assertThrows(InvalidProtocolBufferException.class, () ->
         x509CertificateCodec.deserialize(X509Certificate.class, byteString));

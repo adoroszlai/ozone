@@ -49,7 +49,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import com.google.protobuf.Proto2Utils;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -99,6 +98,7 @@ import org.apache.hadoop.ozone.protocol.commands.DeleteContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.thirdparty.protobuf.ProtoUtils;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.TestClock;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
@@ -1164,7 +1164,7 @@ public class TestReplicationManager {
 
     ReconstructECContainersCommand command = new ReconstructECContainersCommand(
         containerInfo.getContainerID(), sourceNodes, targetNodes,
-        Proto2Utils.unsafeByteString(missingIndexes), ecRepConfig);
+        ProtoUtils.unsafeByteString(missingIndexes), ecRepConfig);
 
     replicationManager.sendDatanodeCommand(command, containerInfo, target4);
 
@@ -1490,7 +1490,7 @@ public class TestReplicationManager {
     byte[] missingIndexes = new byte[]{4, 5};
     return new ReconstructECContainersCommand(
         containerInfo.getContainerID(), sources,
-        Arrays.asList(targets), Proto2Utils.unsafeByteString(missingIndexes),
+        Arrays.asList(targets), ProtoUtils.unsafeByteString(missingIndexes),
         (ECReplicationConfig) repConfig);
   }
 

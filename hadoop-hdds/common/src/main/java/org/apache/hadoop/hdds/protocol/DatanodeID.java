@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.protocol;
 
-import com.google.protobuf.ByteString;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -25,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.util.StringWithByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * DatanodeID is the primary identifier of the Datanode.

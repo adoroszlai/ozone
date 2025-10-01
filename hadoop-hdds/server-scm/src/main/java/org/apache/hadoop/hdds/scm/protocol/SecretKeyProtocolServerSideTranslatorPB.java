@@ -17,9 +17,6 @@
 
 package org.apache.hadoop.hdds.scm.protocol;
 
-import com.google.protobuf.ProtocolMessageEnum;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.hdds.protocol.SecretKeyProtocolScm;
@@ -40,6 +37,9 @@ import org.apache.hadoop.hdds.security.symmetric.ManagedSecretKey;
 import org.apache.hadoop.hdds.server.OzoneProtocolMessageDispatcher;
 import org.apache.hadoop.hdds.utils.ProtocolMessageMetrics;
 import org.apache.hadoop.ozone.util.ProtobufUtils;
+import org.apache.hadoop.thirdparty.protobuf.ProtocolMessageEnum;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

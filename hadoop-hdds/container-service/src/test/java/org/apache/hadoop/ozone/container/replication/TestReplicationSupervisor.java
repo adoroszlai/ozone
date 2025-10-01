@@ -40,7 +40,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.Proto2Utils;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
@@ -111,6 +110,7 @@ import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.protocol.commands.ReconcileContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
+import org.apache.hadoop.thirdparty.protobuf.ProtoUtils;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.GenericTestUtils.LogCapturer;
 import org.apache.ozone.test.TestClock;
@@ -1000,7 +1000,7 @@ public class TestReplicationSupervisor {
     List<DatanodeDetails> target = singletonList(
         MockDatanodeDetails.randomDatanodeDetails());
     ReconstructECContainersCommand cmd = new ReconstructECContainersCommand(containerId, sources, target,
-        Proto2Utils.unsafeByteString(missingIndexes),
+        ProtoUtils.unsafeByteString(missingIndexes),
         new ECReplicationConfig(3, 2));
     cmd.setTerm(CURRENT_TERM);
     return cmd;

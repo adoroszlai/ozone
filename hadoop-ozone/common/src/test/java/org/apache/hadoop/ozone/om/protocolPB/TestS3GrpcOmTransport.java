@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
-import com.google.protobuf.ServiceException;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -40,6 +39,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Service
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerServiceGrpc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

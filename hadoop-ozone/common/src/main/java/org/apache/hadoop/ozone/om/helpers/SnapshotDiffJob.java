@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.om.helpers;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hdds.utils.db.Codec;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SnapshotDiffJobProto;
 import org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse.JobStatus;
 import org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse.SubStatus;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 /**
  * POJO for Snapshot diff job.

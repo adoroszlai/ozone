@@ -23,13 +23,6 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.SSL_
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HostAndPort;
-import io.grpc.Context;
-import io.grpc.ManagedChannel;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import io.grpc.netty.GrpcSslContexts;
-import io.grpc.netty.NettyChannelBuilder;
-import io.netty.handler.ssl.SslContextBuilder;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -55,10 +48,17 @@ import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.ha.GrpcOMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.protocolPB.grpc.ClientAddressClientInterceptor;
 import org.apache.hadoop.ozone.om.protocolPB.grpc.GrpcClientConstants;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerServiceGrpc;
+import org.apache.hadoop.ozone.protocol.ratis_proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.ratis_proto.OzoneManagerProtocolProtos.OMResponse;
+import org.apache.hadoop.ozone.protocol.ratis_proto.OzoneManagerServiceGrpc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.thirdparty.io.grpc.Context;
+import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
+import org.apache.ratis.thirdparty.io.grpc.Status;
+import org.apache.ratis.thirdparty.io.grpc.StatusRuntimeException;
+import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
+import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
+import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

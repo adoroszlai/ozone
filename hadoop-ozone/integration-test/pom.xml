@@ -52,11 +52,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.squareup.okhttp3</groupId>
       <artifactId>okhttp</artifactId>
       <scope>test</scope>
@@ -268,6 +263,10 @@
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>

@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.utils.db;
 import static org.apache.hadoop.hdds.HddsUtils.formatStackTrace;
 import static org.apache.hadoop.hdds.HddsUtils.getStackTrace;
 
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,6 +31,7 @@ import java.util.function.BiFunction;
 import java.util.function.IntFunction;
 import java.util.function.ToIntFunction;
 import org.apache.hadoop.hdds.StringUtils;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.ratis.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.ratis.thirdparty.io.netty.buffer.ByteBufAllocator;
 import org.apache.ratis.thirdparty.io.netty.buffer.ByteBufInputStream;

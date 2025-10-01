@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.protobuf.ByteString;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hdds.StringUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ChecksumTypeProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MD5MD5Crc32FileChecksumProto;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.junit.jupiter.api.Test;
 
 /**

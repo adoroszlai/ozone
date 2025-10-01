@@ -24,17 +24,14 @@
   <packaging>jar</packaging>
   <name>Apache Ozone Storage Interface</name>
   <description>Apache Ozone Storage Interface</description>
-  <properties>
-    <protobuf.version>${protobuf2.version}</protobuf.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>
@@ -98,13 +95,13 @@
         <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-proto-${protobuf.version}</id>
+            <id>compile-proto-for-hadoop</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <protocArtifact>com.google.protobuf:protoc:${hadoop-thirdparty.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
             </configuration>
           </execution>
         </executions>

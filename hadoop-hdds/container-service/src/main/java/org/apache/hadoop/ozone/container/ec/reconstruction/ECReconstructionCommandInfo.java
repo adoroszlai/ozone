@@ -21,7 +21,6 @@ import static java.util.Collections.unmodifiableSortedMap;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type.reconstructECContainersCommand;
 
-import com.google.protobuf.ByteString;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.IntStream;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReconstructECContainersCommand.DatanodeDetailsAndReplicaIndex;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * This class is to keep the required EC reconstruction info.

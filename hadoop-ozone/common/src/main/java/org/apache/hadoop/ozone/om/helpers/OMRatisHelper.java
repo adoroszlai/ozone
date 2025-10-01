@@ -17,12 +17,12 @@
 
 package org.apache.hadoop.ozone.om.helpers;
 
-import com.google.protobuf.TextFormat;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hdds.utils.io.ByteBufferInputStream;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.ratis.proto.RaftProtos.StateMachineLogEntryProto;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientReply;

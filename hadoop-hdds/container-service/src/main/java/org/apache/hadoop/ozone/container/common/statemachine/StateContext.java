@@ -26,8 +26,6 @@ import static org.apache.hadoop.hdds.utils.HddsServerUtil.getScmInitialHeartbeat
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Message;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -79,6 +77,8 @@ import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlockCommandStatus.DeleteBlockCommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.thirdparty.protobuf.Descriptors.Descriptor;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

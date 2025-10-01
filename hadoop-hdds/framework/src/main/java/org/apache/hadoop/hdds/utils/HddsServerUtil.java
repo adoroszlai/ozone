@@ -48,7 +48,6 @@ import static org.apache.hadoop.hdds.utils.Archiver.tar;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_CONTAINER_DB_DIR;
 
 import com.google.common.base.Strings;
-import com.google.protobuf.BlockingService;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -103,6 +102,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

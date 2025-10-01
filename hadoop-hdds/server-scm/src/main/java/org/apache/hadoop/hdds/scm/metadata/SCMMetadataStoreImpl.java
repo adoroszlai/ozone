@@ -29,7 +29,6 @@ import static org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition.VALID_CERTS;
 import static org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition.VALID_SCM_CERTS;
 import static org.apache.hadoop.ozone.OzoneConsts.DB_TRANSIENT_MARKER;
 
-import com.google.protobuf.ByteString;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hdds.utils.db.BatchOperationHandler;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
 import org.apache.hadoop.hdds.utils.db.Table;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.ratis.util.ExitUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

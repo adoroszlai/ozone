@@ -17,9 +17,6 @@
 
 package org.apache.hadoop.hdds.scm.protocol;
 
-import com.google.protobuf.ProtocolMessageEnum;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,6 +53,9 @@ import org.apache.hadoop.hdds.upgrade.HDDSLayoutFeature;
 import org.apache.hadoop.hdds.utils.ProtocolMessageMetrics;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.thirdparty.protobuf.ProtocolMessageEnum;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

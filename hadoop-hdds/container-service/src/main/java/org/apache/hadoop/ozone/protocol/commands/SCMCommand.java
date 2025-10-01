@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.ozone.protocol.commands;
 
-import com.google.protobuf.Message;
 import org.apache.hadoop.hdds.HddsIdFactory;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /**
  * A class that acts as the base class to convert between Java and SCM

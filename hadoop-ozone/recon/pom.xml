@@ -51,10 +51,6 @@
       <artifactId>guice-servlet</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.jolbox</groupId>
       <artifactId>bonecp</artifactId>
     </dependency>
@@ -125,6 +121,10 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.ozone</groupId>

@@ -34,38 +34,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.grpc</groupId>
-      <artifactId>grpc-api</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.code.findbugs</groupId>
-          <artifactId>jsr305</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.grpc</groupId>
-      <artifactId>grpc-protobuf</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.code.findbugs</groupId>
-          <artifactId>jsr305</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.grpc</groupId>
-      <artifactId>grpc-stub</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>${hadoop-thirdparty.protobuf.artifact}</artifactId>
     </dependency>
@@ -74,20 +42,14 @@
       <artifactId>hdds-interface-client</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.ratis</groupId>
+      <artifactId>ratis-thirdparty-misc</artifactId>
+    </dependency>
+    <dependency>
       <!-- for generated sources, Java 11+ -->
       <groupId>javax.annotation</groupId>
       <artifactId>javax.annotation-api</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http2</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-handler-proxy</artifactId>
-      <scope>runtime</scope>
     </dependency>
   </dependencies>
   <build>
@@ -108,7 +70,7 @@
         <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-proto-${protobuf2.version}</id>
+            <id>compile-proto-for-ratis</id>
             <goals>
               <goal>compile</goal>
               <goal>test-compile</goal>
@@ -116,11 +78,15 @@
               <goal>test-compile-custom</goal>
             </goals>
             <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf2.version}:exe:${os.detected.classifier}</protocArtifact>
-              <outputDirectory>target/generated-sources/proto-java-protobuf-${protobuf2.version}</outputDirectory>
+              <protocArtifact>com.google.protobuf:protoc:${ratis-thirdparty.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <includes>
+                <include>OmClientProtocol.proto</include>
+                <include>Security.proto</include>
+              </includes>
+              <outputDirectory>target/generated-sources/proto-java-for-ratis</outputDirectory>
               <clearOutputDirectory>false</clearOutputDirectory>
               <pluginId>grpc-java</pluginId>
-              <pluginArtifact>io.grpc:protoc-gen-grpc-java:${io.grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+              <pluginArtifact>io.grpc:protoc-gen-grpc-java:${ratis-thirdparty.grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
             </configuration>
           </execution>
           <execution>
@@ -148,15 +114,20 @@
             <phase>generate-sources</phase>
             <configuration>
               <target>
+                <!-- use grpc, guava, protobuf from ratis-thirdparty -->
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="com.google.common" value="org.apache.ratis.thirdparty.com.google.common" />
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="com.google.protobuf" value="org.apache.ratis.thirdparty.com.google.protobuf" />
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="io.grpc" value="org.apache.ratis.thirdparty.io.grpc" />
+                <!-- use corresponding hdds.proto -->
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="org.apache.hadoop.hdds.protocol.proto" value="org.apache.hadoop.hdds.protocol.ratis_proto" />
+                <!-- rename package to avoid conflict -->
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="org.apache.hadoop.ozone.protocol.proto" value="org.apache.hadoop.ozone.protocol.ratis_proto" />
+                <replace dir="target/generated-sources/proto-java-for-ratis" token="org.apache.hadoop.ozone.security.proto" value="org.apache.hadoop.ozone.security.ratis_proto" />
+                <move file="target/generated-sources/proto-java-for-ratis/org/apache/hadoop/ozone/protocol/proto" tofile="target/generated-sources/proto-java-for-ratis/org/apache/hadoop/ozone/protocol/ratis_proto" />
+                <move file="target/generated-sources/proto-java-for-ratis/org/apache/hadoop/ozone/security/proto" tofile="target/generated-sources/proto-java-for-ratis/org/apache/hadoop/ozone/security/ratis_proto" />
+
                 <!-- use protobuf from hadoop-thirdparty -->
                 <replace dir="target/generated-sources/proto-java-for-hadoop" token="com.google.protobuf" value="org.apache.hadoop.thirdparty.protobuf" />
-                <!-- use matching hdds proto -->
-                <replace dir="target/generated-sources/proto-java-for-hadoop" token="org.apache.hadoop.hdds.protocol.proto" value="org.apache.hadoop.hdds.protocol.hadoop_proto" />
-                <!-- rename packages to avoid conflict -->
-                <replace dir="target/generated-sources/proto-java-for-hadoop" token="org.apache.hadoop.ozone.protocol.proto" value="org.apache.hadoop.ozone.protocol.hadoop_proto" />
-                <replace dir="target/generated-sources/proto-java-for-hadoop" token="org.apache.hadoop.ozone.security.proto" value="org.apache.hadoop.ozone.security.hadoop_proto" />
-                <move file="target/generated-sources/proto-java-for-hadoop/org/apache/hadoop/ozone/protocol/proto" tofile="target/generated-sources/proto-java-for-hadoop/org/apache/hadoop/ozone/protocol/hadoop_proto" />
-                <move file="target/generated-sources/proto-java-for-hadoop/org/apache/hadoop/ozone/security/proto" tofile="target/generated-sources/proto-java-for-hadoop/org/apache/hadoop/ozone/security/hadoop_proto" />
               </target>
             </configuration>
           </execution>

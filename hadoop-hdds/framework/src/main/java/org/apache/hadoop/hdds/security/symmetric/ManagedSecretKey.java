@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.security.symmetric;
 
-import com.google.protobuf.ByteString;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -31,6 +30,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecretKeyProtocolProtos;
 import org.apache.hadoop.ozone.util.ProtobufUtils;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Enclosed a symmetric {@link SecretKey} with additional data for life-cycle

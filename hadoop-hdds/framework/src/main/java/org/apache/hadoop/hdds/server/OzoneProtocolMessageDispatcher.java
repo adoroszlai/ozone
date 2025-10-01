@@ -17,11 +17,11 @@
 
 package org.apache.hadoop.hdds.server;
 
-import com.google.protobuf.ServiceException;
 import io.opentelemetry.api.trace.Span;
 import java.util.function.UnaryOperator;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdds.utils.ProtocolMessageMetrics;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.ratis.util.UncheckedAutoCloseable;
 import org.apache.ratis.util.function.CheckedFunction;
 import org.slf4j.Logger;

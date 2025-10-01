@@ -29,7 +29,6 @@ import static org.apache.hadoop.hdds.security.x509.certificate.utils.Certificate
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest.getCertificationRequest;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -79,6 +78,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

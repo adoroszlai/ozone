@@ -28,8 +28,6 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Proto2Utils;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.time.Instant;
@@ -247,6 +245,8 @@ import org.apache.hadoop.ozone.upgrade.UpgradeFinalization;
 import org.apache.hadoop.ozone.upgrade.UpgradeFinalization.StatusAndMessages;
 import org.apache.hadoop.ozone.util.ProtobufUtils;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ProtoUtils;
 
 /**
  * The client side implementation of OzoneManagerProtocol.
@@ -2489,7 +2489,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
                                     boolean writeToRatis) throws IOException {
     EchoRPCRequest echoRPCRequest =
             EchoRPCRequest.newBuilder()
-                    .setPayloadReq(Proto2Utils.unsafeByteString(payloadReq))
+                    .setPayloadReq(ProtoUtils.unsafeByteString(payloadReq))
                     .setPayloadSizeResp(payloadSizeRespBytes)
                     .setReadOnly(!writeToRatis)
                     .build();

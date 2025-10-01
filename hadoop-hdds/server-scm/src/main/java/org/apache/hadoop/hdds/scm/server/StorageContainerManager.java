@@ -31,7 +31,6 @@ import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.BlockingService;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -193,6 +192,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;

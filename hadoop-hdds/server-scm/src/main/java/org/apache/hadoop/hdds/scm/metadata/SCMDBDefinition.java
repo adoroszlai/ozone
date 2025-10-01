@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.scm.metadata;
 
-import com.google.protobuf.ByteString;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.Map;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hdds.utils.db.DBDefinition;
 import org.apache.hadoop.hdds.utils.db.LongCodec;
 import org.apache.hadoop.hdds.utils.db.Proto2Codec;
 import org.apache.hadoop.hdds.utils.db.StringCodec;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Class defines the structure and types of the scm.db.

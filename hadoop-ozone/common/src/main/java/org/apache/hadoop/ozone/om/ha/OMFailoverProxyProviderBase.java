@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.om.ha;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,6 +47,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMNotLeaderException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.ratis.protocol.exceptions.StateMachineException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

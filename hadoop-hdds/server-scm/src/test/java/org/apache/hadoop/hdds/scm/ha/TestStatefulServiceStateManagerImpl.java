@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.ha;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.protobuf.ByteString;
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
