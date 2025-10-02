@@ -65,7 +65,7 @@ for HADOOP_TEST_IMAGE in $HADOOP_TEST_IMAGES; do
     execute_robot_test rm -v SECURITY_ENABLED:"${SECURITY_ENABLED}" kinit-hadoop.robot
   fi
 
-  for scheme in ofs; do
+  for scheme in o3fs ofs; do
     execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
     # TODO secure MapReduce test is failing with 2.7 due to some token problem
     if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
