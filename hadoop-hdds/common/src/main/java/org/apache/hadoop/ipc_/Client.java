@@ -1653,7 +1653,7 @@ public class Client implements AutoCloseable {
   
   /**
    * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by <remoteAddress, protocol, ticket>
+   * to servers are uniquely identified by [remoteAddress, protocol, ticket]
    */
   public static class ConnectionId {
     InetSocketAddress address;
