@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.fs.ozone;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -35,6 +33,8 @@ import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ozone.shaded.com.google.protobuf.RpcController;
+import org.apache.ozone.shaded.com.google.protobuf.ServiceException;
 
 /**
  * Hadoop RPC based transport with failover support.
