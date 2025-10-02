@@ -29,6 +29,8 @@
 # filtered explicitly by adding them to the `license.exceptions` file, instead
 # of allowing the generic "Unknown license".
 
+#checks:post-build
+
 set -euo pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

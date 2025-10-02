@@ -45,6 +45,7 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
+      post-build-checks: ${{ steps.categorize-basic-checks.outputs.post-build-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
       needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
@@ -129,8 +130,7 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
-      - license
+      - post-build
     if: needs.build-info.outputs.needs-compile == 'true'
     strategy:
       matrix:
@@ -173,7 +173,7 @@ jobs:
         check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
       fail-fast: false
 
-  dependency:
+  post-build:
     needs:
       - build-info
       - build
@@ -182,43 +182,20 @@ jobs:
     with:
       java-version: ${{ needs.build-info.outputs.java-version }}
       needs-ozone-binary-tarball: true
-      script: dependency
-      sha: ${{ needs.build-info.outputs.sha }}
-      timeout-minutes: 5
-
-  license:
-    needs:
-      - build-info
-      - build
-    uses: ./.github/workflows/check.yml
-    secrets: inherit
-    with:
-      java-version: ${{ needs.build-info.outputs.java-version }}
       needs-ozone-repo: true
-      script: license
+      script: ${{ matrix.check }}
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 15
-
-  javadoc:
-    needs:
-      - build-info
-      - build
-    uses: ./.github/workflows/check.yml
-    secrets: inherit
-    with:
-      java-version: ${{ needs.build-info.outputs.java-version }}
-      needs-ozone-repo: true
-      script: javadoc
-      sha: ${{ needs.build-info.outputs.sha }}
-      timeout-minutes: 30
+    strategy:
+      matrix:
+        check: ${{ fromJson(needs.build-info.outputs.post-build-checks) }}
+      fail-fast: false
 
   repro:
     needs:
       - build-info
       - build
       - basic
-      - dependency
-      - license
     uses: ./.github/workflows/check.yml
     secrets: inherit
     with:
@@ -237,8 +214,7 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
-      - license
+      - post-build
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: ./.github/workflows/check.yml
     secrets: inherit
@@ -262,8 +238,7 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
-      - license
+      - post-build
     if: needs.build-info.outputs.needs-kubernetes-tests == 'true'
     uses: ./.github/workflows/check.yml
     secrets: inherit
@@ -280,8 +255,7 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
-      - license
+      - post-build
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: ./.github/workflows/check.yml
     secrets: inherit
