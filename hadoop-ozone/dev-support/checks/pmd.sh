@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#checks:post-build
+#checks:basic
 
 set -u -o pipefail
 
@@ -26,12 +26,12 @@ mkdir -p "$REPORT_DIR"
 
 REPORT_FILE="$REPORT_DIR/summary.txt"
 
-MAVEN_OPTIONS="-B -fae -DskipRecon --no-transfer-progress -Dpmd.failOnViolation=false -Dpmd.printFailingErrors ${MAVEN_OPTIONS:-}"
+MAVEN_OPTIONS='-B -fae --no-transfer-progress -Dpmd.failOnViolation=false -Dpmd.printFailingErrors -DskipRecon'
 
 declare -i rc
 
 #shellcheck disable=SC2086
-mvn $MAVEN_OPTIONS pmd:check "$@" | tee "${REPORT_DIR}/output.log"
+mvn $MAVEN_OPTIONS test-compile pmd:check "$@" | tee "${REPORT_DIR}/output.log"
 rc=$?
 
 grep -o "PMD Failure.*" "${REPORT_DIR}/output.log" > "$REPORT_FILE"
