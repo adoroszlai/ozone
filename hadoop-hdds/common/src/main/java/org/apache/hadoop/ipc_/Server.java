@@ -788,13 +788,13 @@ public abstract class Server {
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId) {
-      this(id, retryCount, kind, clientId, null, null);
+      this(id, retryCount, kind, clientId, null);
     }
 
     @VisibleForTesting // primarily TestNamenodeRetryCache
     public Call(int id, int retryCount, Void ignore1, Void ignore2,
         RPC.RpcKind kind, byte[] clientId) {
-      this(id, retryCount, kind, clientId, null, null);
+      this(id, retryCount, kind, clientId, null);
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
@@ -960,7 +960,7 @@ public abstract class Server {
     RpcCall(Connection connection, int id, int retryCount) {
       this(connection, id, retryCount, null,
           RPC.RpcKind.RPC_BUILTIN, RpcConstants.DUMMY_CLIENT_ID,
-          null, null);
+          null);
     }
 
     RpcCall(Connection connection, int id, int retryCount,
