@@ -2539,7 +2539,7 @@
     <repository>
       <id>ratis-rc</id>
       <name>Apache Ratis RC</name>
-      <url>https://repository.apache.org/content/repositories/orgapacheratis-1172</url>
+      <url>https://repository.apache.org/content/repositories/orgapacheratis-1173</url>
     </repository>
   </repositories>
 
