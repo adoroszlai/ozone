@@ -14,10 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-HDDS_VERSION=${hdds.version}
-HADOOP_IMAGE=${docker.hadoop.image}
-OZONE_RUNNER_VERSION=${docker.ozone-runner.version}
-OZONE_RUNNER_IMAGE=apache/ozone-runner
-OZONE_OPTS=
-SPARK_IMAGE=apache/spark
-SPARK_IMAGE_VERSION=3.5.6
+services:
+  spark:
+    image: ${SPARK_IMAGE}:${SPARK_IMAGE_VERSION}
+    hostname: spark
+    volumes:
+      - ../..:/opt/ozone
+    env_file:
+      - docker-config
+    environment:
+      SPARK_EXTRA_CLASSPATH: /opt/ozone/share/ozone/lib/ozone-filesystem-hadoop3-@project.version@.jar
+    command: ["sleep","100000000000000000"]
