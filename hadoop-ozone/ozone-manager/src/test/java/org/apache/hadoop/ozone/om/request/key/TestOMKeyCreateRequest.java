@@ -499,9 +499,9 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
 
     // We have to add the key to the key table, as validateAndUpdateCache only
     // updates the cache and not the DB.
-    OmKeyInfo keyInfo = createOmKeyInfo(volumeName, bucketName, keyName,
-        replicationConfig).build();
-    keyInfo.setMetadata(initialMetadata);
+    OmKeyInfo keyInfo = createOmKeyInfo(volumeName, bucketName, keyName, replicationConfig)
+        .addAllMetadata(initialMetadata)
+        .build();
     omMetadataManager.getKeyTable(initialOmKeyCreateRequest.getBucketLayout())
         .put(getOzoneKey(), keyInfo);
 

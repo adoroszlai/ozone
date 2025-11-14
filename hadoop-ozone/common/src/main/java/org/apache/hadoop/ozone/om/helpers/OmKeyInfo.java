@@ -277,8 +277,15 @@ public final class OmKeyInfo extends WithParentObjectId
   public List<OmKeyLocationInfo> updateLocationInfoList(
       List<OmKeyLocationInfo> locationInfoList,
       boolean isMpu, boolean skipBlockIDCheck) {
-    long latestVersion = getLatestVersionLocations().getVersion();
-    OmKeyLocationInfoGroup keyLocationInfoGroup = getLatestVersionLocations();
+    return updateLocationInfoList(locationInfoList, keyName, getLatestVersionLocations(), isMpu, skipBlockIDCheck);
+  }
+
+  private static List<OmKeyLocationInfo> updateLocationInfoList(
+      List<OmKeyLocationInfo> locationInfoList,
+      String keyName, OmKeyLocationInfoGroup keyLocationInfoGroup,
+      boolean isMpu, boolean skipBlockIDCheck
+  ) {
+    long latestVersion = keyLocationInfoGroup.getVersion();
 
     keyLocationInfoGroup.setMultipartKey(isMpu);
 
@@ -291,7 +298,7 @@ public final class OmKeyInfo extends WithParentObjectId
       uncommittedBlocks = new ArrayList<>();
     } else {
       Pair<List<OmKeyLocationInfo>, List<OmKeyLocationInfo>> verifiedResult =
-          verifyAndGetKeyLocations(locationInfoList, keyLocationInfoGroup);
+          verifyAndGetKeyLocations(locationInfoList, keyName, keyLocationInfoGroup);
       updatedBlockLocations = verifiedResult.getLeft();
       uncommittedBlocks = verifiedResult.getRight();
     }
@@ -313,9 +320,10 @@ public final class OmKeyInfo extends WithParentObjectId
    * @param keyLocationInfoGroup allocated KeyLocationInfoGroup
    * @return Pair of updatedOmKeyLocationInfo and uncommittedOmKeyLocationInfo
    */
-  private Pair<List<OmKeyLocationInfo>, List<OmKeyLocationInfo>>
+  private static Pair<List<OmKeyLocationInfo>, List<OmKeyLocationInfo>>
       verifyAndGetKeyLocations(
           List<OmKeyLocationInfo> locationInfoList,
+          String keyName, // for log message
           OmKeyLocationInfoGroup keyLocationInfoGroup) {
     // Only check ContainerBlockID here to avoid the mismatch of the pipeline
     // field and BcsId in the OmKeyLocationInfo, as the OmKeyInfoCodec ignores
@@ -518,6 +526,13 @@ public final class OmKeyInfo extends WithParentObjectId
 
     public Builder setOwnerName(String owner) {
       this.ownerName = owner;
+      return this;
+    }
+
+    public Builder updateLatestVersionLocations(
+        List<OmKeyLocationInfo> locationInfoList, boolean isMpu, boolean skipBlockIDCheck) {
+      OmKeyLocationInfoGroup latestVersionLocations = omKeyLocationInfoGroups.get(omKeyLocationInfoGroups.size() - 1);
+      updateLocationInfoList(locationInfoList, keyName, latestVersionLocations, isMpu, skipBlockIDCheck);
       return this;
     }
 
@@ -884,6 +899,10 @@ public final class OmKeyInfo extends WithParentObjectId
    */
   @Override
   public OmKeyInfo copyObject() {
+    return toBuilder().build();
+  }
+
+  public OmKeyInfo.Builder toBuilder() {
     OmKeyInfo.Builder builder = new OmKeyInfo.Builder(this)
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -918,8 +937,7 @@ public final class OmKeyInfo extends WithParentObjectId
     if (expectedDataGeneration != null) {
       builder.setExpectedDataGeneration(expectedDataGeneration);
     }
-
-    return builder.build();
+    return builder;
   }
 
   /**

@@ -461,8 +461,9 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
     OzoneManagerProtocolProtos.KeyInfo partKeyInfo =
         partKeyInfoMap.lastEntry().getPartKeyInfo();
 
-    OmKeyInfo omKeyInfo = getOmKeyInfoFromKeyTable(ozoneKey, keyName,
+    final OmKeyInfo omKeyInfo = getOmKeyInfoFromKeyTable(ozoneKey, keyName,
             omMetadataManager);
+    OmKeyInfo.Builder builder;
     if (omKeyInfo == null) {
       // This is a newly added key, it does not have any versions.
       OmKeyLocationInfoGroup keyLocationInfoGroup = new
@@ -473,7 +474,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
               keyName, omMetadataManager);
 
       // A newly created key, this is the first version.
-      OmKeyInfo.Builder builder =
+      builder =
           new OmKeyInfo.Builder().setVolumeName(volumeName)
           .setBucketName(bucketName).setKeyName(dbOpenKeyInfo.getKeyName())
           .setReplicationConfig(ReplicationConfig.fromProto(
@@ -498,7 +499,6 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         builder.setObjectID(dbOpenKeyInfo.getObjectID());
       }
       updatePrefixFSOInfo(dbOpenKeyInfo, builder);
-      omKeyInfo = builder.build();
     } else {
       OmKeyInfo dbOpenKeyInfo = getOmKeyInfoFromOpenKeyTable(multipartOpenKey,
           keyName, omMetadataManager);
@@ -508,28 +508,31 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
       // key approach. When versioning support comes, then we can uncomment
       // below code keyInfo.addNewVersion(locations);
 
+      builder = omKeyInfo.toBuilder()
+          .updateLatestVersionLocations(partLocationInfos, true, true)
+          .setModificationTime(keyArgs.getModificationTime())
+          .setDataSize(dataSize)
+          .setReplicationConfig(dbOpenKeyInfo.getReplicationConfig());
+
       // As right now versioning is not supported, we can set encryption info
       // at KeyInfo level, but once we start supporting versioning,
       // encryption info needs to be set at KeyLocation level, as each version
       // will have it's own file encryption info.
       if (dbOpenKeyInfo.getFileEncryptionInfo() != null) {
-        omKeyInfo.setFileEncryptionInfo(dbOpenKeyInfo.getFileEncryptionInfo());
+        builder.setFileEncryptionInfo(dbOpenKeyInfo.getFileEncryptionInfo());
       }
-      omKeyInfo.updateLocationInfoList(partLocationInfos, true, true);
-      omKeyInfo.setModificationTime(keyArgs.getModificationTime());
-      omKeyInfo.setDataSize(dataSize);
-      omKeyInfo.setReplicationConfig(dbOpenKeyInfo.getReplicationConfig());
       if (dbOpenKeyInfo.getMetadata() != null) {
-        omKeyInfo.setMetadata(dbOpenKeyInfo.getMetadata());
+        builder.setMetadata(dbOpenKeyInfo.getMetadata());
       }
-      omKeyInfo.getMetadata().put(OzoneConsts.ETAG,
+      builder.addMetadata(OzoneConsts.ETAG,
           multipartUploadedKeyHash(partKeyInfoMap));
       if (dbOpenKeyInfo.getTags() != null) {
-        omKeyInfo.setTags(dbOpenKeyInfo.getTags());
+        builder.addAllTags(dbOpenKeyInfo.getTags());
       }
     }
-    omKeyInfo.setUpdateID(trxnLogIndex);
-    return omKeyInfo;
+
+    builder.setUpdateID(trxnLogIndex);
+    return builder.build();
   }
 
   protected void updatePrefixFSOInfo(OmKeyInfo dbOpenKeyInfo,

@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class WithMetadata {
 
-  private Map<String, String> metadata;
+  private final Map<String, String> metadata;
 
   protected WithMetadata() {
     metadata = new ConcurrentHashMap<>();
@@ -44,13 +44,6 @@ public abstract class WithMetadata {
    */
   public final Map<String, String> getMetadata() {
     return metadata;
-  }
-
-  /**
-   * Set custom key value metadata.
-   */
-  public final void setMetadata(Map<String, String> metadata) {
-    this.metadata = metadata;
   }
 
   /** Builder for {@link WithMetadata}. */

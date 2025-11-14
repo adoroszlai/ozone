@@ -66,7 +66,7 @@ public class TestOmPrefixInfo {
         .build();
   }
 
-  private OmPrefixInfo getOmPrefixInfoForTest(String path,
+  private OmPrefixInfo.Builder getOmPrefixInfoForTest(String path,
       IAccessAuthorizer.ACLIdentityType identityType,
       String identityString,
       IAccessAuthorizer.ACLType aclType,
@@ -77,8 +77,7 @@ public class TestOmPrefixInfo {
             identityType, identityString,
             scope, aclType))))
         .setObjectID(10)
-        .setUpdateID(100)
-        .build();
+        .setUpdateID(100);
   }
 
   @Test
@@ -89,7 +88,7 @@ public class TestOmPrefixInfo {
         IAccessAuthorizer.ACLIdentityType.USER,
         username,
         IAccessAuthorizer.ACLType.WRITE,
-        ACCESS);
+        ACCESS).build();
     OmPrefixInfo clonePrefixInfo = omPrefixInfo.copyObject();
 
     assertEquals(omPrefixInfo, clonePrefixInfo);
@@ -130,8 +129,9 @@ public class TestOmPrefixInfo {
     OmPrefixInfo omPrefixInfo = getOmPrefixInfoForTest(testPath,
         IAccessAuthorizer.ACLIdentityType.USER,
         username, IAccessAuthorizer.ACLType.WRITE,
-        ACCESS);
-    omPrefixInfo.getMetadata().put("key", "value");
+        ACCESS)
+        .addMetadata("key", "value")
+        .build();
     OzoneManagerStorageProtos.PersistedPrefixInfo pi =
         omPrefixInfo.getProtobuf();
     assertEquals(testPath, pi.getName());
