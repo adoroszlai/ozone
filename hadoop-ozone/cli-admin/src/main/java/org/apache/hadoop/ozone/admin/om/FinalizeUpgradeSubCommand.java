@@ -47,17 +47,14 @@ import picocli.CommandLine;
 @CommandLine.Command(
     name = "finalizeupgrade",
     description = "Finalizes Ozone Manager's metadata changes and enables new "
-        + "features after a software upgrade.\n"
-        + "It is possible to specify the service ID for an HA environment, "
-        + "or the Ozone manager host in a non-HA environment, if none provided "
-        + "the default from configuration is being used if not ambiguous.",
+        + "features after a software upgrade.",
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class
 )
 public class FinalizeUpgradeSubCommand implements Callable<Void> {
 
   @CommandLine.Mixin
-  private OmAddressOptions.OptionalServiceIdOrHostMixin omAddressOptions;
+  private OmAddressOptions.OptionalServiceIdMixin omAddressOptions;
 
   @CommandLine.Option(
       names = {"--takeover"},

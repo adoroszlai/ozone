@@ -36,7 +36,7 @@ import picocli.CommandLine;
 public class FinalizationStatusSubCommand implements Callable<Void> {
 
   @CommandLine.Mixin
-  private OmAddressOptions.OptionalServiceIdOrHostMixin omAddressOptions;
+  private OmAddressOptions.OptionalServiceIdMixin omAddressOptions;
 
   @Override
   public Void call() throws Exception {

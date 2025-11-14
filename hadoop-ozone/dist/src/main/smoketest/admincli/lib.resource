@@ -24,9 +24,4 @@ Get OM Service ID
 
 Get OM Service Param
     ${service_id} =     Get OM Service ID
-
-    IF    '${service_id}' == ''
-        RETURN    --service-host om
-    ELSE
-        RETURN    --service-id '${service_id}'
-    END
+    RETURN    --service-id '${service_id}'

@@ -39,7 +39,7 @@ import picocli.CommandLine;
 public class UpdateRangerSubcommand implements Callable<Void> {
 
   @CommandLine.Mixin
-  private OmAddressOptions.OptionalServiceIdOrHostMixin omAddressOptions;
+  private OmAddressOptions.OptionalServiceIdMixin omAddressOptions;
 
   @CommandLine.Option(names = {"--no-wait"},
       description = "Do not wait for task completion. Exit immediately "

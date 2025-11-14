@@ -52,27 +52,6 @@ public final class OmAddressOptions {
     }
   }
 
-  /** Adds host to mixin. */
-  protected abstract static class AbstractServiceIdOrHostMixin extends AbstractServiceIdMixin {
-    @Override
-    protected abstract ServiceIdAndHostOptions addressOptions();
-
-    public String getHost() {
-      ServiceIdAndHostOptions opts = addressOptions();
-      return opts != null ? opts.getHost() : null;
-    }
-
-    @Override
-    public OzoneManagerProtocol newClient() throws IOException {
-      return createOmClient(
-          getOzoneConf(),
-          rootCommand().getUser(),
-          getServiceID(),
-          getHost(),
-          false);
-    }
-  }
-
   /** Optionally specify OM service ID. */
   public static class OptionalServiceIdMixin extends AbstractServiceIdMixin {
     @CommandLine.ArgGroup // exclusive=true, multiplicity=0..1
@@ -91,28 +70,6 @@ public final class OmAddressOptions {
 
     @Override
     protected ServiceIdOptions addressOptions() {
-      return opts;
-    }
-  }
-
-  /** Optionally specify OM service ID or host. */
-  public static class OptionalServiceIdOrHostMixin extends AbstractServiceIdOrHostMixin {
-    @CommandLine.ArgGroup // exclusive=true, multiplicity=0..1
-    private ServiceIdAndHostOptions opts;
-
-    @Override
-    protected ServiceIdAndHostOptions addressOptions() {
-      return opts;
-    }
-  }
-
-  /** Require OM service ID or host. */
-  public static class MandatoryServiceIdOrHostMixin extends AbstractServiceIdOrHostMixin {
-    @CommandLine.ArgGroup(multiplicity = "1") // exclusive=true
-    private ServiceIdAndHostOptions opts;
-
-    @Override
-    protected ServiceIdAndHostOptions addressOptions() {
       return opts;
     }
   }
@@ -147,39 +104,6 @@ public final class OmAddressOptions {
     public String toString() {
       String value = getServiceID();
       return value != null && !value.isEmpty() ? "--om-service-id " + value : "";
-    }
-  }
-
-  /** Add options for OM host. */
-  protected static class ServiceIdAndHostOptions extends ServiceIdOptions {
-    @CommandLine.Option(
-        names = {"--service-host"},
-        description = "Ozone Manager Host.",
-        required = true
-    )
-    private String host;
-
-    /** For backward compatibility. */
-    @CommandLine.Option(
-        names = {"-host"},
-        hidden = true,
-        required = true
-    )
-    @Deprecated
-    @SuppressWarnings("DeprecatedIsStillUsed")
-    private String deprecatedHost;
-
-    public String getHost() {
-      return host != null ? host : deprecatedHost;
-    }
-
-    @Override
-    public String toString() {
-      final String serviceOpt = super.toString();
-      final String hostValue = getHost();
-      return (hostValue != null && !hostValue.isEmpty())
-          ? serviceOpt + " --service-host " + hostValue
-          : serviceOpt;
     }
   }
 
