@@ -12,16 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: build-branch
 on:
-  pull_request:
-    types: [opened, ready_for_review, synchronize]
   push:
-concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  CI:
-    if: github.event_name == 'pull_request' || !startsWith(github.ref_name, 'dependabot')
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
+  repro:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-15
+          - ubuntu-24.04
+      fail-fast: false
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Find files
+        run: |
+          find * -name pom.xml | sort
+      - name: Get hash
+        run: |
+          echo ${{ hashFiles('**/pom.xml') }}
