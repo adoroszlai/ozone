@@ -87,6 +87,7 @@ public final class OmKeyInfo extends WithParentObjectId
    * Represents leaf node name. This also will be used when the keyName is
    * created on a FileSystemOptimized(FSO) bucket. For example, the user given
    * keyName is "a/b/key1" then the fileName stores "key1".
+   * Not persisted to DB.
    */
   private String fileName;
   private final String ownerName;
@@ -113,7 +114,7 @@ public final class OmKeyInfo extends WithParentObjectId
     super(b);
     this.volumeName = b.volumeName;
     this.bucketName = b.bucketName;
-    this.keyName = b.keyName;
+    setKeyName(b.keyName);
     this.dataSize = b.dataSize;
     this.keyLocationVersions = b.omKeyLocationInfoGroups;
     this.creationTime = b.creationTime;
@@ -122,7 +123,6 @@ public final class OmKeyInfo extends WithParentObjectId
     this.encInfo = b.encInfo;
     this.acls = new CopyOnWriteArrayList<>(b.acls);
     this.fileChecksum = b.fileChecksum;
-    this.fileName = b.fileName;
     this.isFile = b.isFile;
     this.ownerName = b.ownerName;
     this.tags = b.tags;
@@ -160,6 +160,7 @@ public final class OmKeyInfo extends WithParentObjectId
 
   public void setKeyName(String keyName) {
     this.keyName = keyName;
+    this.fileName = OzoneFSUtils.getFileName(keyName);
   }
 
   public long getDataSize() {
@@ -172,10 +173,6 @@ public final class OmKeyInfo extends WithParentObjectId
 
   public void setDataSize(long size) {
     this.dataSize = size;
-  }
-
-  public void setFileName(String fileName) {
-    this.fileName = fileName;
   }
 
   public String getFileName() {
@@ -513,8 +510,6 @@ public final class OmKeyInfo extends WithParentObjectId
     private ReplicationConfig replicationConfig;
     private FileEncryptionInfo encInfo;
     private final List<OzoneAcl> acls = new ArrayList<>();
-    // not persisted to DB. FileName will be the last element in path keyName.
-    private String fileName;
     private FileChecksum fileChecksum;
 
     private boolean isFile;
@@ -535,7 +530,6 @@ public final class OmKeyInfo extends WithParentObjectId
       this.modificationTime = obj.modificationTime;
       this.replicationConfig = obj.replicationConfig;
       this.encInfo = obj.encInfo;
-      this.fileName = obj.fileName;
       this.fileChecksum = obj.fileChecksum;
       this.isFile = obj.isFile;
       this.expectedDataGeneration = obj.expectedDataGeneration;
@@ -664,11 +658,6 @@ public final class OmKeyInfo extends WithParentObjectId
     @Override
     public Builder setUpdateID(long id) {
       super.setUpdateID(id);
-      return this;
-    }
-
-    public Builder setFileName(String keyFileName) {
-      this.fileName = keyFileName;
       return this;
     }
 
@@ -875,8 +864,6 @@ public final class OmKeyInfo extends WithParentObjectId
     if (keyInfo.hasOwnerName()) {
       builder.setOwnerName(keyInfo.getOwnerName());
     }
-    // not persisted to DB. FileName will be filtered out from keyName
-    builder.setFileName(OzoneFSUtils.getFileName(keyInfo.getKeyName()));
     return builder;
   }
 
