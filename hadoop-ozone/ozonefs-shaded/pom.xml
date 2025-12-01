@@ -174,17 +174,45 @@
                     <exclude>META-INF/native/libnetty_transport_native_epoll_x86_64.so</exclude>
                     <exclude>META-INF/native/libnetty_transport_native_kqueue_x86_64.jnilib</exclude>
                     <exclude>META-INF/native/netty_tcnative_windows_x86_64.dll</exclude>
+                    <!-- Omit duplicate items -->
+                    <exclude>META-INF/license/*</exclude>
+                    <exclude>META-INF/native-image/**</exclude>
+                    <exclude>META-INF/proguard/**</exclude>
+                    <exclude>META-INF/versions/**</exclude>
+                    <exclude>META-INF.versions.*.module-info</exclude>
+                    <exclude>META-INF/*.versions.properties</exclude>
+                    <exclude>META-INF.*.versions.properties</exclude>
+                    <exclude>**/module-info.class</exclude>
                   </excludes>
                 </filter>
               </filters>
               <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                  <addHeader>false</addHeader>
+                  <projectName>${project.name}</projectName>
+                </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                   <resources>
                     <resource>META-INF/BC1024KE.DSA</resource>
                     <resource>META-INF/BC2048KE.DSA</resource>
                     <resource>META-INF/BC1024KE.SF</resource>
                     <resource>META-INF/BC2048KE.SF</resource>
+                    <resource>META-INF/DEPENDENCIES</resource>
+                    <resource>LICENSE</resource>
+                    <resource>LICENSE.md</resource>
+                    <resource>LICENSE.txt</resource>
+                    <resource>MANIFEST.MF</resource>
+                    <resource>NOTICE</resource>
+                    <resource>NOTICE.txt</resource>
+                    <resource>pom.properties</resource>
+                    <resource>pom.xml</resource>
+                    <resource>proto.lock</resource>
+                    <resource>ratis-version.properties</resource>
                   </resources>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                  <file>${project.build.directory}/classes/META-INF/LICENSE.txt</file>
+                  <resource>META-INF/LICENSE.txt</resource>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
               </transformers>
