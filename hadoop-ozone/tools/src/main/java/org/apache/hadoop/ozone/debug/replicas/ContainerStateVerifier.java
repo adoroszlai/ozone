@@ -48,10 +48,8 @@ public class ContainerStateVerifier implements ReplicaVerifier {
   private static final long DEFAULT_CONTAINER_CACHE_SIZE = 1000000;
   private final ContainerOperationClient containerOperationClient;
   private final XceiverClientManager xceiverClientManager;
-  // cache for container lifecycle state and encodedToken from the SCM
-  private final Cache<Long, ContainerInfoToken> encodedTokenCache;
-  // cache for container-level replication status strings used in CLI output
-  private final Cache<Long, String> replicationStatusCache;
+  // cache for information about the container from SCM
+  private final Cache<Long, ContainerInformation> containerCache;
 
   private static final Set<ContainerDataProto.State> GOOD_REPLICA_STATES =
       EnumSet.of(
@@ -78,12 +76,7 @@ public class ContainerStateVerifier implements ReplicaVerifier {
               ". Falling back to default: " + DEFAULT_CONTAINER_CACHE_SIZE);
       containerCacheSize = DEFAULT_CONTAINER_CACHE_SIZE;
     }
-    encodedTokenCache = CacheBuilder.newBuilder()
-        .maximumSize(containerCacheSize)
-        .build();
-    replicationStatusCache = CacheBuilder.newBuilder()
-        .maximumSize(containerCacheSize)
-        .build();
+    containerCache = CacheBuilder.newBuilder().maximumSize(containerCacheSize).build();
   }
 
   @Override
@@ -94,36 +87,31 @@ public class ContainerStateVerifier implements ReplicaVerifier {
   @Override
   public BlockVerificationResult verifyBlock(DatanodeDetails datanode, OmKeyLocationInfo keyLocation) {
     try {
-      StringBuilder replicaCheckMsg = new StringBuilder().append("Replica state is ");
-      boolean pass = false;
-
-      ContainerInfoToken containerInfoToken = getContainerInfoToken(keyLocation.getContainerID());
-      ContainerDataProto containerData = fetchContainerDataFromDatanode(datanode, keyLocation.getContainerID(),
-          keyLocation, containerInfoToken);
+      long containerID = keyLocation.getContainerID();
+      ContainerInformation containerInformation = fetchContainerInformationFromSCM(containerID);
+      ContainerDataProto containerData = fetchContainerDataFromDatanode(datanode, containerID, keyLocation,
+          containerInformation.getEncodedToken());
 
       if (containerData == null) {
         return BlockVerificationResult.failIncomplete("No container data returned from DN.");
       }
-      ContainerDataProto.State state = containerData.getState();
-      replicaCheckMsg.append(state.name());
-      boolean replicaStateGood = areContainerAndReplicasInGoodState(state, containerInfoToken.getContainerState());
-      replicaCheckMsg.append(", Container state in SCM is ").append(containerInfoToken.getContainerState());
 
-      String replicationStatus = checkReplicationStatus(keyLocation.getContainerID());
-      replicaCheckMsg.append(", ").append(replicationStatus);
+      ContainerDataProto.State replicaState = containerData.getState();
+      String replicationStatus = containerInformation.getReplicationStatus();
+      HddsProtos.LifeCycleState containerState = containerInformation.getContainerState();
 
       // Replication status check evaluates container-level health by counting healthy replicas
       // across all datanodes. Therefore, when a container is UNDER_REPLICATED or OVER_REPLICATED,
       // this information should be reflected in all replica outputs, not just the unhealthy ones.
-      if (replicationStatus.startsWith(ContainerHealthResult.HealthState.HEALTHY.name())
-          && replicaStateGood) {
-        pass = true;
-      }
-
-      if (pass) {
+      if (GOOD_REPLICA_STATES.contains(replicaState) &&
+          GOOD_CONTAINER_STATES.contains(containerState) &&
+          replicationStatus.startsWith(ContainerHealthResult.HealthState.HEALTHY.name())) {
         return BlockVerificationResult.pass();
       } else {
-        return BlockVerificationResult.failCheck(replicaCheckMsg.toString());
+        String replicaCheckMsg = "Replica state is " + replicaState
+            + ", Container state in SCM is " + containerState
+            + ", " + replicationStatus;
+        return BlockVerificationResult.failCheck(replicaCheckMsg);
       }
     } catch (IOException e) {
       if (e.getMessage().contains("ContainerID") && e.getMessage().contains("does not exist")) {
@@ -134,21 +122,16 @@ public class ContainerStateVerifier implements ReplicaVerifier {
     }
   }
 
-  private boolean areContainerAndReplicasInGoodState(ContainerDataProto.State replicaState,
-      HddsProtos.LifeCycleState containerState) {
-    return GOOD_REPLICA_STATES.contains(replicaState) &&
-        GOOD_CONTAINER_STATES.contains(containerState);
-  }
-
-  private ContainerDataProto fetchContainerDataFromDatanode(DatanodeDetails dn, long containerId,
-                                                            OmKeyLocationInfo keyLocation,
-                                                            ContainerInfoToken containerInfoToken)
-      throws IOException {
+  private ContainerDataProto fetchContainerDataFromDatanode(
+      DatanodeDetails dn,
+      long containerId,
+      OmKeyLocationInfo keyLocation,
+      String encodedToken
+  ) throws IOException {
     XceiverClientSpi client = null;
     ReadContainerResponseProto response;
     try {
       Pipeline pipeline = keyLocation.getPipeline().copyForReadFromNode(dn);
-      String encodedToken = containerInfoToken.getEncodedToken();
 
       client = xceiverClientManager.acquireClientForReadData(pipeline);
       response = ContainerProtocolCalls
@@ -165,41 +148,32 @@ public class ContainerStateVerifier implements ReplicaVerifier {
     return response.getContainerData();
   }
 
-  private ContainerInfoToken getContainerInfoToken(long containerId)
+  private ContainerInformation fetchContainerInformationFromSCM(long containerId)
       throws IOException {
-    ContainerInfoToken cachedData = encodedTokenCache.getIfPresent(containerId);
+    ContainerInformation cachedData = containerCache.getIfPresent(containerId);
     if (cachedData != null) {
       return cachedData;
     }
-    // Cache miss - fetch and store only the state and encoded token
+    // Cache miss - fetch from SCM and store only required items
     ContainerInfo info = containerOperationClient.getContainer(containerId);
     String encodeToken = containerOperationClient.getEncodedContainerToken(containerId);
-    cachedData = new ContainerInfoToken(info.getState(), encodeToken);
-    encodedTokenCache.put(containerId, cachedData);
+    String replicationStatus = checkReplicationStatus(info);
+    cachedData = new ContainerInformation(info.getState(), encodeToken, replicationStatus);
+    containerCache.put(containerId, cachedData);
     return cachedData;
   }
 
-  private String checkReplicationStatus(long containerId) {
+  private String checkReplicationStatus(ContainerInfo containerInfo) {
     try {
-      String cachedStatus = replicationStatusCache.getIfPresent(containerId);
-      if (cachedStatus != null) {
-        return cachedStatus;
-      }
-
-      // Fetch container info and replicas from SCM to compute replication health once per container
-      ContainerInfo containerInfo = containerOperationClient.getContainer(containerId);
+      // Fetch replicas from SCM to compute replication health once per container
       List<ContainerReplicaInfo> replicaInfos =
-          containerOperationClient.getContainerReplicas(containerId);
+          containerOperationClient.getContainerReplicas(containerInfo.getContainerID());
 
       if (replicaInfos.isEmpty()) {
-        String status = ContainerHealthResult.HealthState.UNDER_REPLICATED
-            + ": no replicas found";
-        replicationStatusCache.put(containerId, status);
-        return status;
+        return ContainerHealthResult.HealthState.UNDER_REPLICATED + ": no replicas found";
       }
 
-      int requiredNodes =
-          containerInfo.getReplicationConfig().getRequiredNodes();
+      int requiredNodes = containerInfo.getReplicationConfig().getRequiredNodes();
       int healthyReplicas = 0;
 
       for (ContainerReplicaInfo replicaInfo : replicaInfos) {
@@ -209,9 +183,7 @@ public class ContainerStateVerifier implements ReplicaVerifier {
       }
 
       if (healthyReplicas == requiredNodes) {
-        String status = ContainerHealthResult.HealthState.HEALTHY.toString();
-        replicationStatusCache.put(containerId, status);
-        return status;
+        return ContainerHealthResult.HealthState.HEALTHY.toString();
       }
 
       ContainerHealthResult.HealthState status =
@@ -219,22 +191,23 @@ public class ContainerStateVerifier implements ReplicaVerifier {
               ? ContainerHealthResult.HealthState.UNDER_REPLICATED
               : ContainerHealthResult.HealthState.OVER_REPLICATED;
 
-      String formatted = String.format("%s: %d/%d healthy replicas",
+      return String.format("%s: %d/%d healthy replicas",
           status, healthyReplicas, requiredNodes);
-      replicationStatusCache.put(containerId, formatted);
-      return formatted;
     } catch (Exception e) {
       return "REPLICATION_CHECK_FAILED: " + e.getMessage();
     }
   }
 
-  private static class ContainerInfoToken {
-    private HddsProtos.LifeCycleState state;
+  /** Information from SCM about the container needed for each replica. */
+  private static class ContainerInformation {
+    private final HddsProtos.LifeCycleState state;
     private final String encodedToken;
+    private final String replicationStatus;
 
-    ContainerInfoToken(HddsProtos.LifeCycleState lifeState, String token) {
+    ContainerInformation(HddsProtos.LifeCycleState lifeState, String token, String replicationStatus) {
       this.state = lifeState;
       this.encodedToken = token;
+      this.replicationStatus = replicationStatus;
     }
 
     @Override
@@ -242,17 +215,18 @@ public class ContainerStateVerifier implements ReplicaVerifier {
       if (this == o) {
         return true;
       }
-      if (!(o instanceof ContainerInfoToken)) {
+      if (!(o instanceof ContainerInformation)) {
         return false;
       }
-      ContainerInfoToken key = (ContainerInfoToken) o;
-      return Objects.equals(state, key.state) &&
-          Objects.equals(encodedToken, key.encodedToken);
+      ContainerInformation key = (ContainerInformation) o;
+      return Objects.equals(state, key.state)
+          && Objects.equals(encodedToken, key.encodedToken)
+          && Objects.equals(replicationStatus, key.replicationStatus);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(state, encodedToken);
+      return Objects.hash(state, encodedToken, replicationStatus);
     }
 
     public HddsProtos.LifeCycleState getContainerState() {
@@ -261,6 +235,10 @@ public class ContainerStateVerifier implements ReplicaVerifier {
 
     public String getEncodedToken() {
       return encodedToken;
+    }
+
+    public String getReplicationStatus() {
+      return replicationStatus;
     }
   }
 
