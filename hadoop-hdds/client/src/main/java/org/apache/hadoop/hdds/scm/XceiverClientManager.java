@@ -215,8 +215,11 @@ public class XceiverClientManager extends XceiverClientCreator {
     }
     cacheMetrics.unregister();
 
-    if (metrics != null) {
-      metrics.unRegister();
+    synchronized (XceiverClientManager.class) {
+      if (metrics != null) {
+        metrics.unRegister();
+        metrics = null;
+      }
     }
   }
 
