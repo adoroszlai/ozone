@@ -338,7 +338,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         // If no bucket size and Namespace changed, prevent from updating
         // bucket object.
         final OmBucketInfo updatedBucket = isNamespaceUpdate || usedBytesDiff != 0
-            ? updateBucketInCache(omMetadataManager, trxnLogIndex, bucketUpdate)
+            ? updateBucketInCache(omMetadataManager, trxnLogIndex, bucketUpdate).copyObject()
             : null;
 
         omResponse.setCompleteMultiPartUploadResponse(
@@ -352,7 +352,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         long bucketId = omMetadataManager.getBucketId(volumeName, bucketName);
         omClientResponse =
             getOmClientResponse(multipartKey, omResponse, dbMultipartOpenKey,
-                omKeyInfo, allKeyInfoToRemove, updatedBucket.copyObject(),
+                omKeyInfo, allKeyInfoToRemove, updatedBucket,
                 volumeId, bucketId, missingParentInfos, multipartKeyInfo);
 
         result = Result.SUCCESS;

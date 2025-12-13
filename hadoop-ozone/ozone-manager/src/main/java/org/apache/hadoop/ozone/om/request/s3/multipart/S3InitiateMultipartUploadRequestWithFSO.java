@@ -193,11 +193,11 @@ public class S3InitiateMultipartUploadRequestWithFSO
       
       // validate and update namespace for missing parent directory
       final OmBucketInfo updatedBucket;
-      if (null != missingParentInfos) {
-        checkBucketQuotaInNamespace(bucketInfo, missingParentInfos.size());
-
+      if (!missingParentInfos.isEmpty()) {
+        final int count = missingParentInfos.size();
+        checkBucketQuotaInNamespace(bucketInfo, count);
         updatedBucket = updateBucketInCache(omMetadataManager, transactionLogIndex,
-            bucketInfo.toBuilder().incrUsedNamespace(missingParentInfos.size()));
+            bucketInfo.toBuilder().incrUsedNamespace(count));
       } else {
         updatedBucket = bucketInfo; // no change
       }
