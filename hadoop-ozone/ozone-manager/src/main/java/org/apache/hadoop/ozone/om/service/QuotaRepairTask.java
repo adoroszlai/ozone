@@ -149,8 +149,8 @@ public class QuotaRepairTask {
       OMMetadataManager metadataManager,
       OzoneManagerProtocolProtos.QuotaRepairRequest.Builder builder,
       List<String> buckets) throws Exception {
-    Map<String, OmBucketInfo> nameBucketInfoMap = new HashMap<>();
-    Map<String, OmBucketInfo> idBucketInfoMap = new HashMap<>();
+    Map<String, OmBucketInfo.Builder> nameBucketInfoMap = new HashMap<>();
+    Map<String, OmBucketInfo.Builder> idBucketInfoMap = new HashMap<>();
     Map<String, OmBucketInfo> oriBucketInfoMap = new HashMap<>();
     prepareAllBucketInfo(nameBucketInfoMap, idBucketInfoMap, oriBucketInfoMap, metadataManager, buckets);
     if (nameBucketInfoMap.isEmpty()) {
@@ -160,9 +160,9 @@ public class QuotaRepairTask {
     repairCount(nameBucketInfoMap, idBucketInfoMap, metadataManager);
 
     // prepare and submit request to ratis
-    for (Map.Entry<String, OmBucketInfo> entry : nameBucketInfoMap.entrySet()) {
+    for (Map.Entry<String, OmBucketInfo.Builder> entry : nameBucketInfoMap.entrySet()) {
       OmBucketInfo oriBucketInfo = oriBucketInfoMap.get(entry.getKey());
-      OmBucketInfo updatedBuckedInfo = entry.getValue();
+      OmBucketInfo.Builder updatedBuckedInfo = entry.getValue();
       boolean oldQuota = oriBucketInfo.getQuotaInBytes() == OLD_QUOTA_DEFAULT
           || oriBucketInfo.getQuotaInNamespace() == OLD_QUOTA_DEFAULT;
       if (!(oldQuota || isChange(oriBucketInfo, updatedBuckedInfo))) {
@@ -223,7 +223,7 @@ public class QuotaRepairTask {
   }
 
   private void prepareAllBucketInfo(
-      Map<String, OmBucketInfo> nameBucketInfoMap, Map<String, OmBucketInfo> idBucketInfoMap,
+      Map<String, OmBucketInfo.Builder> nameBucketInfoMap, Map<String, OmBucketInfo.Builder> idBucketInfoMap,
       Map<String, OmBucketInfo> oriBucketInfoMap, OMMetadataManager metadataManager,
       List<String> buckets) throws IOException {
     if (!buckets.isEmpty()) {
@@ -245,20 +245,20 @@ public class QuotaRepairTask {
   }
 
   private static void populateBucket(
-      Map<String, OmBucketInfo> nameBucketInfoMap, Map<String, OmBucketInfo> idBucketInfoMap,
+      Map<String, OmBucketInfo.Builder> nameBucketInfoMap, Map<String, OmBucketInfo.Builder> idBucketInfoMap,
       Map<String, OmBucketInfo> oriBucketInfoMap, OMMetadataManager metadataManager,
       OmBucketInfo bucketInfo) throws IOException {
-    String bucketNameKey = buildNamePath(bucketInfo.getVolumeName(),
-        bucketInfo.getBucketName());
-    oriBucketInfoMap.put(bucketNameKey, bucketInfo.copyObject());
-    bucketInfo.decrUsedBytes(bucketInfo.getUsedBytes(), false);
-    bucketInfo.decrUsedNamespace(bucketInfo.getUsedNamespace(), false);
-    nameBucketInfoMap.put(bucketNameKey, bucketInfo);
-    idBucketInfoMap.put(buildIdPath(metadataManager.getVolumeId(bucketInfo.getVolumeName()),
-            bucketInfo.getObjectID()), bucketInfo);
+    String bucketNameKey = buildNamePath(bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+    String idKey = buildIdPath(metadataManager.getVolumeId(bucketInfo.getVolumeName()), bucketInfo.getObjectID());
+    oriBucketInfoMap.put(bucketNameKey, bucketInfo);
+    OmBucketInfo.Builder bucketUpdate = bucketInfo.toBuilder();
+    bucketUpdate.decrUsedBytes(bucketInfo.getUsedBytes(), false);
+    bucketUpdate.decrUsedNamespace(bucketInfo.getUsedNamespace(), false);
+    nameBucketInfoMap.put(bucketNameKey, bucketUpdate);
+    idBucketInfoMap.put(idKey, bucketUpdate);
   }
 
-  private boolean isChange(OmBucketInfo lBucketInfo, OmBucketInfo rBucketInfo) {
+  private boolean isChange(OmBucketInfo lBucketInfo, OmBucketInfo.Builder rBucketInfo) {
     if (lBucketInfo.getUsedNamespace() != rBucketInfo.getUsedNamespace()
         || lBucketInfo.getUsedBytes() != rBucketInfo.getUsedBytes()) {
       return true;
@@ -287,7 +287,7 @@ public class QuotaRepairTask {
   }
   
   private void repairCount(
-      Map<String, OmBucketInfo> nameBucketInfoMap, Map<String, OmBucketInfo> idBucketInfoMap,
+      Map<String, OmBucketInfo.Builder> nameBucketInfoMap, Map<String, OmBucketInfo.Builder> idBucketInfoMap,
       OMMetadataManager metadataManager) throws Exception {
     LOG.info("Starting quota repair counting for all keys, files and directories");
     Map<String, CountPair> keyCountMap = new ConcurrentHashMap<>();
@@ -411,11 +411,11 @@ public class QuotaRepairTask {
   }
   
   private static synchronized void updateCountToBucketInfo(
-      Map<String, OmBucketInfo> bucketInfoMap,
+      Map<String, OmBucketInfo.Builder> bucketInfoMap,
       Map<String, CountPair> prefixUsageMap) {
     for (Map.Entry<String, CountPair> entry : prefixUsageMap.entrySet()) {
       // update bucket info if available
-      OmBucketInfo omBucketInfo = bucketInfoMap.get(entry.getKey());
+      OmBucketInfo.Builder omBucketInfo = bucketInfoMap.get(entry.getKey());
       if (omBucketInfo != null) {
         omBucketInfo.incrUsedBytes(entry.getValue().getSpace());
         omBucketInfo.incrUsedNamespace(entry.getValue().getNamespace());

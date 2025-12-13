@@ -122,22 +122,24 @@ public class OMQuotaRepairRequest extends OMClientRequest {
         // bucket might be deleted when running repair count parallel
         return;
       }
-      bucketInfo.incrUsedBytes(bucketCountInfo.getDiffUsedBytes());
-      bucketInfo.incrUsedNamespace(bucketCountInfo.getDiffUsedNamespace());
+
+      final OmBucketInfo.Builder builder = bucketInfo.toBuilder()
+          .incrUsedBytes(bucketCountInfo.getDiffUsedBytes())
+          .incrUsedNamespace(bucketCountInfo.getDiffUsedNamespace());
+
       if (bucketCountInfo.getSupportOldQuota()) {
-        OmBucketInfo.Builder builder = bucketInfo.toBuilder();
         if (bucketInfo.getQuotaInBytes() == OLD_QUOTA_DEFAULT) {
           builder.setQuotaInBytes(QUOTA_RESET);
         }
         if (bucketInfo.getQuotaInNamespace() == OLD_QUOTA_DEFAULT) {
           builder.setQuotaInNamespace(QUOTA_RESET);
         }
-        bucketInfo = builder.build();
       }
+      final OmBucketInfo updatedBucket = builder.build();
 
       omMetadataManager.getBucketTable().addCacheEntry(
-          new CacheKey<>(bucketKey), CacheValue.get(transactionLogIndex, bucketInfo));
-      bucketMap.put(Pair.of(bucketCountInfo.getVolName(), bucketCountInfo.getBucketName()), bucketInfo);
+          new CacheKey<>(bucketKey), CacheValue.get(transactionLogIndex, updatedBucket));
+      bucketMap.put(Pair.of(bucketCountInfo.getVolName(), bucketCountInfo.getBucketName()), updatedBucket);
     } finally {
       if (acquiredBucketLock) {
         mergeOmLockDetails(omMetadataManager.getLock()

@@ -89,16 +89,16 @@ public final class OmBucketInfo extends WithObjectID implements Auditable, CopyO
 
   private final String sourceBucket;
 
-  private long usedBytes;
-  private long usedNamespace;
+  private final long usedBytes;
+  private final long usedNamespace;
   private final long quotaInBytes;
   private final long quotaInNamespace;
   // Total size of data trapped which is pending to be deleted either because of data trapped in snapshots or
   // background key deleting service is yet to run.
   // This also indicates the size exclusively held by all snapshots of this bucket.
   // i.e. when all snapshots of this bucket are deleted and purged, this much space would be released.
-  private long snapshotUsedBytes;
-  private long snapshotUsedNamespace;
+  private final long snapshotUsedBytes;
+  private final long snapshotUsedNamespace;
 
   /**
    * Bucket Layout.
@@ -247,44 +247,6 @@ public final class OmBucketInfo extends WithObjectID implements Auditable, CopyO
 
   public long getUsedNamespace() {
     return usedNamespace;
-  }
-
-  public void incrUsedBytes(long bytes) {
-    this.usedBytes += bytes;
-  }
-
-  public void decrUsedBytes(long bytes, boolean increasePendingDeleteBytes) {
-    this.usedBytes -= bytes;
-    if (increasePendingDeleteBytes) {
-      incrSnapshotUsedBytes(bytes);
-    }
-  }
-
-  private void incrSnapshotUsedBytes(long bytes) {
-    this.snapshotUsedBytes += bytes;
-  }
-
-  public void incrUsedNamespace(long namespaceToUse) {
-    this.usedNamespace += namespaceToUse;
-  }
-
-  public void decrUsedNamespace(long namespaceToUse, boolean increasePendingDeleteNamespace) {
-    this.usedNamespace -= namespaceToUse;
-    if (increasePendingDeleteNamespace) {
-      incrSnapshotUsedNamespace(namespaceToUse);
-    }
-  }
-
-  private void incrSnapshotUsedNamespace(long namespaceToUse) {
-    this.snapshotUsedNamespace += namespaceToUse;
-  }
-
-  public void purgeSnapshotUsedBytes(long bytes) {
-    this.snapshotUsedBytes -= bytes;
-  }
-
-  public void purgeSnapshotUsedNamespace(long namespaceToUse) {
-    this.snapshotUsedNamespace -= namespaceToUse;
   }
 
   public long getQuotaInBytes() {
@@ -508,6 +470,42 @@ public final class OmBucketInfo extends WithObjectID implements Auditable, CopyO
       return this;
     }
 
+    public Builder incrUsedBytes(long bytes) {
+      this.usedBytes += bytes;
+      return this;
+    }
+
+    public Builder decrUsedBytes(long bytes, boolean increasePendingDeleteBytes) {
+      this.usedBytes -= bytes;
+      if (increasePendingDeleteBytes) {
+        this.snapshotUsedBytes += bytes;
+      }
+      return this;
+    }
+
+    public Builder incrUsedNamespace(long namespaceToUse) {
+      this.usedNamespace += namespaceToUse;
+      return this;
+    }
+
+    public Builder decrUsedNamespace(long namespaceToUse, boolean increasePendingDeleteNamespace) {
+      this.usedNamespace -= namespaceToUse;
+      if (increasePendingDeleteNamespace) {
+        this.snapshotUsedNamespace += namespaceToUse;
+      }
+      return this;
+    }
+
+    public Builder purgeSnapshotUsedBytes(long bytes) {
+      this.snapshotUsedBytes -= bytes;
+      return this;
+    }
+
+    public Builder purgeSnapshotUsedNamespace(long namespaceToUse) {
+      this.snapshotUsedNamespace -= namespaceToUse;
+      return this;
+    }
+
     /** @param quotaUsage - Bucket Quota Usage in bytes. */
     public Builder setUsedBytes(long quotaUsage) {
       this.usedBytes = quotaUsage;
@@ -572,6 +570,22 @@ public final class OmBucketInfo extends WithObjectID implements Auditable, CopyO
     @Override
     protected OmBucketInfo buildObject() {
       return new OmBucketInfo(this);
+    }
+
+    public long getUsedNamespace() {
+      return usedNamespace;
+    }
+
+    public long getUsedBytes() {
+      return usedBytes;
+    }
+
+    public String getVolumeName() {
+      return volumeName;
+    }
+
+    public String getBucketName() {
+      return bucketName;
     }
   }
 

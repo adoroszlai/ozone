@@ -355,28 +355,28 @@ public final class OMRequestTestUtils {
 
       // Simulate bucket quota (usage) update done in OMKeyCommitRequest
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-      OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
+      final OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
           bucketKey);
       // omBucketInfo can be null if some mocked tests doesn't use the table
-      if (omBucketInfo != null) {
-        omBucketInfo.incrUsedBytes(omKeyInfo.getReplicatedSize());
-      }
+      final OmBucketInfo updatedBucket = omBucketInfo != null
+          ? omBucketInfo.toBuilder().incrUsedBytes(omKeyInfo.getReplicatedSize()).build()
+          : null;
 
       if (addToCache) {
         omMetadataManager.getKeyTable(getDefaultBucketLayout())
             .addCacheEntry(new CacheKey<>(ozoneKey),
                 CacheValue.get(trxnLogIndex, omKeyInfo));
-        if (omBucketInfo != null) {
+        if (updatedBucket != null) {
           omMetadataManager.getBucketTable()
               .addCacheEntry(new CacheKey<>(bucketKey),
-                  CacheValue.get(trxnLogIndex + 1, omBucketInfo));
+                  CacheValue.get(trxnLogIndex + 1, updatedBucket));
         }
       }
       omMetadataManager.getKeyTable(getDefaultBucketLayout())
           .put(ozoneKey, omKeyInfo);
 
-      if (omBucketInfo != null) {
-        omMetadataManager.getBucketTable().put(bucketKey, omBucketInfo);
+      if (updatedBucket != null) {
+        omMetadataManager.getBucketTable().put(bucketKey, updatedBucket);
       }
     }
   }

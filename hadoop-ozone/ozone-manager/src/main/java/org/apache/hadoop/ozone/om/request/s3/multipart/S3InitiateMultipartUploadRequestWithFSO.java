@@ -192,9 +192,14 @@ public class S3InitiateMultipartUploadRequestWithFSO
           .build();
       
       // validate and update namespace for missing parent directory
+      final OmBucketInfo updatedBucket;
       if (null != missingParentInfos) {
         checkBucketQuotaInNamespace(bucketInfo, missingParentInfos.size());
-        bucketInfo.incrUsedNamespace(missingParentInfos.size());
+
+        updatedBucket = updateBucketInCache(omMetadataManager, transactionLogIndex,
+            bucketInfo.toBuilder().incrUsedNamespace(missingParentInfos.size()));
+      } else {
+        updatedBucket = bucketInfo; // no change
       }
 
       // Add cache entries for the prefix directories.
@@ -221,7 +226,7 @@ public class S3InitiateMultipartUploadRequestWithFSO
                       .setMultipartUploadID(keyArgs.getMultipartUploadID()))
                   .build(), multipartKeyInfo, omKeyInfo, multipartKey,
               missingParentInfos, getBucketLayout(), volumeId, bucketId,
-              bucketInfo.copyObject());
+              updatedBucket.copyObject());
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

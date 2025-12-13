@@ -280,7 +280,9 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
             quotaReleased +=
                 iterPartKeyInfo.getPartKeyInfo().getDataSize() * keyFactor;
           }
-          omBucketInfo.incrUsedBytes(-quotaReleased);
+
+          final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+              omBucketInfo.toBuilder().incrUsedBytes(-quotaReleased));
 
           OmMultipartAbortInfo omMultipartAbortInfo =
               new OmMultipartAbortInfo.Builder()
@@ -290,7 +292,7 @@ public class S3ExpiredMultipartUploadsAbortRequest extends OMKeyRequest {
                   .setBucketLayout(omBucketInfo.getBucketLayout())
                   .build();
 
-          abortedMultipartUploads.computeIfAbsent(omBucketInfo,
+          abortedMultipartUploads.computeIfAbsent(updatedBucket,
               k -> new ArrayList<>()).add(omMultipartAbortInfo);
 
           // Update cache of openKeyTable and multipartInfo table.

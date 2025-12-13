@@ -130,8 +130,6 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
 
   private void updateBlockInfo(OmKeyInfo omKeyInfo) throws IOException {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
     List<OmKeyLocationInfoGroup> locationList = new ArrayList<>();
     List<OmKeyLocationInfo> locList = new ArrayList<>();
     OmKeyLocationInfo.Builder builder = new OmKeyLocationInfo.Builder();
@@ -139,8 +137,13 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
     locList.add(builder.build());
     locationList.add(new OmKeyLocationInfoGroup(1, locList, false));
     omKeyInfo.setKeyLocationVersions(locationList);
-    omBucketInfo.incrUsedBytes(omKeyInfo.getDataSize());
-    omBucketInfo.incrUsedNamespace(1L);
+
+    final OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable()
+        .get(bucketKey)
+        .toBuilder()
+        .incrUsedBytes(omKeyInfo.getDataSize())
+        .incrUsedNamespace(1L)
+        .build();
     omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
         CacheValue.get(1L, omBucketInfo));
     omMetadataManager.getBucketTable().put(bucketKey, omBucketInfo);
@@ -575,10 +578,9 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
 
     // Create PurgeKeysRequest to purge the deleted keys
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    OmBucketInfo omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
+    final OmBucketInfo initialBucket = omMetadataManager.getBucketTable().get(bucketKey);
     OMRequest omRequest = createPurgeKeysRequest(null,
-        null, deletedKeyInfos, omBucketInfo);
+        null, deletedKeyInfos, initialBucket);
     OMRequest preExecutedRequest = preExecute(omRequest);
     OMDirectoriesPurgeRequestWithFSO omKeyPurgeRequest =
         new OMDirectoriesPurgeRequestWithFSO(preExecutedRequest);
@@ -587,20 +589,21 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
     omMetadataManager.getBucketTable().delete(bucketKey);
     OMRequestTestUtils.addBucketToDB(volumeName, bucketName,
         omMetadataManager);
-    omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
-    final long bucketInitialUsedBytes = omBucketInfo.getUsedBytes();
+    final OmBucketInfo recreatedBucket = omMetadataManager.getBucketTable().get(bucketKey);
+    final long bucketInitialUsedBytes = recreatedBucket.getUsedBytes();
 
-    omBucketInfo.incrUsedBytes(1000L);
-    omBucketInfo.incrUsedNamespace(100L);
+    final OmBucketInfo updatedBucket = recreatedBucket.toBuilder()
+        .incrUsedBytes(1000L)
+        .incrUsedNamespace(100L)
+        .build();
     omMetadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
-        CacheValue.get(1L, omBucketInfo));
-    omMetadataManager.getBucketTable().put(bucketKey, omBucketInfo);
+        CacheValue.get(1L, updatedBucket));
+    omMetadataManager.getBucketTable().put(bucketKey, updatedBucket);
 
     // prevalidate bucket
-    omBucketInfo = omMetadataManager.getBucketTable().get(bucketKey);
+    final OmBucketInfo bucketAfterUpdate = omMetadataManager.getBucketTable().get(bucketKey);
     final long bucketExpectedUsedBytes = bucketInitialUsedBytes + 1000L;
-    assertEquals(bucketExpectedUsedBytes, omBucketInfo.getUsedBytes());
+    assertEquals(bucketExpectedUsedBytes, bucketAfterUpdate.getUsedBytes());
     
     // perform delete
     OMDirectoriesPurgeResponseWithFSO omClientResponse
@@ -608,9 +611,8 @@ public class TestOMDirectoriesPurgeRequestAndResponse extends TestOMKeyRequest {
         .validateAndUpdateCache(ozoneManager, 100L);
     
     // validate bucket info, no change expected
-    omBucketInfo = omMetadataManager.getBucketTable().get(
-        bucketKey);
-    assertEquals(bucketExpectedUsedBytes, omBucketInfo.getUsedBytes());
+    final OmBucketInfo bucketAfterPurge = omMetadataManager.getBucketTable().get(bucketKey);
+    assertEquals(bucketExpectedUsedBytes, bucketAfterPurge.getUsedBytes());
 
     performBatchOperationCommit(omClientResponse);
 
