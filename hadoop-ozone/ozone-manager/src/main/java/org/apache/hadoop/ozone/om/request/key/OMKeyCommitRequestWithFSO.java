@@ -247,6 +247,8 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
       // not persisted in the key table.
       omKeyInfo.setExpectedDataGeneration(null);
 
+      final OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
+
       long correctedSpace = omKeyInfo.getReplicatedSize();
       // if keyToDelete isn't null, usedNamespace shouldn't check and increase.
       if (keyToDelete != null && isSameHsyncKey) {
@@ -294,15 +296,15 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
         // Subtract the size of blocks to be overwritten.
-        omBucketInfo.decrUsedNamespace(totalNamespace, true);
-        omBucketInfo.decrUsedNamespace(filteredUsedBlockCnt.getRight(), false);
-        omBucketInfo.decrUsedBytes(totalSize, true);
+        bucketUpdate.decrUsedNamespace(totalNamespace, true);
+        bucketUpdate.decrUsedNamespace(filteredUsedBlockCnt.getRight(), false);
+        bucketUpdate.decrUsedBytes(totalSize, true);
       } else {
         checkBucketQuotaInNamespace(omBucketInfo, 1L);
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
       }
-      omBucketInfo.incrUsedNamespace(1L);
+      bucketUpdate.incrUsedNamespace(1L);
 
       // let the uncommitted blocks pretend as key's old version blocks
       // which will be deleted as RepeatedOmKeyInfo
@@ -345,10 +347,12 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
       OMFileRequest.addFileTableCacheEntry(omMetadataManager, dbFileKey,
               omKeyInfo, fileName, trxnLogIndex);
 
-      omBucketInfo.incrUsedBytes(correctedSpace);
+      bucketUpdate.incrUsedBytes(correctedSpace);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex, bucketUpdate);
 
       omClientResponse = new OMKeyCommitResponseWithFSO(omResponse.build(),
-          omKeyInfo, dbFileKey, dbOpenFileKey, omBucketInfo.copyObject(),
+          omKeyInfo, dbFileKey, dbOpenFileKey, updatedBucket,
           oldKeyVersionsToDeleteMap, volumeId, isHSync, newOpenKeyInfo, dbOpenKeyToDeleteKey, openKeyToDelete);
 
       result = Result.SUCCESS;

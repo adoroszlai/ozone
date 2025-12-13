@@ -172,7 +172,9 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
             iterPartKeyInfo.getPartKeyInfo().getDataSize(),
             omKeyInfo.getReplicationConfig());
       }
-      omBucketInfo.incrUsedBytes(-quotaReleased);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder().incrUsedBytes(-quotaReleased));
 
       // Update cache of openKeyTable and multipartInfo table.
       // No need to add the cache entries to delete table, as the entries
@@ -185,7 +187,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
               CacheValue.get(trxnLogIndex));
 
       omClientResponse = getOmClientResponse(ozoneManager, multipartKeyInfo,
-          multipartKey, multipartOpenKey, omResponse, omBucketInfo);
+          multipartKey, multipartOpenKey, omResponse, updatedBucket);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {
@@ -243,7 +245,7 @@ public class S3MultipartUploadAbortRequest extends OMKeyRequest {
         omResponse.setAbortMultiPartUploadResponse(
             MultipartUploadAbortResponse.newBuilder()).build(), multipartKey,
         multipartOpenKey, multipartKeyInfo,
-        omBucketInfo.copyObject(), getBucketLayout());
+        omBucketInfo, getBucketLayout());
     return omClientResponse;
   }
 

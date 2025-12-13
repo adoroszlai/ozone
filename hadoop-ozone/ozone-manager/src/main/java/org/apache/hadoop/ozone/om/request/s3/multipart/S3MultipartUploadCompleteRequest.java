@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.om.request.s3.multipart;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.NOT_A_FILE;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.LeveledResource.BUCKET_LOCK;
 
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
@@ -310,6 +309,8 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
           }
         }
 
+        final OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
+
         // If bucket versioning is turned on during the update, between key
         // creation and key commit, old versions will be just overwritten and
         // not kept. Bucket versioning will be effective from the first key
@@ -324,22 +325,21 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
           usedBytesDiff -= keyToDelete.getReplicatedSize();
         } else {
           checkBucketQuotaInNamespace(omBucketInfo, 1L);
-          omBucketInfo.incrUsedNamespace(1L);
+          bucketUpdate.incrUsedNamespace(1L);
           isNamespaceUpdate = true;
         }
 
-        String dbBucketKey = omMetadataManager.getBucketKey(
-            omBucketInfo.getVolumeName(), omBucketInfo.getBucketName());
         if (usedBytesDiff != 0) {
-          omBucketInfo.incrUsedBytes(usedBytesDiff);
-        } else if (!isNamespaceUpdate) {
-          // If no bucket size and Namespace changed, prevent from updating
-          // bucket object.
-          omBucketInfo = null;
+          bucketUpdate.incrUsedBytes(usedBytesDiff);
         }
 
-        updateCache(omMetadataManager, dbBucketKey, omBucketInfo, dbOzoneKey,
-            dbMultipartOpenKey, multipartKey, omKeyInfo, trxnLogIndex);
+        updateCache(omMetadataManager, dbOzoneKey, dbMultipartOpenKey, multipartKey, omKeyInfo, trxnLogIndex);
+
+        // If no bucket size and Namespace changed, prevent from updating
+        // bucket object.
+        final OmBucketInfo updatedBucket = isNamespaceUpdate || usedBytesDiff != 0
+            ? updateBucketInCache(omMetadataManager, trxnLogIndex, bucketUpdate)
+            : null;
 
         omResponse.setCompleteMultiPartUploadResponse(
             MultipartUploadCompleteResponse.newBuilder()
@@ -352,7 +352,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         long bucketId = omMetadataManager.getBucketId(volumeName, bucketName);
         omClientResponse =
             getOmClientResponse(multipartKey, omResponse, dbMultipartOpenKey,
-                omKeyInfo, allKeyInfoToRemove, omBucketInfo,
+                omKeyInfo, allKeyInfoToRemove, updatedBucket,
                 volumeId, bucketId, missingParentInfos, multipartKeyInfo);
 
         result = Result.SUCCESS;
@@ -667,9 +667,7 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
         volume + " bucket: " + bucket + " key: " + keyName;
   }
 
-  @SuppressWarnings("parameternumber")
   private void updateCache(OMMetadataManager omMetadataManager,
-      String dbBucketKey, @Nullable OmBucketInfo omBucketInfo,
       String dbOzoneKey, String dbMultipartOpenKey, String dbMultipartKey,
       OmKeyInfo omKeyInfo, long transactionLogIndex) throws IOException {
     // Update cache.
@@ -687,15 +685,6 @@ public class S3MultipartUploadCompleteRequest extends OMKeyRequest {
     omMetadataManager.getMultipartInfoTable().addCacheEntry(
         new CacheKey<>(dbMultipartKey),
         CacheValue.get(transactionLogIndex));
-
-    // Here, omBucketInfo can be null if its size has not changed. No need to
-    // update the bucket info unless its size has changed. We never want to
-    // delete the bucket info here, but just avoiding unnecessary update.
-    if (omBucketInfo != null) {
-      omMetadataManager.getBucketTable().addCacheEntry(
-          new CacheKey<>(dbBucketKey),
-          CacheValue.get(transactionLogIndex, omBucketInfo));
-    }
   }
 
   @RequestFeatureValidator(

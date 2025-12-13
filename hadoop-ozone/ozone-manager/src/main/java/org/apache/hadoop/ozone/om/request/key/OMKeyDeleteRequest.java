@@ -157,14 +157,16 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
               omMetadataManager.getOzoneKey(volumeName, bucketName, keyName)),
           CacheValue.get(trxnLogIndex));
 
-      OmBucketInfo omBucketInfo =
-          getBucketInfo(omMetadataManager, volumeName, bucketName);
-
       long quotaReleased = sumBlockLengths(omKeyInfo);
       // Empty entries won't be added to deleted table so this key shouldn't get added to snapshotUsed space.
       boolean isKeyNonEmpty = !OmKeyInfo.isKeyEmpty(omKeyInfo);
-      omBucketInfo.decrUsedBytes(quotaReleased, isKeyNonEmpty);
-      omBucketInfo.decrUsedNamespace(1L, isKeyNonEmpty);
+
+      final OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder()
+              .decrUsedBytes(quotaReleased, isKeyNonEmpty)
+              .decrUsedNamespace(1L, isKeyNonEmpty));
       OmKeyInfo deletedOpenKeyInfo = null;
 
       // If omKeyInfo has hsync metadata, delete its corresponding open key as well
@@ -187,7 +189,7 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
       omClientResponse = new OMKeyDeleteResponse(
           omResponse.setDeleteKeyResponse(DeleteKeyResponse.newBuilder())
               .build(), omKeyInfo,
-          omBucketInfo.copyObject(), deletedOpenKeyInfo);
+          updatedBucket, deletedOpenKeyInfo);
       if (omKeyInfo.isFile()) {
         auditMap.put(OzoneConsts.DATA_SIZE, String.valueOf(omKeyInfo.getDataSize()));
         auditMap.put(OzoneConsts.REPLICATION_CONFIG, omKeyInfo.getReplicationConfig().toString());

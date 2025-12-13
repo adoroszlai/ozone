@@ -183,7 +183,9 @@ public class OMKeyCreateRequestWithFSO extends OMKeyCreateRequest {
           preAllocatedSpace);
       checkBucketQuotaInNamespace(omBucketInfo, numKeysCreated + 1L);
       perfMetrics.addCreateKeyQuotaCheckLatencyNs(Time.monotonicNowNanos() - quotaCheckStartTime);
-      omBucketInfo.incrUsedNamespace(numKeysCreated);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder().incrUsedNamespace(numKeysCreated));
 
       // Add to cache entry can be done outside of lock for this openKey.
       // Even if bucket gets deleted, when commitKey we shall identify if
@@ -208,7 +210,7 @@ public class OMKeyCreateRequestWithFSO extends OMKeyCreateRequest {
               .setCmdType(Type.CreateKey);
       omClientResponse = new OMKeyCreateResponseWithFSO(omResponse.build(),
               omFileInfo, missingParentInfos, clientID,
-              omBucketInfo.copyObject(), volumeId);
+              updatedBucket, volumeId);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

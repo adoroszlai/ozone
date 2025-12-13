@@ -188,7 +188,9 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
 
         numMissingParents = missingParentInfos.size();
         checkBucketQuotaInNamespace(omBucketInfo, numMissingParents + 1L);
-        omBucketInfo.incrUsedNamespace(numMissingParents + 1L);
+
+        final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+            omBucketInfo.toBuilder().incrUsedNamespace(numMissingParents + 1L));
 
         OMFileRequest.addKeyTableCacheEntries(omMetadataManager, volumeName,
             bucketName, omBucketInfo.getBucketLayout(),
@@ -197,7 +199,7 @@ public class OMDirectoryCreateRequest extends OMKeyRequest {
         result = Result.SUCCESS;
         omClientResponse = new OMDirectoryCreateResponse(omResponse.build(),
             dirKeyInfo, missingParentInfos, result, getBucketLayout(),
-            omBucketInfo.copyObject());
+            updatedBucket);
       } else {
         // omDirectoryResult == DIRECTORY_EXITS
         result = Result.DIRECTORY_ALREADY_EXISTS;

@@ -195,16 +195,19 @@ public class OMKeysDeleteRequest extends OMKeyRequest {
       Pair<Long, Integer> quotaReleasedEmptyKeys =
           markKeysAsDeletedInCache(ozoneManager, trxnLogIndex, omKeyInfoList,
               dirList, omMetadataManager, openKeyInfoMap);
-      omBucketInfo.decrUsedBytes(quotaReleasedEmptyKeys.getKey(), true);
-      // For empty keyInfos the quota should be released and not added to namespace.
-      omBucketInfo.decrUsedNamespace(omKeyInfoList.size() + dirList.size() -
-              quotaReleasedEmptyKeys.getValue(), true);
-      omBucketInfo.decrUsedNamespace(quotaReleasedEmptyKeys.getValue(), false);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder()
+              .decrUsedBytes(quotaReleasedEmptyKeys.getKey(), true)
+              // For empty keyInfos the quota should be released and not added to namespace.
+              .decrUsedNamespace(omKeyInfoList.size() + dirList.size() - quotaReleasedEmptyKeys.getValue(), true)
+              .decrUsedNamespace(quotaReleasedEmptyKeys.getValue(), false)
+      );
 
       final long volumeId = omMetadataManager.getVolumeId(volumeName);
       omClientResponse =
           getOmClientResponse(ozoneManager, omKeyInfoList, dirList, omResponse,
-              unDeletedKeys, keyToError, deleteStatus, omBucketInfo, volumeId, openKeyInfoMap);
+              unDeletedKeys, keyToError, deleteStatus, updatedBucket, volumeId, openKeyInfoMap);
 
       result = Result.SUCCESS;
       long endNanosDeleteKeySuccessLatencyNs = Time.monotonicNowNanos();
@@ -298,7 +301,7 @@ public class OMKeysDeleteRequest extends OMKeyRequest {
                 .setUnDeletedKeys(unDeletedKeys).addAllErrors(deleteKeyErrors))
         .setStatus(deleteStatus ? OK : PARTIAL_DELETE).setSuccess(deleteStatus)
         .build(), omKeyInfoList,
-        omBucketInfo.copyObject(), openKeyInfoMap);
+        omBucketInfo, openKeyInfoMap);
     return omClientResponse;
   }
 

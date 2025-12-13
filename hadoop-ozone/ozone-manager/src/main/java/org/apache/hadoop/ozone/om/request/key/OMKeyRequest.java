@@ -920,6 +920,19 @@ public abstract class OMKeyRequest extends OMClientRequest {
     return value != null ? value.getCacheValue() : null;
   }
 
+  /** Store modified bucket in table cache.
+   * @return copy of updated bucket */
+  public static OmBucketInfo updateBucketInCache(OMMetadataManager omMetadataManager,
+      long transactionLogIndex, OmBucketInfo.Builder bucketUpdate) {
+    final OmBucketInfo bucket = bucketUpdate
+        .setUpdateID(transactionLogIndex)
+        .build();
+    omMetadataManager.getBucketTable().addCacheEntry(
+        new CacheKey<>(omMetadataManager.getBucketKey(bucket.getVolumeName(), bucket.getBucketName())),
+        CacheValue.get(transactionLogIndex, bucket));
+    return bucket.copyObject();
+  }
+
   /**
    * Prepare OmKeyInfo which will be persisted to openKeyTable.
    * @return OmKeyInfo

@@ -161,8 +161,11 @@ public class OMKeyDeleteRequestWithFSO extends OMKeyDeleteRequest {
       long quotaReleased = sumBlockLengths(omKeyInfo);
       // Empty entries won't be added to deleted table so this key shouldn't get added to snapshotUsed space.
       boolean isKeyNonEmpty = !OmKeyInfo.isKeyEmpty(omKeyInfo);
-      omBucketInfo.decrUsedBytes(quotaReleased, isKeyNonEmpty);
-      omBucketInfo.decrUsedNamespace(1L, isKeyNonEmpty);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder()
+              .decrUsedBytes(quotaReleased, isKeyNonEmpty)
+              .decrUsedNamespace(1L, isKeyNonEmpty));
 
       // If omKeyInfo has hsync metadata, delete its corresponding open key as well
       String dbOpenKey = null;
@@ -190,7 +193,7 @@ public class OMKeyDeleteRequestWithFSO extends OMKeyDeleteRequest {
       omClientResponse = new OMKeyDeleteResponseWithFSO(omResponse
           .setDeleteKeyResponse(DeleteKeyResponse.newBuilder()).build(),
           keyName, omKeyInfo,
-          omBucketInfo.copyObject(), keyStatus.isDirectory(), volumeId, deletedOpenKeyInfo);
+          updatedBucket, keyStatus.isDirectory(), volumeId, deletedOpenKeyInfo);
 
       result = Result.SUCCESS;
       long endNanosDeleteKeySuccessLatencyNs = Time.monotonicNowNanos();

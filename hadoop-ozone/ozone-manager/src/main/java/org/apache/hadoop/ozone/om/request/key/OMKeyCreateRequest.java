@@ -316,7 +316,9 @@ public class OMKeyCreateRequest extends OMKeyRequest {
           preAllocatedSpace);
       checkBucketQuotaInNamespace(bucketInfo, numMissingParents + 1L);
       perfMetrics.addCreateKeyQuotaCheckLatencyNs(Time.monotonicNowNanos() - quotaCheckStartTime);
-      bucketInfo.incrUsedNamespace(numMissingParents);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          bucketInfo.toBuilder().incrUsedNamespace(numMissingParents));
 
       if (numMissingParents > 0) {
         // Add cache entries for the prefix directories.
@@ -340,7 +342,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
           .setOpenVersion(openVersion).build())
           .setCmdType(Type.CreateKey);
       omClientResponse = new OMKeyCreateResponse(omResponse.build(),
-          omKeyInfo, missingParentInfos, clientID, bucketInfo.copyObject());
+          omKeyInfo, missingParentInfos, clientID, updatedBucket);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

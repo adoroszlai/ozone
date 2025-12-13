@@ -142,7 +142,7 @@ public class OMKeyPurgeRequest extends OMKeyRequest {
         deletingServiceMetrics.setLastAOSTransactionInfo(transactionInfo);
       }
       List<OmBucketInfo> bucketInfoList = updateBucketSize(purgeKeysRequest.getBucketPurgeKeysSizeList(),
-          omMetadataManager);
+          omMetadataManager, context);
 
       if (LOG.isDebugEnabled()) {
         Map<String, String> auditParams = new LinkedHashMap<>();
@@ -168,7 +168,7 @@ public class OMKeyPurgeRequest extends OMKeyRequest {
   }
 
   private List<OmBucketInfo> updateBucketSize(List<BucketPurgeKeysSize> bucketPurgeKeysSizeList,
-      OMMetadataManager omMetadataManager) throws OMException {
+      OMMetadataManager omMetadataManager, ExecutionContext context) throws OMException {
     Map<String, Map<String, List<BucketPurgeKeysSize>>> bucketPurgeKeysSizes = new HashMap<>();
     List<String[]> bucketKeyList = new ArrayList<>();
     for (BucketPurgeKeysSize bucketPurgeKey : bucketPurgeKeysSizeList) {
@@ -195,17 +195,19 @@ public class OMKeyPurgeRequest extends OMKeyRequest {
           OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volumeName, bucketName);
           // Check null if bucket has been deleted.
           if (omBucketInfo != null) {
+            OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
             boolean bucketUpdated = false;
             for (BucketPurgeKeysSize bucketPurgeKeysSize : bucketEntry.getValue()) {
               BucketNameInfo bucketNameInfo = bucketPurgeKeysSize.getBucketNameInfo();
               if (bucketNameInfo.getBucketId() == omBucketInfo.getObjectID()) {
-                omBucketInfo.purgeSnapshotUsedBytes(bucketPurgeKeysSize.getPurgedBytes());
-                omBucketInfo.purgeSnapshotUsedNamespace(bucketPurgeKeysSize.getPurgedNamespace());
+                bucketUpdate.purgeSnapshotUsedBytes(bucketPurgeKeysSize.getPurgedBytes());
+                bucketUpdate.purgeSnapshotUsedNamespace(bucketPurgeKeysSize.getPurgedNamespace());
                 bucketUpdated = true;
               }
             }
             if (bucketUpdated) {
-              bucketInfoList.add(omBucketInfo.copyObject());
+              OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, context.getIndex(), bucketUpdate);
+              bucketInfoList.add(updatedBucket);
             }
           }
         }

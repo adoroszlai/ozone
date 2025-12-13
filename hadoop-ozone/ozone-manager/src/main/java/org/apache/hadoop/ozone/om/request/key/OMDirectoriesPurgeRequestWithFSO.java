@@ -140,24 +140,23 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
           .collect(Collectors.toMap(bucketNameInfo ->
                   new VolumeBucketId(bucketNameInfo.getVolumeId(), bucketNameInfo.getBucketId()),
               Function.identity()));
+      Map<Pair<String, String>, OmBucketInfo.Builder> bucketUpdates = new HashMap<>();
       for (OzoneManagerProtocolProtos.PurgePathRequest path : purgeRequests) {
         for (OzoneManagerProtocolProtos.KeyInfo key : path.getMarkDeletedSubDirsList()) {
           ProcessedKeyInfo processed = processDeleteKey(key, path, omMetadataManager);
           subDirNames.add(processed.deleteKey);
-
           omMetrics.decNumKeys();
-          OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
-              processed.volumeName, processed.bucketName);
-          // bucketInfo can be null in case of delete volume or bucket
-          // or key does not belong to bucket as bucket is recreated
-          if (null != omBucketInfo && omBucketInfo.getObjectID() == path.getBucketId()) {
-            omBucketInfo.decrUsedNamespace(1L, true);
+
+          OmBucketInfo.Builder bucketUpdate = getBuilder(path, bucketUpdates, processed.volBucketPair,
+              omMetadataManager);
+          if (bucketUpdate != null) {
+            bucketUpdate.decrUsedNamespace(1L, true);
+
             String ozoneDbKey = omMetadataManager.getOzonePathKey(path.getVolumeId(),
                 path.getBucketId(), processed.keyInfo.getParentObjectID(),
                 processed.keyInfo.getFileName());
             omMetadataManager.getDirectoryTable().addCacheEntry(new CacheKey<>(ozoneDbKey),
                 CacheValue.get(context.getIndex()));
-            volBucketInfoMap.putIfAbsent(processed.volBucketPair, omBucketInfo);
           }
         }
 
@@ -182,35 +181,38 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
 
           omMetrics.decNumKeys();
           numSubFilesMoved++;
-          OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
-              processed.volumeName, processed.bucketName);
-          // bucketInfo can be null in case of delete volume or bucket
-          // or key does not belong to bucket as bucket is recreated
-          if (null != omBucketInfo
-              && omBucketInfo.getObjectID() == path.getBucketId()) {
+
+
+          OmBucketInfo.Builder bucketUpdate = getBuilder(path, bucketUpdates, processed.volBucketPair,
+              omMetadataManager);
+          if (bucketUpdate != null) {
             long totalSize = sumBlockLengths(processed.keyInfo);
-            omBucketInfo.decrUsedBytes(totalSize, true);
-            omBucketInfo.decrUsedNamespace(1L, true);
+            bucketUpdate.decrUsedBytes(totalSize, true)
+                .decrUsedNamespace(1L, true);
+
             String ozoneDbKey = omMetadataManager.getOzonePathKey(path.getVolumeId(),
                 path.getBucketId(), processed.keyInfo.getParentObjectID(),
                 processed.keyInfo.getFileName());
             omMetadataManager.getFileTable().addCacheEntry(new CacheKey<>(ozoneDbKey),
                 CacheValue.get(context.getIndex()));
-            volBucketInfoMap.putIfAbsent(processed.volBucketPair, omBucketInfo);
           }
         }
         if (path.hasDeletedDir()) {
           deletedDirNames.add(path.getDeletedDir());
           BucketNameInfo bucketNameInfo = volumeBucketIdMap.get(new VolumeBucketId(path.getVolumeId(),
               path.getBucketId()));
-          OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager,
-              bucketNameInfo.getVolumeName(), bucketNameInfo.getBucketName());
-          if (omBucketInfo != null && omBucketInfo.getObjectID() == path.getBucketId()) {
-            omBucketInfo.purgeSnapshotUsedNamespace(1);
-            volBucketInfoMap.put(Pair.of(omBucketInfo.getVolumeName(), omBucketInfo.getBucketName()), omBucketInfo);
+          Pair<String, String> volBucketPair = Pair.of(bucketNameInfo.getVolumeName(), bucketNameInfo.getBucketName());
+          OmBucketInfo.Builder bucketUpdate = getBuilder(path, bucketUpdates, volBucketPair, omMetadataManager);
+          if (bucketUpdate != null) {
+            bucketUpdate.purgeSnapshotUsedNamespace(1);
           }
           numDirsDeleted++;
         }
+      }
+
+      for (Map.Entry<Pair<String, String>, OmBucketInfo.Builder> e : bucketUpdates.entrySet()) {
+        final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, context.getIndex(), e.getValue());
+        volBucketInfoMap.put(e.getKey(), updatedBucket);
       }
 
       // Remove deletedDirNames from subDirNames to avoid duplication
@@ -253,10 +255,6 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
       }
       throw new IllegalStateException(ex);
     } finally {
-      for (Map.Entry<Pair<String, String>, OmBucketInfo> entry :
-          volBucketInfoMap.entrySet()) {
-        entry.setValue(entry.getValue().copyObject());
-      }
       if (lockAcquired) {
         mergeOmLockDetails(omMetadataManager.getLock().releaseWriteLocks(BUCKET_LOCK, bucketLockKeys));
       }  
@@ -267,21 +265,34 @@ public class OMDirectoriesPurgeRequestWithFSO extends OMKeyRequest {
         getBucketLayout(), volBucketInfoMap, fromSnapshotInfo, openKeyInfoMap);
   }
 
+  private static OmBucketInfo.Builder getBuilder(OzoneManagerProtocolProtos.PurgePathRequest path,
+      Map<Pair<String, String>, OmBucketInfo.Builder> bucketUpdates, Pair<String, String> volBucketPair,
+      OmMetadataManagerImpl omMetadataManager) {
+    OmBucketInfo.Builder bucketUpdate = bucketUpdates.get(volBucketPair);
+    if (bucketUpdate == null) {
+      OmBucketInfo omBucketInfo = getBucketInfo(omMetadataManager, volBucketPair.getLeft(), volBucketPair.getRight());
+      // bucketInfo can be null in case of delete volume or bucket
+      // or key does not belong to bucket as bucket is recreated
+      if (null == omBucketInfo || omBucketInfo.getObjectID() != path.getBucketId()) {
+        return null;
+      }
+      bucketUpdate = omBucketInfo.toBuilder();
+      bucketUpdates.put(volBucketPair, bucketUpdate);
+    }
+    return bucketUpdate;
+  }
+
   /**
    * Helper class to hold processed key information.
    */
   private static class ProcessedKeyInfo {
     private final OmKeyInfo keyInfo;
     private final String deleteKey;
-    private final String volumeName;
-    private final String bucketName;
     private final Pair<String, String> volBucketPair;
 
     ProcessedKeyInfo(OmKeyInfo keyInfo, String deleteKey, String volumeName, String bucketName) {
       this.keyInfo = keyInfo;
       this.deleteKey = deleteKey;
-      this.volumeName = volumeName;
-      this.bucketName = bucketName;
       this.volBucketPair = Pair.of(volumeName, bucketName);
     }
   }

@@ -157,9 +157,7 @@ public class S3InitiateMultipartUploadRequestWithFSO
       final ReplicationConfig replicationConfig = OzoneConfigUtil
           .resolveReplicationConfigPreference(keyArgs.getType(),
               keyArgs.getFactor(), keyArgs.getEcReplicationConfig(),
-              bucketInfo != null ?
-                  bucketInfo.getDefaultReplicationConfig() :
-                  null, ozoneManager);
+                  bucketInfo.getDefaultReplicationConfig(), ozoneManager);
 
       multipartKeyInfo = new OmMultipartKeyInfo.Builder()
           .setUploadID(keyArgs.getMultipartUploadID())
@@ -192,9 +190,14 @@ public class S3InitiateMultipartUploadRequestWithFSO
           .build();
       
       // validate and update namespace for missing parent directory
-      if (null != missingParentInfos) {
-        checkBucketQuotaInNamespace(bucketInfo, missingParentInfos.size());
-        bucketInfo.incrUsedNamespace(missingParentInfos.size());
+      final OmBucketInfo updatedBucket;
+      if (!missingParentInfos.isEmpty()) {
+        final int count = missingParentInfos.size();
+        checkBucketQuotaInNamespace(bucketInfo, count);
+        updatedBucket = updateBucketInCache(omMetadataManager, transactionLogIndex,
+            bucketInfo.toBuilder().incrUsedNamespace(count));
+      } else {
+        updatedBucket = bucketInfo.copyObject(); // no change
       }
 
       // Add cache entries for the prefix directories.
@@ -221,7 +224,7 @@ public class S3InitiateMultipartUploadRequestWithFSO
                       .setMultipartUploadID(keyArgs.getMultipartUploadID()))
                   .build(), multipartKeyInfo, omKeyInfo, multipartKey,
               missingParentInfos, getBucketLayout(), volumeId, bucketId,
-              bucketInfo.copyObject());
+              updatedBucket);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

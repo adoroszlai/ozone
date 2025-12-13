@@ -421,7 +421,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
       String key, int count, int numParts) throws Exception {
     List<String> mpuKeys = new ArrayList<>();
 
-    long trxnLogIndex = 1L;
+    long trxnLogIndex = transactionIndex.incrementAndGet();
 
     String dirName = "a/b/c/";
 
@@ -450,7 +450,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
       assertSame(omClientResponse.getOMResponse().getStatus(),
           Status.OK);
 
-      trxnLogIndex++;
+      trxnLogIndex = transactionIndex.incrementAndGet();
 
       String multipartUploadID = omClientResponse.getOMResponse()
           .getInitiateMultiPartUploadResponse().getMultipartUploadID();
@@ -491,7 +491,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
         OMClientResponse commitResponse =
             s3MultipartUploadCommitPartRequest.validateAndUpdateCache(
                 ozoneManager, trxnLogIndex);
-        trxnLogIndex++;
+        trxnLogIndex = transactionIndex.incrementAndGet();
 
         assertSame(commitResponse.getOMResponse().getStatus(),
             Status.OK);
@@ -517,7 +517,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
       String key, int count, int numParts) throws Exception {
     List<String> mpuKeys = new ArrayList<>();
 
-    long trxnLogIndex = 1L;
+    long trxnLogIndex = transactionIndex.incrementAndGet();
 
     for (int i = 0; i < count; i++) {
       // Initiate MPU
@@ -534,7 +534,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
       assertSame(omClientResponse.getOMResponse().getStatus(),
           Status.OK);
 
-      trxnLogIndex++;
+      trxnLogIndex = transactionIndex.incrementAndGet();
 
       String multipartUploadID = omClientResponse.getOMResponse()
           .getInitiateMultiPartUploadResponse().getMultipartUploadID();
@@ -567,7 +567,7 @@ public class TestS3ExpiredMultipartUploadsAbortRequest
         OMClientResponse commitResponse =
             s3MultipartUploadCommitPartRequest.validateAndUpdateCache(
                 ozoneManager, trxnLogIndex);
-        trxnLogIndex++;
+        trxnLogIndex = transactionIndex.incrementAndGet();
 
         assertSame(commitResponse.getOMResponse().getStatus(), Status.OK);
 

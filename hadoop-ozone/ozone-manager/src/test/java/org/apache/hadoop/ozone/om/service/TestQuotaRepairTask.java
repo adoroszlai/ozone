@@ -191,8 +191,10 @@ public class TestQuotaRepairTask extends TestOMKeyRequest {
                                       long trxnLogIndex)
       throws IOException {
     String dbKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    OmBucketInfo bucketInfo = omMetadataManager.getBucketTable().get(dbKey);
-    bucketInfo.decrUsedBytes(bucketInfo.getUsedBytes(), false);
+    final OmBucketInfo bucketInfo = omMetadataManager.getBucketTable().get(dbKey)
+        .toBuilder()
+        .setUsedBytes(0)
+        .build();
     omMetadataManager.getBucketTable()
         .addCacheEntry(new CacheKey<>(dbKey),
             CacheValue.get(trxnLogIndex, bucketInfo));

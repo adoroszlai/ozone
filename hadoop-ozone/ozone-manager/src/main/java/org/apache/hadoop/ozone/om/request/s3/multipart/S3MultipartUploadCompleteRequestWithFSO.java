@@ -77,7 +77,9 @@ public class S3MultipartUploadCompleteRequestWithFSO
 
     // validate and update namespace for missing parent directory.
     checkBucketQuotaInNamespace(omBucketInfo, missingParentInfos.size());
-    omBucketInfo.incrUsedNamespace(missingParentInfos.size());
+
+    updateBucketInCache(omMetadataManager, transactionLogIndex,
+        omBucketInfo.toBuilder().incrUsedNamespace(missingParentInfos.size()));
 
     // Add cache entries for the missing parent directories.
     OMFileRequest.addDirectoryTableCacheEntries(omMetadataManager,

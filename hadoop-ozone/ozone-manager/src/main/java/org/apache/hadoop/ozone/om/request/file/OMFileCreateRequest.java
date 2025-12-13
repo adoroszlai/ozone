@@ -268,7 +268,9 @@ public class OMFileCreateRequest extends OMKeyRequest {
           preAllocatedSpace);
       numMissingParents = missingParentInfos.size();
       checkBucketQuotaInNamespace(omBucketInfo, numMissingParents + 1L);
-      omBucketInfo.incrUsedNamespace(numMissingParents);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder().incrUsedNamespace(numMissingParents));
 
       // Add to cache entry can be done outside of lock for this openKey.
       // Even if bucket gets deleted, when commitKey we shall identify if
@@ -290,7 +292,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
           .setOpenVersion(openVersion).build())
           .setCmdType(CreateFile);
       omClientResponse = new OMFileCreateResponse(omResponse.build(),
-          omKeyInfo, missingParentInfos, clientID, omBucketInfo.copyObject());
+          omKeyInfo, missingParentInfos, clientID, updatedBucket);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

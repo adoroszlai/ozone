@@ -254,7 +254,9 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       }
       checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
           correctedSpace);
-      omBucketInfo.incrUsedBytes(correctedSpace);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+          omBucketInfo.toBuilder().incrUsedBytes(correctedSpace));
 
       // let the uncommitted blocks pretend as key's old version blocks
       // which will be deleted as RepeatedOmKeyInfo
@@ -272,7 +274,7 @@ public class S3MultipartUploadCommitPartRequest extends OMKeyRequest {
       omClientResponse =
           getOmClientResponse(ozoneManager, keyVersionsToDeleteMap, openKey,
               omKeyInfo, multipartKey, multipartKeyInfo, omResponse.build(),
-              omBucketInfo.copyObject(), bucketId);
+              updatedBucket, bucketId);
 
       result = Result.SUCCESS;
     } catch (IOException | InvalidPathException ex) {

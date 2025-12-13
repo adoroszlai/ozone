@@ -29,8 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.UUID;
 import org.apache.hadoop.hdds.client.DefaultReplicationConfig;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
-import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
-import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
@@ -366,13 +364,13 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
 
     OMRequestTestUtils.addVolumeToDB(
         volumeName, omMetadataManager, 10 * GB);
-    OMRequestTestUtils.addBucketToDB(
-        volumeName, bucketName, omMetadataManager, 8 * GB);
-    String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    CacheValue<OmBucketInfo> cacheValue = omMetadataManager.getBucketTable()
-        .getCacheValue(new CacheKey<>(bucketKey));
-    cacheValue.getCacheValue().incrUsedBytes(5 * GB);
-    cacheValue.getCacheValue().incrUsedNamespace(10);
+    OMRequestTestUtils.addBucketToDB(omMetadataManager,
+        OmBucketInfo.newBuilder()
+            .setVolumeName(volumeName)
+            .setBucketName(bucketName)
+            .incrUsedBytes(5 * GB)
+    );
+
     OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true, GB);
 
@@ -398,13 +396,12 @@ public class TestOMBucketSetPropertyRequest extends TestBucketRequest {
 
     OMRequestTestUtils.addVolumeToDB(
         volumeName, omMetadataManager, 10 * GB);
-    OMRequestTestUtils.addBucketToDB(
-        volumeName, bucketName, omMetadataManager, 8 * GB);
-    String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-    CacheValue<OmBucketInfo> cacheValue = omMetadataManager.getBucketTable()
-        .getCacheValue(new CacheKey<>(bucketKey));
-    cacheValue.getCacheValue().incrUsedBytes(5 * GB);
-    cacheValue.getCacheValue().incrUsedNamespace(2000);
+    OMRequestTestUtils.addBucketToDB(omMetadataManager,
+        OmBucketInfo.newBuilder()
+            .setVolumeName(volumeName)
+            .setBucketName(bucketName)
+            .incrUsedNamespace(2000)
+    );
     OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true, 9 * GB);
 

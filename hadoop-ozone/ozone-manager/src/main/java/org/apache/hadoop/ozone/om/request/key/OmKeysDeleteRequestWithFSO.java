@@ -179,7 +179,7 @@ public class OmKeysDeleteRequestWithFSO extends OMKeysDeleteRequest {
                 .setStatus(deleteStatus).setUnDeletedKeys(unDeletedKeys).addAllErrors(deleteKeyErrors))
         .setStatus(deleteStatus ? OK : PARTIAL_DELETE).setSuccess(deleteStatus)
         .build(), omKeyInfoList, dirList,
-        omBucketInfo.copyObject(), volumeId, openKeyInfoMap);
+        omBucketInfo, volumeId, openKeyInfoMap);
     return omClientResponse;
   }
 }

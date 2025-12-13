@@ -314,6 +314,8 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       List<OmKeyLocationInfo> uncommitted =
           omKeyInfo.updateLocationInfoList(locationInfoList, false);
 
+      final OmBucketInfo.Builder bucketUpdate = omBucketInfo.toBuilder();
+
       Map<String, RepeatedOmKeyInfo> oldKeyVersionsToDeleteMap = null;
       long correctedSpace = omKeyInfo.getReplicatedSize();
       // if keyToDelete isn't null, usedNamespace needn't check and
@@ -360,16 +362,16 @@ public class OMKeyCommitRequest extends OMKeyRequest {
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
         // Subtract the size of blocks to be overwritten.
-        omBucketInfo.decrUsedNamespace(totalNamespace, true);
+        bucketUpdate.decrUsedNamespace(totalNamespace, true);
         // Subtract the used namespace of empty overwritten keys.
-        omBucketInfo.decrUsedNamespace(filteredUsedBlockCnt.getRight(), false);
-        omBucketInfo.decrUsedBytes(totalSize, true);
+        bucketUpdate.decrUsedNamespace(filteredUsedBlockCnt.getRight(), false);
+        bucketUpdate.decrUsedBytes(totalSize, true);
       } else {
         checkBucketQuotaInNamespace(omBucketInfo, 1L);
         checkBucketQuotaInBytes(omMetadataManager, omBucketInfo,
             correctedSpace);
       }
-      omBucketInfo.incrUsedNamespace(1L);
+      bucketUpdate.incrUsedNamespace(1L);
       // let the uncommitted blocks pretend as key's old version blocks
       // which will be deleted as RepeatedOmKeyInfo
       final OmKeyInfo pseudoKeyInfo = isHSync ? null
@@ -401,10 +403,12 @@ public class OMKeyCommitRequest extends OMKeyRequest {
       omMetadataManager.getKeyTable(getBucketLayout()).addCacheEntry(
           dbOzoneKey, omKeyInfo, trxnLogIndex);
 
-      omBucketInfo.incrUsedBytes(correctedSpace);
+      bucketUpdate.incrUsedBytes(correctedSpace);
+
+      final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex, bucketUpdate);
 
       omClientResponse = new OMKeyCommitResponse(omResponse.build(),
-          omKeyInfo, dbOzoneKey, dbOpenKey, omBucketInfo.copyObject(),
+          omKeyInfo, dbOzoneKey, dbOpenKey, updatedBucket,
           oldKeyVersionsToDeleteMap, isHSync, newOpenKeyInfo, dbOpenKeyToDeleteKey, openKeyToDelete);
 
       result = Result.SUCCESS;

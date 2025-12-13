@@ -145,7 +145,9 @@ public class OMDirectoryCreateRequestWithFSO extends OMDirectoryCreateRequest {
         // total number of keys created.
         numKeysCreated = missingParentInfos.size() + 1;
         checkBucketQuotaInNamespace(omBucketInfo, numKeysCreated);
-        omBucketInfo.incrUsedNamespace(numKeysCreated);
+
+        final OmBucketInfo updatedBucket = updateBucketInCache(omMetadataManager, trxnLogIndex,
+            omBucketInfo.toBuilder().incrUsedNamespace(numKeysCreated));
 
         // prepare leafNode dir
         OmDirectoryInfo dirInfo = createDirectoryInfoWithACL(
@@ -161,7 +163,7 @@ public class OMDirectoryCreateRequestWithFSO extends OMDirectoryCreateRequest {
         omClientResponse =
             new OMDirectoryCreateResponseWithFSO(omResponse.build(),
                 volumeId, bucketId, dirInfo, missingParentInfos, result,
-                getBucketLayout(), omBucketInfo.copyObject());
+                getBucketLayout(), updatedBucket);
       } else {
         result = Result.DIRECTORY_ALREADY_EXISTS;
         omResponse.setStatus(Status.DIRECTORY_ALREADY_EXISTS);
