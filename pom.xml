@@ -2494,6 +2494,13 @@
     </license>
   </licenses>
 
+  <scm>
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/ozone.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/ozone.git</developerConnection>
+    <url>https://github.com/apache/ozone/tree/${project.scm.tag}</url>
+    <tag>master</tag>
+  </scm>
+
   <repositories>
     <repository>
       <releases>
