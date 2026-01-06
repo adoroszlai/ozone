@@ -31,5 +31,10 @@
       <url>https://repository.apache.org/content/repositories/snapshots</url>
       <blocked>true</blocked>
     </mirror>
+    <mirror>
+      <id>central-alt</id>
+      <mirrorOf>central</mirrorOf>
+      <url>https://repo1.maven.org/maven2</url>
+    </mirror>
   </mirrors>
 </settings>

@@ -20,7 +20,11 @@
 : ${SPOTBUGS_VERSION:=3.1.12}
 
 _install_spotbugs() {
-  curl -LSs "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz" | tar -xz -f -
+  for maven_repo in repo1.maven.org repo.maven.apache.org; do
+    if curl -LSs "https://${maven_repo}/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz" | tar -xz -f -; then
+      break
+    fi
+  done
 }
 
 _install_tool spotbugs "spotbugs-${SPOTBUGS_VERSION}/bin"
