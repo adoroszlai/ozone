@@ -26,13 +26,10 @@ import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
 import static org.apache.hadoop.ozone.s3.util.S3Consts.X_AMZ_CONTENT_SHA256;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.Map;
-import javax.ws.rs.core.HttpHeaders;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -65,10 +62,6 @@ public class TestUploadWithStream {
     client = new OzoneClientStub();
     client.getObjectStore().createS3Bucket(S3BUCKET);
 
-    HttpHeaders headers = mock(HttpHeaders.class);
-    when(headers.getHeaderString(X_AMZ_CONTENT_SHA256)).thenReturn("UNSIGNED-PAYLOAD");
-    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("STANDARD");
-
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OzoneConfigKeys.HDDS_CONTAINER_RATIS_DATASTREAM_ENABLED,
         true);
@@ -77,9 +70,11 @@ public class TestUploadWithStream {
 
     rest = EndpointBuilder.newObjectEndpointBuilder()
         .setClient(client)
-        .setHeaders(headers)
         .setConfig(conf)
         .build();
+
+    when(rest.getHeaders().getHeaderString(X_AMZ_CONTENT_SHA256)).thenReturn("UNSIGNED-PAYLOAD");
+    when(rest.getHeaders().getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("STANDARD");
   }
 
   @Test
@@ -109,17 +104,8 @@ public class TestUploadWithStream {
     assertEquals(dataSize, keyContent.length);
 
 
-    Map<String, String> additionalHeaders = new HashMap<>();
-    additionalHeaders
-        .put(COPY_SOURCE_HEADER, S3BUCKET + "/" + S3_COPY_EXISTING_KEY);
-
-    HttpHeaders headers = mock(HttpHeaders.class);
-    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn(
-        "STANDARD");
-
-    additionalHeaders
-        .forEach((k, v) -> when(headers.getHeaderString(k)).thenReturn(v));
-    rest.setHeaders(headers);
+    when(rest.getHeaders().getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(S3BUCKET + "/" + S3_COPY_EXISTING_KEY);
 
     assertSucceeds(() -> put(rest, S3BUCKET, S3KEY, null));
 

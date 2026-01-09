@@ -167,6 +167,7 @@ public abstract class EndpointBase {
 
   // initialized in @PostConstruct
   private RequestParameters.MultivaluedMapImpl queryParams;
+  private RequestParameters.MultivaluedMapImpl headerParams;
 
   private final Set<String> excludeMetadataFields =
       new HashSet<>(Arrays.asList(OzoneConsts.GDPR_FLAG, STORAGE_CONFIG_HEADER));
@@ -175,6 +176,15 @@ public abstract class EndpointBase {
 
   protected static final AuditLogger AUDIT =
       new AuditLogger(AuditLoggerType.S3GLOGGER);
+
+  /** Read-only access to headers. */
+  protected RequestParameters headerParams() {
+    return headerParams;
+  }
+
+  public RequestParameters.Mutable headerParamsForTest() {
+    return headerParams;
+  }
 
   /** Read-only access to query parameters. */
   protected RequestParameters queryParams() {
@@ -214,6 +224,7 @@ public abstract class EndpointBase {
   @PostConstruct
   public void initialization() {
     queryParams = RequestParameters.of(context.getUriInfo().getQueryParameters());
+    headerParams = RequestParameters.of(headers.getRequestHeaders());
     // Note: userPrincipal is initialized to be the same value as accessId,
     //  could be updated later in RpcClient#getS3Volume
     s3Auth = new S3Auth(signatureInfo.getStringToSign(),
@@ -225,6 +236,10 @@ public abstract class EndpointBase {
     clientProtocol.setThreadLocalS3Auth(s3Auth);
     clientProtocol.setIsS3Request(true);
 
+    init();
+  }
+
+  protected void init() {
     bufferSize = (int) getOzoneConfiguration().getStorageSize(
         OZONE_S3G_CLIENT_BUFFER_SIZE_KEY,
         OZONE_S3G_CLIENT_BUFFER_SIZE_DEFAULT, StorageUnit.BYTES);
@@ -238,12 +253,6 @@ public abstract class EndpointBase {
     datastreamMinLength = (long) getOzoneConfiguration().getStorageSize(
         OZONE_FS_DATASTREAM_AUTO_THRESHOLD,
         OZONE_FS_DATASTREAM_AUTO_THRESHOLD_DEFAULT, StorageUnit.BYTES);
-
-    init();
-  }
-
-  protected void init() {
-    // hook method
   }
 
   protected OzoneBucket getBucket(String bucketName)
@@ -623,6 +632,10 @@ public abstract class EndpointBase {
    * Used for initializing handler instances.
    */
   protected void copyDependenciesTo(EndpointBase target) {
+    if (this == target) {
+      return;
+    }
+    target.headerParams = headerParams;
     target.queryParams = queryParams;
     target.s3Auth = s3Auth;
     target.setClient(this.client);
@@ -820,11 +833,11 @@ public abstract class EndpointBase {
     return chunkSize;
   }
 
-  public MessageDigest getMD5DigestInstance() {
+  public static MessageDigest getMD5DigestInstance() {
     return MD5_PROVIDER.get();
   }
 
-  public MessageDigest getSha256DigestInstance() {
+  public static MessageDigest getSha256DigestInstance() {
     return SHA_256_PROVIDER.get();
   }
 

@@ -48,6 +48,19 @@ public interface RequestParameters {
     }
   }
 
+  default long getLong(String key, long defaultValue) {
+    final String value = get(key);
+    if (value == null) {
+      return defaultValue;
+    }
+
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      throw translateException(e);
+    }
+  }
+
   default WebApplicationException translateException(RuntimeException e) {
     return new WebApplicationException(e.getMessage(), S3ErrorTable.INVALID_ARGUMENT.getHttpCode());
   }
@@ -60,6 +73,10 @@ public interface RequestParameters {
     void unset(String key);
 
     default void setInt(String key, int value) {
+      set(key, String.valueOf(value));
+    }
+
+    default void setLong(String key, long value) {
       set(key, String.valueOf(value));
     }
   }

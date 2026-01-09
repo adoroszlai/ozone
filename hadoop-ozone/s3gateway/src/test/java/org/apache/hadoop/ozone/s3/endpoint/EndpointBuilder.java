@@ -42,7 +42,7 @@ public class EndpointBuilder<T extends EndpointBase> {
   private OzoneClient ozoneClient;
   private OzoneConfiguration ozoneConfig;
   private HttpHeaders httpHeaders;
-  private ContainerRequestContext requestContext;
+  private final ContainerRequestContext requestContext;
   private RequestIdentifier identifier;
   private SignatureInfo signatureInfo;
 
@@ -80,11 +80,6 @@ public class EndpointBuilder<T extends EndpointBase> {
     return this;
   }
 
-  public EndpointBuilder<T> setContext(ContainerRequestContext newContext) {
-    this.requestContext = newContext;
-    return this;
-  }
-
   public EndpointBuilder<T> setRequestId(RequestIdentifier newRequestId) {
     this.identifier = newRequestId;
     return this;
@@ -104,6 +99,13 @@ public class EndpointBuilder<T extends EndpointBase> {
 
     final OzoneConfiguration config = getConfig();
     endpoint.setOzoneConfiguration(config != null ? config : new OzoneConfiguration());
+
+    if (httpHeaders == null) {
+      httpHeaders = mock(HttpHeaders.class);
+    }
+    if (httpHeaders.getRequestHeaders() == null) {
+      when(httpHeaders.getRequestHeaders()).thenReturn(new MultivaluedHashMap<>());
+    }
 
     endpoint.setContext(requestContext);
     endpoint.setHeaders(httpHeaders);

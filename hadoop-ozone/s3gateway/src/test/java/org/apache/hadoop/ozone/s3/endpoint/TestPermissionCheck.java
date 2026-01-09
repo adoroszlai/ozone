@@ -256,7 +256,7 @@ public class TestPermissionCheck {
     when(objectStore.getS3Volume()).thenReturn(volume);
     when(volume.getBucket("bucketName")).thenReturn(bucket);
     doThrow(exception).when(clientProtocol).createKey(
-            anyString(), anyString(), anyString(), anyLong(), any(), anyMap(), anyMap());
+        any(), any(), any(), anyLong(), any(), anyMap(), anyMap());
     ObjectEndpoint objectEndpoint = EndpointBuilder.newObjectEndpointBuilder()
         .setClient(client)
         .setHeaders(headers)

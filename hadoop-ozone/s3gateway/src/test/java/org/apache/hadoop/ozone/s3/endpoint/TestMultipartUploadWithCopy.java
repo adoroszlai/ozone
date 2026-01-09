@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.s3.endpoint;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptyMap;
 import static org.apache.hadoop.ozone.s3.endpoint.EndpointTestUtils.assertSucceeds;
 import static org.apache.hadoop.ozone.s3.endpoint.EndpointTestUtils.completeMultipartUpload;
 import static org.apache.hadoop.ozone.s3.endpoint.EndpointTestUtils.initiateMultipartUpload;
@@ -32,7 +33,7 @@ import static org.apache.hadoop.ozone.s3.util.S3Consts.X_AMZ_CONTENT_SHA256;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -121,14 +122,8 @@ public class TestMultipartUploadWithCopy {
     if (sleepMs > 0) {
       Thread.sleep(sleepMs);
     }
-    HttpHeaders headers = mock(HttpHeaders.class);
-    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn(
-        "STANDARD");
-    when(headers.getHeaderString(X_AMZ_CONTENT_SHA256))
-        .thenReturn("mockSignature");
 
     endpoint = EndpointBuilder.newObjectEndpointBuilder()
-        .setHeaders(headers)
         .setClient(client)
         .build();
   }
@@ -379,7 +374,8 @@ public class TestMultipartUploadWithCopy {
   }
 
   private void setHeaders(Map<String, String> additionalHeaders) {
-    HttpHeaders headers = mock(HttpHeaders.class);
+    HttpHeaders headers = endpoint.getHeaders();
+    reset(headers);
     when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn(
         "STANDARD");
     when(headers.getHeaderString(X_AMZ_CONTENT_SHA256))
@@ -387,11 +383,10 @@ public class TestMultipartUploadWithCopy {
 
     additionalHeaders
         .forEach((k, v) -> when(headers.getHeaderString(k)).thenReturn(v));
-    endpoint.setHeaders(headers);
   }
 
   private void setHeaders() {
-    setHeaders(new HashMap<>());
+    setHeaders(emptyMap());
   }
 
 }

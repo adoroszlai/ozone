@@ -547,6 +547,7 @@ public class BucketEndpoint extends EndpointBase {
 
   @Override
   protected void init() {
+    super.init();
     listKeysShallowEnabled = getOzoneConfiguration().getBoolean(
         OZONE_S3G_LIST_KEYS_SHALLOW_ENABLED,
         OZONE_S3G_LIST_KEYS_SHALLOW_ENABLED_DEFAULT);
