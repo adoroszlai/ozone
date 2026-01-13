@@ -132,7 +132,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - java: 8
+          - java: 17
             os: macos-15
       fail-fast: false
     uses: ./.github/workflows/check.yml
