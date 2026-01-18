@@ -86,6 +86,15 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.eclipse.jetty.ee8.nested.SessionHandler;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.ServletMapping;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
@@ -100,21 +109,10 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Slf4jRequestLogWriter;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ArrayUtil;
-import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ExceptionUtil.MultiException;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
@@ -190,7 +188,7 @@ public final class HttpServer2 implements FilterContainer {
 
   private final Server webServer;
 
-  private final HandlerCollection handlers;
+  private final Handler.Sequence handlers;
 
   private final List<ServerConnector> listeners = Lists.newArrayList();
 
@@ -582,7 +580,7 @@ public final class HttpServer2 implements FilterContainer {
     final String appDir = getWebAppsPath(b.name);
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
-    this.handlers = new HandlerCollection();
+    this.handlers = new Handler.Sequence();
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
@@ -626,9 +624,7 @@ public final class HttpServer2 implements FilterContainer {
     handlers.addHandler(contexts);
 
     RequestLog requestLog = getRequestLog(builder.name);
-    RequestLogHandler requestLogHandler = new RequestLogHandler();
-    requestLogHandler.setRequestLog(requestLog);
-    handlers.addHandler(requestLogHandler);
+    webServer.setRequestLog(requestLog);
 
     handlers.addHandler(webAppContext);
     final String appDir = getWebAppsPath(builder.name);
@@ -771,7 +767,7 @@ public final class HttpServer2 implements FilterContainer {
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       if (conf.getBoolean(HADOOP_JETTY_LOGS_SERVE_ALIASES, DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
         Map<String, String> params = logContext.getInitParams();
-        params.put("org.eclipse.jetty.servlet.Default.aliases", "true");
+        params.put(DefaultServlet.CONTEXT_INIT + "aliases", "true");
       }
       logContext.setDisplayName("logs");
       SessionHandler handler = new SessionHandler();
@@ -789,8 +785,8 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
     Map<String, String> params = staticContext.getInitParams();
-    params.put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-    params.put("org.eclipse.jetty.servlet.Default.gzip", "true");
+    params.put(DefaultServlet.CONTEXT_INIT + "dirAllowed", "false");
+    params.put(DefaultServlet.CONTEXT_INIT + "gzip", "true");
     SessionHandler handler = new SessionHandler();
     handler.setHttpOnly(true);
     handler.getSessionCookieConfig().setSecure(true);
@@ -986,26 +982,6 @@ public final class HttpServer2 implements FilterContainer {
     webAppContext.addServlet(sh, pathSpec);
   }
 
-  /**
-   * Add the given handler to the front of the list of handlers.
-   *
-   * @param handler The handler to add
-   */
-  public void addHandlerAtFront(Handler handler) {
-    Handler[] h = ArrayUtil.prependToArray(
-        handler, this.handlers.getHandlers(), Handler.class);
-    handlers.setHandlers(h);
-  }
-
-  /**
-   * Add the given handler to the end of the list of handlers.
-   *
-   * @param handler The handler to add
-   */
-  public void addHandlerAtEnd(Handler handler) {
-    handlers.addHandler(handler);
-  }
-
   @Override
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
@@ -1187,15 +1163,12 @@ public final class HttpServer2 implements FilterContainer {
       try {
         openListeners();
         webServer.start();
-      } catch (IOException ex) {
-        LOG.info("HttpServer.start() threw a non Bind IOException", ex);
-        throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
+      } catch (Exception ex) {
+        LOG.info("HttpServer.start() threw Exception", ex);
         throw ex;
       }
       // Make sure there is no handler failures.
-      Handler[] hs = webServer.getHandlers();
+      List<Handler> hs = webServer.getHandlers();
       for (Handler handler : hs) {
         if (handler.isFailed()) {
           throw new IOException(
@@ -1676,8 +1649,7 @@ public final class HttpServer2 implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest) request).getRequestURI();
-      ServletContextHandler.Context sContext =
-          (ServletContextHandler.Context) config.getServletContext();
+      ServletContext sContext = config.getServletContext();
       return sContext.getMimeType(path);
     }
 

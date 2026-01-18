@@ -422,11 +422,15 @@ Apache License 2.0
    org.eclipse.jetty:jetty-io
    org.eclipse.jetty:jetty-security
    org.eclipse.jetty:jetty-server
-   org.eclipse.jetty:jetty-servlet
    org.eclipse.jetty:jetty-util
    org.eclipse.jetty:jetty-util-ajax
-   org.eclipse.jetty:jetty-webapp
    org.eclipse.jetty:jetty-xml
+   org.eclipse.jetty.ee:jetty-ee-webapp
+   org.eclipse.jetty.ee8:jetty-ee8-nested
+   org.eclipse.jetty.ee8:jetty-ee8-security
+   org.eclipse.jetty.ee8:jetty-ee8-servlet
+   org.eclipse.jetty.ee8:jetty-ee8-webapp
+   org.eclipse.jetty.toolchain:jetty-servlet-api
    org.javassist:javassist
    org.jboss.weld.servlet:weld-servlet-shaded
    org.jetbrains:annotations
