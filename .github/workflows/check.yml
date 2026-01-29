@@ -134,7 +134,8 @@ env:
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_IMAGE: ghcr.io/apache/ozone
-  OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
+  OZONE_RUNNER_IMAGE: ghcr.io/adoroszlai/ozone-runner
+  OZONE_RUNNER_VERSION: ff5566d5690bc662c37c22cead892b3c8f9e5d14
   OZONE_VOLUME_OWNER: 1000
   SCRIPT: ${{ inputs.script }}
 
