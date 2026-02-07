@@ -55,6 +55,7 @@ _init() {
 
 _write() {
   _kinit
+  execute_command_in_container ${container} java -version
   execute_robot_test ${container} -N "xcompat-cluster-${cluster_version}-client-${client_version}-write" \
     -v CLIENT_VERSION:${client_version} \
     -v CLUSTER_VERSION:${cluster_version} \
