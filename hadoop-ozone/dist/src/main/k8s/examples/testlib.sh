@@ -26,7 +26,6 @@ retry() {
    local -i t=${TEST_NUMBER}
    until [ $n -ge $attempts ]
    do
-      rm -f result/robot-${TEST_NUMBER}.xml
       "$@" && break
       TEST_NUMBER=${t}
       n=$[$n+1]
@@ -171,9 +170,7 @@ execute_robot_test() {
    set +e
    kubectl exec -it "${CONTAINER}" -- robot -d /tmp/report ${ARGUMENTS[@]}
    rc=$?
-   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-${TEST_NUMBER}.xml"
-   echo "test # ${TEST_NUMBER}"
-   ls -l result
+   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-$(printf "%02d" ${TEST_NUMBER}).xml"
    let TEST_NUMBER++
    set -e
    return $rc
@@ -182,7 +179,6 @@ execute_robot_test() {
 combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
-    ls -l result
     run_rebot result result "-o output.xml -N '$(basename $(pwd))' *.xml"
   fi
 }
