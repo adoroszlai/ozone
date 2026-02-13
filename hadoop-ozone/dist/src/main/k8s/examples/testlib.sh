@@ -18,16 +18,12 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/../../smoketest/testlib.sh"
 
-: ${TEST_NUMBER:=0}
-
 retry() {
    local -i n=0
    local -i attempts=${RETRY_ATTEMPTS:-100}
-   local -i t=${TEST_NUMBER}
    until [ $n -ge $attempts ]
    do
       "$@" && break
-      TEST_NUMBER=${t}
       n=$[$n+1]
       echo "$n '$@' is failed..."
       sleep ${RETRY_SLEEP:-3}
@@ -170,9 +166,8 @@ execute_robot_test() {
    set +e
    kubectl exec -it "${CONTAINER}" -- robot -d /tmp/report ${ARGUMENTS[@]}
    rc=$?
-   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-$(printf "%02d" ${TEST_NUMBER}).xml"
-   let TEST_NUMBER++
    set -e
+   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-$RANDOM.xml" || true
    return $rc
 }
 
