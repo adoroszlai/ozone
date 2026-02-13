@@ -163,8 +163,12 @@ execute_robot_test() {
 
    kubectl exec -it "${CONTAINER}" -- bash -c 'rm -rf /tmp/report'
    kubectl exec -it "${CONTAINER}" -- bash -c 'mkdir -p  /tmp/report'
-   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/report ${ARGUMENTS[@]} || true
+   set +e
+   kubectl exec -it "${CONTAINER}" -- robot -d /tmp/report ${ARGUMENTS[@]}
+   rc=$?
+   set -e
    kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-$RANDOM.xml" || true
+   return $rc
 }
 
 combine_reports() {
