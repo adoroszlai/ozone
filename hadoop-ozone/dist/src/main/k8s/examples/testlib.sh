@@ -54,7 +54,7 @@ execute_command_in_container() {
    CONTAINER="$1"
    shift 1 #Remove first argument which was the container name
 
-   kubectl exec -it "${CONTAINER}" -- "$@"
+   kubectl exec "${CONTAINER}" -- "$@"
 }
 
 pipeline_exists() {

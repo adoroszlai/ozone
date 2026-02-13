@@ -38,7 +38,8 @@ data:
   OZONE-SITE.XML_ozone.scm.client.address: scm-0.scm
   OZONE-SITE.XML_ozone.scm.datanode.id.dir: /data/metadata
   OZONE-SITE.XML_ozone.scm.names: scm-0.scm
-  LOG4J.PROPERTIES_log4j.rootLogger: INFO, stdout
+  LOG4J.PROPERTIES_hadoop.root.logger: INFO,console
+  LOG4J.PROPERTIES_log4j.rootLogger: ${hadoop.root.logger}
   LOG4J.PROPERTIES_log4j.appender.stdout: org.apache.log4j.ConsoleAppender
   LOG4J.PROPERTIES_log4j.appender.stdout.layout: org.apache.log4j.PatternLayout
   LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern: '%d{yyyy-MM-dd
