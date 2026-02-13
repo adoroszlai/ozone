@@ -50,6 +50,22 @@ wait_for_startup(){
    fi
 }
 
+execute_command_in_container() {
+   CONTAINER="$1"
+   shift 1 #Remove first argument which was the container name
+
+   kubectl exec -it "${CONTAINER}" -- "$@"
+}
+
+pipeline_exists() {
+   local count
+   pipelines=$(execute_command_in_container scm-0 ozone admin pipeline list --state OPEN --filter-by-factor THREE --json)
+   echo $pipelines
+   count=$(echo "$pipelines" | jq -r '.[] | length')
+   echo $count
+   [[ $count -gt 0 ]]
+}
+
 all_pods_are_running() {
    local -i running=$(kubectl get pod --field-selector status.phase=Running | grep -v 'STATUS' | wc -l)
    local -i all=$(kubectl get pod | grep -v 'STATUS' | wc -l)
