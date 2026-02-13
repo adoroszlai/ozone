@@ -137,6 +137,7 @@ env:
   OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
   OZONE_VOLUME_OWNER: 1000
   SCRIPT: ${{ inputs.script }}
+  OZONE_TEST_SELECTOR: ozone/test.sh
 
 jobs:
   check:
