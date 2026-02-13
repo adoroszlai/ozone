@@ -38,6 +38,8 @@ data:
   OZONE-SITE.XML_ozone.scm.client.address: "scm-0.scm"
   OZONE-SITE.XML_ozone.scm.datanode.id.dir: "/data/metadata"
   OZONE-SITE.XML_ozone.scm.names: "scm-0.scm"
+  OZONE-SITE.XML_ozone.client.max.retries: "15"
+  OZONE-SITE.XML_ozone.client.retry.interval: "1"
   LOG4J.PROPERTIES_log4j.rootLogger: "INFO, stdout"
   LOG4J.PROPERTIES_log4j.appender.stdout: "org.apache.log4j.ConsoleAppender"
   LOG4J.PROPERTIES_log4j.appender.stdout.layout: "org.apache.log4j.PatternLayout"
