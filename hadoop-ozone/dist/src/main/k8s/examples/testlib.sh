@@ -144,6 +144,7 @@ regenerate_resources() {
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
   flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image="${runner_image}:${runner_version}" -t ozone/onenode
+  grep -Fr OZONE-SITE.XML_ozone.client || true
 }
 
 revert_resources() {
