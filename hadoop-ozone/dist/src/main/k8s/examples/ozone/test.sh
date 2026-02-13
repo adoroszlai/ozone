@@ -37,5 +37,5 @@ kubectl delete pod datanode-0 datanode-1 datanode-2
 wait_for_startup
 
 RETRY_ATTEMPTS=3 retry execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
-execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/generate.robot
+RETRY_ATTEMPTS=3 retry execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/generate.robot
 execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/validate.robot

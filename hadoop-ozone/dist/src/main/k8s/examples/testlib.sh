@@ -171,7 +171,7 @@ execute_robot_test() {
    set +e
    kubectl exec -it "${CONTAINER}" -- robot -d /tmp/report ${ARGUMENTS[@]}
    rc=$?
-   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-${TEST_NUMBER}.xml"
+   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/robot-${TEST_NUMBER}.xml"
    echo "test # ${TEST_NUMBER}"
    ls -l result
    let TEST_NUMBER++
