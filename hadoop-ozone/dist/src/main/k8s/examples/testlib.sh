@@ -59,10 +59,7 @@ execute_command_in_container() {
 
 pipeline_exists() {
    local count
-   pipelines=$(execute_command_in_container scm-0 ozone admin pipeline list --state OPEN --filter-by-factor THREE --json)
-   echo $pipelines
-   count=$(echo "$pipelines" | jq -r '.[] | length')
-   echo $count
+   count=$(execute_command_in_container scm-0 ozone admin pipeline list --state OPEN --filter-by-factor THREE --json | jq -r 'length')
    [[ $count -gt 0 ]]
 }
 
@@ -160,7 +157,6 @@ regenerate_resources() {
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
   flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image="${runner_image}:${runner_version}" -t ozone/onenode
-  grep -Fr OZONE-SITE.XML_ozone.client || true
 }
 
 revert_resources() {
