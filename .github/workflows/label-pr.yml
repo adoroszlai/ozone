@@ -15,8 +15,11 @@
 
 # This workflow reads its configuration from the .github/labeler.yml file.
 name: pull-request-labeler
+
 on:
-- pull_request_target
+  workflow_dispatch:
+# schedule:
+#   - cron: '5 * * * *'
 
 jobs:
   labeler:
@@ -24,6 +27,15 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch:
+          - HDDS-14496-zdu
     steps:
-    - uses: actions/labeler@v5
-
+      - name: List pull requests for ${{ matrix.branch }}
+        id: pr-list
+        run: |
+          ( echo -n "prs="; gh pr list --base ${{ matrix.branch }} --json number --jq '[ .[].number ]' ) >> $GITHUB_OUTPUT
+      - uses: actions/labeler@v5
+        with:
+          pr-number: ${{ fromJson(steps.pr-list.outputs.nrs) }}
