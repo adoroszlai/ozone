@@ -84,13 +84,13 @@ aws s3 --endpoint http://localhost:9878 cp --storage-class REDUCED_REDUNDANCY  /
 
 ### Run Ozone from released artifact
 
-If you need a more realistic cluster, you can [download](https://ozone.apache.org/downloads/) the latest (binary) release package, and start a cluster with the help of docker-compose:
+If you need a more realistic cluster, you can [download](https://ozone.apache.org/downloads/) the latest (binary) release package, and start a cluster with Docker Compose:
 
 After you untar the binary:
 
 ```
 cd compose/ozone
-docker-compose up -d --scale datanode=3
+docker compose up -d --scale datanode=3
 ```
 
 The `compose` folder contains different sets of configured clusters (secure, HA, mapreduce example), you can check the various subfolders for more examples.
@@ -107,11 +107,11 @@ Ozone can be built with [Apache Maven](https://maven.apache.org):
 mvn clean install -DskipTests
 ```
 
-And can be started with the help of Docker:
+And can be started with Docker Compose:
 
 ```
 cd hadoop-ozone/dist/target/ozone-*/compose/ozone
-docker-compose up -d --scale datanode=3
+docker compose up -d --scale datanode=3
 ```
 For more information, you can check the [Contribution guideline](./CONTRIBUTING.md)
 
