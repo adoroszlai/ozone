@@ -130,7 +130,8 @@ on:
         required: false
 
 env:
-  HADOOP_IMAGE: ghcr.io/apache/hadoop
+  HADOOP_IMAGE: ghcr.io/adoroszlai/hadoop
+  HADOOP_VERSION: HADOOP-19825
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_IMAGE: ghcr.io/apache/ozone

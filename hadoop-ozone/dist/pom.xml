@@ -25,7 +25,7 @@
   <name>Apache Ozone Distribution</name>
   <properties>
     <!-- Hadoop Docker image for current version; multi-arch Hadoop 3.4.2-lean only available from ghcr.io currently -->
-    <docker.hadoop.image>ghcr.io/apache/hadoop</docker.hadoop.image>
+    <docker.hadoop.image>ghcr.io/adoroszlai/hadoop</docker.hadoop.image>
     <!-- suffix appended to Hadoop version to get Docker image version -->
     <docker.hadoop.image.flavor></docker.hadoop.image.flavor>
     <docker.ozone-runner.client.version>20260207-1-jdk8</docker.ozone-runner.client.version>
