@@ -36,6 +36,7 @@
     <docker.ozone.image.flavor>-rocky</docker.ozone.image.flavor>
     <downloadSources>true</downloadSources>
     <file.encoding>UTF-8</file.encoding>
+    <hadoop.version>HADOOP-19825</hadoop.version>
     <!-- no tests in this module so far -->
     <maven.test.skip>true</maven.test.skip>
     <!-- rpm usage-->
