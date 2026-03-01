@@ -27,7 +27,7 @@
   <!--Container Settings used by Datanode-->
   <property>
     <name>ozone.container.cache.size</name>
-    <value>1024</value>
+    <value>1111</value>
     <tag>PERFORMANCE, CONTAINER, STORAGE</tag>
     <description>The open container is cached on the data node side. We maintain
       an LRU
