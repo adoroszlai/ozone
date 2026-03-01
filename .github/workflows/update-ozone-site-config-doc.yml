@@ -30,8 +30,16 @@ jobs:
           name: config-documentation
           path: .
 
+      - name: Debug
+        run: |
+          echo "workflow: ${{ github.workflow }}"
+          echo "run_id: ${{ github.run_id }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "sha: ${{ github.sha }}"
+
       - name: Check if ozone-site repository exists
         id: check-site-repo
+        if: ${{ env.TOKEN != '' }}
         run: |
           if gh repo view "$REPO_OWNER/ozone-site" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -41,6 +49,7 @@ jobs:
           fi
         env:
           REPO_OWNER: "${{ github.repository_owner }}"
+          TOKEN: "${{ secrets.OZONE_WEBSITE_BUILD }}"
       
       - name: Checkout ozone-site repository
         if: steps.check-site-repo.outputs.exists == 'true'
