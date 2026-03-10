@@ -36,6 +36,14 @@ Compact OM DB Column Family
     [Arguments]        ${column_family}
     Execute    ozone repair om compact --cf=${column_family} --service-id ${OM_SERVICE_ID} --node-id om1
 
+OM DB Size Is Reduced
+    [arguments]    ${size_before_compaction}
+
+    ${size_after_compaction} =    Get OM DB SST Files Size
+
+    Should Be True    ${size_after_compaction} < ${size_before_compaction}
+    ...    OM DB size should be reduced after compaction. Before: ${size_before_compaction}, After: ${size_after_compaction}
+
 *** Test Cases ***
 Testing OM DB Size Reduction After Compaction
     # Test keys are already created and flushed
@@ -47,8 +55,5 @@ Testing OM DB Size Reduction After Compaction
     Compact OM DB Column Family    fileTable
     Compact OM DB Column Family    deletedTable
     Compact OM DB Column Family    deletedDirectoryTable
-    
-    ${size_after_compaction} =    Get OM DB SST Files Size
 
-    Should Be True    ${size_after_compaction} < ${size_before_compaction}
-    ...    OM DB size should be reduced after compaction. Before: ${size_before_compaction}, After: ${size_after_compaction}
+    Wait Until Keyword Succeeds    1min    2sec    OM DB Size Is Reduced    ${size_before_compaction}
