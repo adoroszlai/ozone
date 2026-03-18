@@ -24,8 +24,6 @@ import static org.apache.hadoop.ozone.s3.util.S3Utils.wrapOS3Exception;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -43,9 +41,6 @@ import org.xml.sax.XMLReader;
  * @param <T> the object type to read from XML
  */
 public class MessageUnmarshaller<T> implements MessageBodyReader<T> {
-  // Static cache to hold JAXBContexts for each class type
-  // JAXBContext is relatively expensive to create and is threadsafe, so cache and reuse
-  private static final ConcurrentMap<Class<?>, JAXBContext> JAXB_CONTEXT_CACHE = new ConcurrentHashMap<>();
 
   private final JAXBContext context;
   private final SAXParserFactory saxParserFactory;
@@ -55,15 +50,7 @@ public class MessageUnmarshaller<T> implements MessageBodyReader<T> {
     this.cls = cls;
 
     try {
-      // Use computeIfAbsent to atomically create and cache the JAXBContext if it doesn't exist
-      this.context = JAXB_CONTEXT_CACHE.computeIfAbsent(cls, type -> {
-        try {
-          return JAXBContext.newInstance(type);
-        } catch (Exception ex) {
-          throw new RuntimeException("Failed to initialize JAXBContext for " + type.getSimpleName(), ex);
-        }
-      });
-
+      context = JAXBContext.newInstance(cls);
       saxParserFactory = SAXParserFactory.newInstance();
       saxParserFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
     } catch (Exception ex) {
