@@ -209,8 +209,8 @@
                   </excludes>
                 </relocation>
                 <relocation>
-                  <pattern>com/</pattern>
-                  <shadedPattern>${ozone.shaded.prefix}.com.</shadedPattern>
+                  <pattern>com</pattern>
+                  <shadedPattern>${ozone.shaded.prefix}.com</shadedPattern>
                   <excludes>
                     <!-- These packages are the ones that are not shaded in the hadoop release package.
                     To prevent conflicts, we do not include these packages in the ozone client release package.
