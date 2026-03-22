@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm.block;
 
 import com.google.protobuf.ByteString;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DeletedBlocksTransactionSummary;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.hdds.scm.metadata.Replicate;
@@ -31,28 +31,28 @@ import org.apache.hadoop.hdds.utils.db.Table;
  */
 public interface DeletedBlockLogStateManager {
   @Replicate
-  void addTransactionsToDB(ArrayList<DeletedBlocksTransaction> txs,
+  void addTransactionsToDB(List<DeletedBlocksTransaction> txs,
       DeletedBlocksTransactionSummary summary) throws IOException;
 
   @Replicate
-  void addTransactionsToDB(ArrayList<DeletedBlocksTransaction> txs) throws IOException;
+  void addTransactionsToDB(List<DeletedBlocksTransaction> txs) throws IOException;
 
   @Replicate
-  void removeTransactionsFromDB(ArrayList<Long> txIDs, DeletedBlocksTransactionSummary summary)
+  void removeTransactionsFromDB(List<Long> txIDs, DeletedBlocksTransactionSummary summary)
       throws IOException;
 
   @Replicate
-  void removeTransactionsFromDB(ArrayList<Long> txIDs)
-      throws IOException;
-
-  @Deprecated
-  @Replicate
-  void increaseRetryCountOfTransactionInDB(ArrayList<Long> txIDs)
+  void removeTransactionsFromDB(List<Long> txIDs)
       throws IOException;
 
   @Deprecated
   @Replicate
-  int resetRetryCountOfTransactionInDB(ArrayList<Long> txIDs)
+  void increaseRetryCountOfTransactionInDB(List<Long> txIDs)
+      throws IOException;
+
+  @Deprecated
+  @Replicate
+  int resetRetryCountOfTransactionInDB(List<Long> txIDs)
       throws IOException;
 
   Table.KeyValueIterator<Long, DeletedBlocksTransaction> getReadOnlyIterator()

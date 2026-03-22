@@ -20,8 +20,8 @@ package org.apache.hadoop.hdds.scm.block;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -144,7 +144,7 @@ public class DeletedBlockLogStateManagerImpl
   }
 
   @Override
-  public void addTransactionsToDB(ArrayList<DeletedBlocksTransaction> txs,
+  public void addTransactionsToDB(List<DeletedBlocksTransaction> txs,
       DeletedBlocksTransactionSummary summary) throws IOException {
     Map<ContainerID, Long> containerIdToTxnIdMap = new HashMap<>();
     for (DeletedBlocksTransaction tx : txs) {
@@ -158,7 +158,7 @@ public class DeletedBlockLogStateManagerImpl
   }
 
   @Override
-  public void addTransactionsToDB(ArrayList<DeletedBlocksTransaction> txs) throws IOException {
+  public void addTransactionsToDB(List<DeletedBlocksTransaction> txs) throws IOException {
     Map<ContainerID, Long> containerIdToTxnIdMap = new HashMap<>();
     for (DeletedBlocksTransaction tx : txs) {
       long tid = tx.getTxID();
@@ -170,7 +170,7 @@ public class DeletedBlockLogStateManagerImpl
   }
 
   @Override
-  public void removeTransactionsFromDB(ArrayList<Long> txIDs, DeletedBlocksTransactionSummary summary)
+  public void removeTransactionsFromDB(List<Long> txIDs, DeletedBlocksTransactionSummary summary)
       throws IOException {
     if (deletingTxIDs != null) {
       deletingTxIDs.addAll(txIDs);
@@ -182,7 +182,7 @@ public class DeletedBlockLogStateManagerImpl
   }
 
   @Override
-  public void removeTransactionsFromDB(ArrayList<Long> txIDs) throws IOException {
+  public void removeTransactionsFromDB(List<Long> txIDs) throws IOException {
     if (deletingTxIDs != null) {
       deletingTxIDs.addAll(txIDs);
     }
@@ -194,7 +194,7 @@ public class DeletedBlockLogStateManagerImpl
   @Deprecated
   @Override
   public void increaseRetryCountOfTransactionInDB(
-      ArrayList<Long> txIDs) throws IOException {
+      List<Long> txIDs) throws IOException {
     // We don't store retry count in DB anymore.
     // This method is being retained to ensure backward compatibility and prevent
     // issues during minor upgrades. It will be removed in the future, during a major release.
@@ -202,7 +202,7 @@ public class DeletedBlockLogStateManagerImpl
 
   @Deprecated
   @Override
-  public int resetRetryCountOfTransactionInDB(ArrayList<Long> txIDs)
+  public int resetRetryCountOfTransactionInDB(List<Long> txIDs)
       throws IOException {
     // We don't reset retry count anymore.
     // This method is being retained to ensure backward compatibility and prevent
