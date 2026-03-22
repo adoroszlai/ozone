@@ -79,7 +79,7 @@ public class TestSCMRatisRequest {
     Object[] args = new Object[] {pids};
     String operation = "test";
     SCMRatisRequest request = SCMRatisRequest.of(PIPELINE, operation,
-        new Class[]{pids.getClass()}, args);
+        new Class[]{List.class}, args);
     assertEquals(operation, SCMRatisRequest.decode(request.encode()).getOperation());
     assertEquals(args[0], SCMRatisRequest.decode(request.encode()).getArguments()[0]);
   }
