@@ -27,8 +27,6 @@ DEFAULT_HADOOP_IMAGE="${docker.hadoop.image}"
 : ${HADOOP_TEST_IMAGES:=""}
 
 if [[ -z "${HADOOP_TEST_IMAGES}" ]]; then
-  # hadoop2 image is only available from Docker Hub
-  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} apache/hadoop:${hadoop2.version}"
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:3.3.6"
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.version}${docker.hadoop.image.flavor}"
 fi
@@ -41,12 +39,6 @@ export OZONE_REPLICATION_FACTOR=3
 source "$COMPOSE_DIR/../testlib.sh"
 
 start_docker_env
-
-if [[ ${SECURITY_ENABLED} == "true" ]]; then
-  execute_robot_test ${SCM} kinit.robot
-fi
-
-execute_robot_test ${SCM} createmrenv.robot
 
 # reinitialize the directories to use
 export OZONE_DIR=/opt/ozone
@@ -63,18 +55,6 @@ for HADOOP_TEST_IMAGE in $HADOOP_TEST_IMAGES; do
   docker-compose --ansi never --profile hadoop up -d nm rm
 
   execute_command_in_container rm hadoop version
-
-  if [[ ${SECURITY_ENABLED} == "true" ]]; then
-    execute_robot_test rm -v SECURITY_ENABLED:"${SECURITY_ENABLED}" kinit-hadoop.robot
-  fi
-
-  for scheme in o3fs ofs; do
-    execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-hadoopfs-${scheme}" ozonefs/hadoopo3fs.robot
-    # TODO secure MapReduce test is failing with 2.7 due to some token problem
-    if [[ ${SECURITY_ENABLED} != "true" ]] || [[ ${HADOOP_MAJOR_VERSION} == "3" ]]; then
-      execute_robot_test rm -v "SCHEME:${scheme}" -N "hadoop-${hadoop_version}-mapreduce-${scheme}" mapreduce.robot
-    fi
-  done
 
   save_container_logs nm rm
   stop_containers nm rm

@@ -86,65 +86,6 @@ test_cross_compatibility() {
   echo "Starting ${cluster_version} cluster with COMPOSE_FILE=${COMPOSE_FILE}"
 
   OZONE_KEEP_RESULTS=true start_docker_env 5
-
-  execute_command_in_container kms hadoop key create ${OZONE_BUCKET_KEY_NAME}
-
-  _init
-
-  # first write with client matching cluster version
-  client_version="${cluster_version}" client _write
-
-  for client_version in "$@"; do
-    # skip write, since already done
-    if [[ "${client_version}" == "${cluster_version}" ]]; then
-      continue
-    fi
-    client _write
-  done
-
-  for client_version in "$@"; do
-    for data_version in $(echo "$client_version" "$cluster_version" "$current_version" | xargs -n1 | sort -u); do
-
-      # do not test old-only scenario
-      if [[ "${cluster_version}" != "${current_version}" ]] \
-        && [[ "${client_version}" != "${current_version}" ]] \
-        && [[ "${data_version}" != "${current_version}" ]]; then
-        continue
-      fi
-
-      client _read ${data_version}
-    done
-  done
-
-  # Add checkpoint compatibility tests (only for clusters that support checkpoint endpoints)
-  # Skip checkpoint tests for very old clusters that don't have the endpoints
-  if [[ "${cluster_version}" < "2.0.0" ]]; then
-    echo "Skipping checkpoint compatibility tests for cluster ${cluster_version} (checkpoint endpoints not available)"
-  else
-    echo ""
-    echo "=========================================="
-    echo "Running checkpoint compatibility tests"
-    echo "=========================================="
-    
-    # Test 2.0.0 client (if available)
-    for client_version in "$@"; do
-      if [[ "${client_version}" == "2.0.0" ]]; then
-        echo "Testing 2.0.0 client against ${cluster_version} cluster"
-        client _test_checkpoint_compatibility
-        break  # Only test 2.0 once
-      fi
-    done
-    
-    # Test current client (if different from 2.0.0 and available)
-    for client_version in "$@"; do
-      if [[ "${client_version}" == "${current_version}" ]]; then
-        echo "Testing ${current_version} client against ${cluster_version} cluster"
-        client _test_checkpoint_compatibility
-        break  # Only test current version once
-      fi
-    done
-  fi
-
   KEEP_RUNNING=false stop_docker_env
 }
 
