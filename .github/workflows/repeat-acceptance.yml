@@ -43,8 +43,11 @@ on:
         default: false
         required: true
 env:
+  HADOOP_IMAGE: ghcr.io/apache/hadoop
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   OZONE_ACCEPTANCE_SUITE: ${{ github.event.inputs.test-suite}}
+  OZONE_IMAGE: ghcr.io/apache/ozone
+  OZONE_RUNNER_IMAGE: ghcr.io/apache/ozone-runner
   OZONE_TEST_SELECTOR: ${{ github.event.inputs.test-filter }}
   FAIL_FAST: ${{ github.event.inputs.fail-fast }}
   JAVA_VERSION: 8
