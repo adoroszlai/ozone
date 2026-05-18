@@ -151,7 +151,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    * opens the gRPC channel to be used to send requests to the server.
    */
   @Override
-  public void connect() throws Exception {
+  public void connect() throws IOException {
     // connect to the closest node, if closest node doesn't exist, delegate to
     // first node, which is usually the leader in the pipeline.
     DatanodeDetails dn = topologyAwareRead

@@ -46,7 +46,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.ozone.util.CacheMetrics;
+import org.apache.hadoop.ozone.util.GuavaCacheMetrics;
 
 /**
  * Wrapper class for Scm protocol clients.
@@ -56,8 +56,8 @@ public class ScmClient {
   private final ScmBlockLocationProtocol blockClient;
   private final StorageContainerLocationProtocol containerClient;
   private final LoadingCache<Long, Pipeline> containerLocationCache;
-  private final CacheMetrics containerCacheMetrics;
-  private final CacheMetrics datanodeDetailsCacheMetrics;
+  private final GuavaCacheMetrics containerCacheMetrics;
+  private final GuavaCacheMetrics datanodeDetailsCacheMetrics;
 
   ScmClient(ScmBlockLocationProtocol blockClient,
             StorageContainerLocationProtocol containerClient,
@@ -69,9 +69,9 @@ public class ScmClient {
     this.containerLocationCache =
         createContainerLocationCache(configuration, containerClient,
             datanodeDetailsCache);
-    this.containerCacheMetrics = CacheMetrics.create(containerLocationCache,
+    this.containerCacheMetrics = GuavaCacheMetrics.create(containerLocationCache,
         "ContainerInfo");
-    this.datanodeDetailsCacheMetrics = CacheMetrics.create(
+    this.datanodeDetailsCacheMetrics = GuavaCacheMetrics.create(
         datanodeDetailsCache, "DatanodeDetails");
   }
 

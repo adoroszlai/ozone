@@ -270,8 +270,8 @@ public class ContainerStateMachine extends BaseStateMachine {
     stateMachineDataCache = new ResourceCache<>(
         (index, data) -> data.size(),
         pendingRequestsBytesLimit,
-        (p) -> {
-          if (p.wasEvicted()) {
+        (key, value, cause) -> {
+          if (cause.wasEvicted()) {
             metrics.incNumEvictedCacheCount();
           }
         });

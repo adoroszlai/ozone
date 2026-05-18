@@ -58,7 +58,7 @@ public class MockXceiverClientSpi extends XceiverClientSpi {
   }
 
   @Override
-  public void connect() throws Exception {
+  public void connect() {
 
   }
 

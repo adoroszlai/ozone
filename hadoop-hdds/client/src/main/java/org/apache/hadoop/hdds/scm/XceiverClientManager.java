@@ -22,12 +22,11 @@ import static org.apache.hadoop.hdds.conf.ConfigTag.OZONE;
 import static org.apache.hadoop.hdds.conf.ConfigTag.PERFORMANCE;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.NO_REPLICA_FOUND;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +38,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.ozone.util.CacheMetrics;
+import org.apache.hadoop.ozone.util.CaffeineCacheMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,8 +59,9 @@ public class XceiverClientManager extends XceiverClientCreator {
   private static final Logger LOG =
       LoggerFactory.getLogger(XceiverClientManager.class);
 
+  private final Object lock = new Object();
   private final Cache<String, XceiverClientSpi> clientCache;
-  private final CacheMetrics cacheMetrics;
+  private final CaffeineCacheMetrics cacheMetrics;
 
   private static XceiverClientMetrics metrics;
 
@@ -84,25 +84,19 @@ public class XceiverClientManager extends XceiverClientCreator {
     Objects.requireNonNull(conf, "conf == null");
     long staleThresholdMs = clientConf.getStaleThreshold(MILLISECONDS);
 
-    this.clientCache = CacheBuilder.newBuilder()
+    this.clientCache = Caffeine.newBuilder()
         .recordStats()
         .expireAfterAccess(staleThresholdMs, MILLISECONDS)
         .maximumSize(clientConf.getMaxSize())
-        .removalListener(
-            new RemovalListener<String, XceiverClientSpi>() {
-            @Override
-            public void onRemoval(
-                RemovalNotification<String, XceiverClientSpi>
-                  removalNotification) {
-              synchronized (clientCache) {
-                // Mark the entry as evicted
-                XceiverClientSpi info = removalNotification.getValue();
-                info.setEvicted();
-              }
+        .removalListener((String key, XceiverClientSpi value, RemovalCause cause) -> {
+          synchronized (lock) {
+            if (value != null) {
+              value.setEvicted();
             }
-          }).build();
+          }
+        }).build();
 
-    cacheMetrics = CacheMetrics.create(clientCache, this);
+    cacheMetrics = CaffeineCacheMetrics.create(clientCache, this);
   }
 
   @VisibleForTesting
@@ -124,7 +118,7 @@ public class XceiverClientManager extends XceiverClientCreator {
     Preconditions.checkArgument(!pipeline.getNodes().isEmpty(),
         NO_REPLICA_FOUND);
 
-    synchronized (clientCache) {
+    synchronized (lock) {
       XceiverClientSpi info = getClient(pipeline, topologyAware);
       info.incrementReference();
       return info;
@@ -135,7 +129,7 @@ public class XceiverClientManager extends XceiverClientCreator {
   public void releaseClient(XceiverClientSpi client, boolean invalidateClient,
       boolean topologyAware) {
     Objects.requireNonNull(client, "client == null");
-    synchronized (clientCache) {
+    synchronized (lock) {
       client.decrementReference();
       if (invalidateClient) {
         Pipeline pipeline = client.getPipeline();
@@ -154,7 +148,7 @@ public class XceiverClientManager extends XceiverClientCreator {
       // create different client different pipeline node based on
       // network topology
       String key = getPipelineCacheKey(pipeline, topologyAware);
-      return clientCache.get(key, () -> newClient(pipeline));
+      return clientCache.get(key, k -> newClient(pipeline));
     } catch (Exception e) {
       throw new IOException(
           "Exception getting XceiverClient: " + e, e);

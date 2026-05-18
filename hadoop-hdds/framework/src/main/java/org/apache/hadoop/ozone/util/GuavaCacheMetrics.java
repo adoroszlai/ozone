@@ -30,29 +30,29 @@ import org.apache.ratis.util.JavaUtils;
 /**
  * Reusable component that emits cache metrics for a particular cache.
  */
-public final class CacheMetrics implements MetricsSource {
+public final class GuavaCacheMetrics implements MetricsSource {
 
-  public static final String SOURCE_NAME = CacheMetrics.class.getSimpleName();
+  public static final String SOURCE_NAME = GuavaCacheMetrics.class.getSimpleName();
 
   private final Cache<?, ?> cache;
   private final String name;
   private final String sourceName;
 
-  private CacheMetrics(Cache<?, ?> cache, String name) {
+  private GuavaCacheMetrics(Cache<?, ?> cache, String name) {
     this.cache = cache;
     this.name = name;
     sourceName = SOURCE_NAME + "-" + name;
   }
 
-  public static CacheMetrics create(Cache<?, ?> cache, Object owner) {
+  public static GuavaCacheMetrics create(Cache<?, ?> cache, Object owner) {
     final String name = JavaUtils.getClassSimpleName(owner.getClass())
         + "@" + Integer.toHexString(owner.hashCode());
     return create(cache, name);
   }
 
-  public static CacheMetrics create(Cache<?, ?> cache, String name) {
+  public static GuavaCacheMetrics create(Cache<?, ?> cache, String name) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    CacheMetrics source = new CacheMetrics(cache, name);
+    GuavaCacheMetrics source = new GuavaCacheMetrics(cache, name);
     return ms.register(source.sourceName, "Cache Metrics", source);
   }
 

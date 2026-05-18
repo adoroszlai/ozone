@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import com.google.common.cache.Cache;
+import com.github.benmanes.caffeine.cache.Cache;
 import java.io.IOException;
 import java.nio.file.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -106,7 +106,9 @@ public abstract class TestXceiverClientManager implements NonHATests.TestCase {
       clientManager.releaseClient(client1, true);
       clientManager.releaseClient(client2, true);
       clientManager.releaseClient(client3, true);
-      assertEquals(0, clientManager.getClientCache().size());
+      Cache<String, XceiverClientSpi> cache = clientManager.getClientCache();
+      cache.cleanUp();
+      assertEquals(0, cache.estimatedSize());
     }
   }
 
@@ -143,6 +145,7 @@ public abstract class TestXceiverClientManager implements NonHATests.TestCase {
       assertNotEquals(client1, client2);
 
       // least recent container (i.e containerName1) is evicted
+      cache.cleanUp();
       XceiverClientSpi nonExistent1 = cache.getIfPresent(
           container1.getContainerInfo().getPipelineID().getId().toString()
               + container1.getContainerInfo().getReplicationType());
@@ -199,6 +202,7 @@ public abstract class TestXceiverClientManager implements NonHATests.TestCase {
       assertNotEquals(client1, client2);
 
       // now client 1 should be evicted
+      cache.cleanUp();
       XceiverClientSpi nonExistent = cache.getIfPresent(
           container1.getContainerInfo().getPipelineID().getId().toString()
               + container1.getContainerInfo().getReplicationType());

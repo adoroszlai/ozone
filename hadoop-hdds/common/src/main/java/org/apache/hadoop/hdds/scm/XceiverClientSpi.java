@@ -86,7 +86,7 @@ public abstract class XceiverClientSpi implements Closeable {
   /**
    * Connects to the leader in the pipeline.
    */
-  public abstract void connect() throws Exception;
+  public abstract void connect() throws IOException;
 
   @Override
   public abstract void close();

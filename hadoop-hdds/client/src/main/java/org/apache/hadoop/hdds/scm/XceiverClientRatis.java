@@ -204,7 +204,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   }
 
   @Override
-  public void connect() throws Exception {
+  public void connect() throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to pipeline:{} leaderDatanode:{}, " +
           "primaryDatanode:{}", getPipeline().getId(),

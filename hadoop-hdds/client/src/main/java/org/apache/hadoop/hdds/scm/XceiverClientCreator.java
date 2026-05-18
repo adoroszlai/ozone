@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.scm.client.ClientTrustManager;
@@ -61,7 +62,7 @@ public class XceiverClientCreator implements XceiverClientFactory {
     return securityEnabled;
   }
 
-  protected XceiverClientSpi newClient(Pipeline pipeline) throws IOException {
+  protected XceiverClientSpi newClient(Pipeline pipeline) {
     XceiverClientSpi client;
     switch (pipeline.getType()) {
     case RATIS:
@@ -75,12 +76,13 @@ public class XceiverClientCreator implements XceiverClientFactory {
       break;
     case CHAINED:
     default:
-      throw new IOException("not implemented " + pipeline.getType());
+      throw new IllegalArgumentException(
+          XceiverClientSpi.class.getSimpleName() + " not implemented for " + pipeline.getType());
     }
     try {
       client.connect();
-    } catch (Exception e) {
-      throw new IOException(e);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
     return client;
   }

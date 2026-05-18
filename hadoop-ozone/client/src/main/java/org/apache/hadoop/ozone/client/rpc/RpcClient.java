@@ -30,12 +30,11 @@ import static org.apache.hadoop.ozone.OzoneConsts.MAXIMUM_NUMBER_OF_PARTS_PER_UP
 import static org.apache.hadoop.ozone.OzoneConsts.OLD_QUOTA_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_MAXIMUM_ACCESS_ID_LENGTH;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
@@ -50,7 +49,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -308,19 +306,14 @@ public class RpcClient implements ClientProtocol {
     long keyProviderCacheExpiryMs = conf.getTimeDuration(
         OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY,
         OZONE_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT, TimeUnit.MILLISECONDS);
-    keyProviderCache = CacheBuilder.newBuilder()
+    keyProviderCache = Caffeine.newBuilder()
         .expireAfterAccess(keyProviderCacheExpiryMs, TimeUnit.MILLISECONDS)
-        .removalListener(new RemovalListener<URI, KeyProvider>() {
-          @Override
-          public void onRemoval(
-              @Nonnull RemovalNotification<URI, KeyProvider> notification) {
-            try {
-              assert notification.getValue() != null;
-              notification.getValue().close();
-            } catch (Throwable t) {
-              LOG.error("Error closing KeyProvider with uri [" +
-                  notification.getKey() + "]", t);
-            }
+        .removalListener((URI key, KeyProvider value, RemovalCause cause) -> {
+          try {
+            assert value != null;
+            value.close();
+          } catch (Throwable t) {
+            LOG.error("Error closing KeyProvider with uri [{}]", key, t);
           }
         }).build();
     long maxPoolSize = (long) conf.getStorageSize(
@@ -2685,12 +2678,7 @@ public class RpcClient implements ClientProtocol {
     }
 
     try {
-      return keyProviderCache.get(kmsUri, new Callable<KeyProvider>() {
-        @Override
-        public KeyProvider call() throws Exception {
-          return OzoneKMSUtil.getKeyProvider(conf, kmsUri);
-        }
-      });
+      return keyProviderCache.get(kmsUri, k -> OzoneKMSUtil.getKeyProvider(conf, kmsUri));
     } catch (Exception e) {
       LOG.error("Can't create KeyProvider for Ozone RpcClient.", e);
       return null;

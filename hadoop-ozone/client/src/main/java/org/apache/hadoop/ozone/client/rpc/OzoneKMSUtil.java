@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.client.rpc;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -129,13 +130,17 @@ public final class OzoneKMSUtil {
   }
 
   public static KeyProvider getKeyProvider(final ConfigurationSource conf,
-      final URI serverProviderUri) throws IOException {
+      final URI serverProviderUri) throws UncheckedIOException {
     if (serverProviderUri == null) {
-      throw new IOException("KMS serverProviderUri is not configured.");
+      throw new IllegalArgumentException("KMS serverProviderUri is not configured.");
     }
-    return KMSUtil.createKeyProviderFromUri(
-        LegacyHadoopConfigurationSource.asHadoopConfiguration(conf),
-        serverProviderUri);
+    try {
+      return KMSUtil.createKeyProviderFromUri(
+          LegacyHadoopConfigurationSource.asHadoopConfiguration(conf),
+          serverProviderUri);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   public static CryptoProtocolVersion getCryptoProtocolVersion(

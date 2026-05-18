@@ -17,9 +17,9 @@
 
 package org.apache.hadoop.hdds.utils;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.Weigher;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.Weigher;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -29,17 +29,17 @@ import java.util.function.Predicate;
  * as first entry removal may not meet the limit.
  */
 public class ResourceCache<K, V> implements Cache<K, V> {
-  private final com.google.common.cache.Cache<K, V> cache;
+  private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 
   public ResourceCache(
       Weigher<K, V> weigher, long limits,
       RemovalListener<K, V> listener) {
     Objects.requireNonNull(weigher, "weigher == null");
     if (listener == null) {
-      cache = CacheBuilder.newBuilder()
+      cache = Caffeine.newBuilder()
           .maximumWeight(limits).weigher(weigher).build();
     } else {
-      cache = CacheBuilder.newBuilder()
+      cache = Caffeine.newBuilder()
           .maximumWeight(limits).weigher(weigher)
           .removalListener(listener).build();
     }
@@ -77,5 +77,9 @@ public class ResourceCache<K, V> implements Cache<K, V> {
   @Override
   public void clear() {
     cache.invalidateAll();
+  }
+
+  void cleanUp() {
+    cache.cleanUp();
   }
 }

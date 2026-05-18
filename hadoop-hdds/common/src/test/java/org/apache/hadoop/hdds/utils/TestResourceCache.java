@@ -35,11 +35,11 @@ public class TestResourceCache {
   @Test
   public void testResourceCache() throws InterruptedException {
     AtomicLong count = new AtomicLong(0);
-    Cache<Integer, String> resourceCache =
+    ResourceCache<Integer, String> resourceCache =
         new ResourceCache<>(
-            (k, v) -> (int) k, 10,
-            (P) -> {
-              if (P.wasEvicted()) {
+            (k, v) -> k, 10,
+            (k, v, cause) -> {
+              if (cause.wasEvicted()) {
                 count.incrementAndGet();
               }
             });
@@ -51,6 +51,7 @@ public class TestResourceCache {
 
     // put to cache with removing old element "6" as eviction FIFO
     resourceCache.put(1, "a");
+    resourceCache.cleanUp();
     assertNull(resourceCache.get(6));
     assertEquals(1, count.get());
 
