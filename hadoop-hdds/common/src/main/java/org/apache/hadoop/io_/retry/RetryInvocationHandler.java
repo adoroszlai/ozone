@@ -121,8 +121,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
      * It first processes the wait time, if there is any,
      * and then invokes {@link #processRetryInfo()}.
      *
-     * If the wait time is positive, it either sleeps for synchronous calls
-     * or immediately returns for asynchronous calls.
+     * If the wait time is positive, it sleeps.
      *
      * @return {@link CallReturn#RETRY} if the retryInfo is processed;
      *         otherwise, return {@link CallReturn#WAIT_RETRY}.
