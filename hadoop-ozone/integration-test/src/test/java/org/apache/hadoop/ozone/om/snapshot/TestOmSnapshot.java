@@ -166,6 +166,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.rocksdb.LiveFileMetaData;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract class to test OmSnapshot.
@@ -2102,7 +2103,8 @@ public abstract class TestOmSnapshot {
           bucketName, snapshot1, snapshot2, null, 0);
       assertEquals(100, diffReport.getDiffList().size());
     } else {
-      fail("Unexpected job status for the test.");
+      LoggerFactory.getLogger(getClass()).info("ZZZ Response: {}", response);
+      fail("Unexpected job status for the test: " + response.getJobStatus());
     }
   }
 
