@@ -112,6 +112,7 @@ import org.apache.hadoop.ozone.snapshot.SnapshotDiffReportOzone;
 import org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse;
 import org.apache.hadoop.ozone.snapshot.SubmitSnapshotDiffResponse;
 import org.apache.ozone.rocksdiff.RocksDBCheckpointDiffer;
+import org.apache.ratis.util.JavaUtils;
 import org.apache.ratis.util.function.CheckedFunction;
 import org.apache.ratis.util.function.UncheckedAutoCloseableSupplier;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -376,6 +377,8 @@ public final class OmSnapshotManager implements AutoCloseable {
             }
           }, POLL_INTERVAL_DURATION, maxPollDuration);
           if (!flushed) {
+            LOG.info("ZZZ not flushed yet");
+            JavaUtils.dumpAllThreads(LOG::info);
             throw new OMException("Unable to load snapshot. " +
                 "Create Snapshot Txn '" + snapshotInfo.getTableKey() +
                 "' with txnId : '" + TransactionInfo.fromByteString(snapshotInfo.getCreateTransactionInfo()) +
