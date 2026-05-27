@@ -204,19 +204,16 @@ public class DirectoryDeletingService extends AbstractKeyDeletingService {
     });
   }
 
-  private synchronized void updateAndRestart(OzoneConfiguration conf) {
+  private void updateAndRestart(OzoneConfiguration conf) {
+    TimeUnit timeUnit = getTimeUnit();
     long newInterval = conf.getTimeDuration(OZONE_DIR_DELETING_SERVICE_INTERVAL,
-        OZONE_DIR_DELETING_SERVICE_INTERVAL_DEFAULT, TimeUnit.SECONDS);
+        OZONE_DIR_DELETING_SERVICE_INTERVAL_DEFAULT, timeUnit);
     int newCorePoolSize = conf.getInt(OZONE_THREAD_NUMBER_DIR_DELETION,
         OZONE_THREAD_NUMBER_DIR_DELETION_DEFAULT);
     LOG.info("Updating and restarting DirectoryDeletingService with interval {} {}" +
             " and core pool size {}",
-        newInterval, TimeUnit.SECONDS.name().toLowerCase(), newCorePoolSize);
-    shutdown();
-    setInterval(newInterval, TimeUnit.SECONDS);
-    setPoolSize(newCorePoolSize);
-    this.numberOfParallelThreadsPerStore.set(newCorePoolSize);
-    start();
+        newInterval, timeUnit.name().toLowerCase(), newCorePoolSize);
+    restart(newInterval, newCorePoolSize, () -> numberOfParallelThreadsPerStore.set(newCorePoolSize));
   }
 
   @Override
@@ -274,26 +271,38 @@ public class DirectoryDeletingService extends AbstractKeyDeletingService {
 
   @Override
   public void shutdown() {
-    if (deletionThreadPool != null) {
-      deletionThreadPool.shutdown();
-      try {
-        if (!deletionThreadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+    final java.util.concurrent.locks.Lock lock = getLock();
+    lock.lock();
+    try {
+      if (deletionThreadPool != null) {
+        deletionThreadPool.shutdown();
+        try {
+          if (!deletionThreadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+            deletionThreadPool.shutdownNow();
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           deletionThreadPool.shutdownNow();
         }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        deletionThreadPool.shutdownNow();
       }
+      super.shutdown();
+    } finally {
+      lock.unlock();
     }
-    super.shutdown();
   }
 
   @Override
-  public synchronized void start() {
-    if (deletionThreadPool == null || deletionThreadPool.isShutdown() || deletionThreadPool.isTerminated()) {
-      this.deletionThreadPool = createDeletionThreadPool(numberOfParallelThreadsPerStore.get());
+  public void start() {
+    final java.util.concurrent.locks.Lock lock = getLock();
+    lock.lock();
+    try {
+      if (deletionThreadPool == null || deletionThreadPool.isShutdown() || deletionThreadPool.isTerminated()) {
+        this.deletionThreadPool = createDeletionThreadPool(numberOfParallelThreadsPerStore.get());
+      }
+      super.start();
+    } finally {
+      lock.unlock();
     }
-    super.start();
   }
 
   private ThreadPoolExecutor createDeletionThreadPool(int threadCount) {

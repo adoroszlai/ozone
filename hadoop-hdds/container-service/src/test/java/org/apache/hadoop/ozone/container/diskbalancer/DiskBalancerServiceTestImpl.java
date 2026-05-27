@@ -86,7 +86,7 @@ public class DiskBalancerServiceTestImpl extends DiskBalancerService {
         Future<?> future = this.getExecutorService().submit(svc);
         try {
           // for tests, we only wait for 3s for completion
-          future.get(3000, TimeUnit.SECONDS);
+          future.get(3, TimeUnit.SECONDS);
           numOfProcessed.incrementAndGet();
         } catch (Exception e) {
           e.printStackTrace();

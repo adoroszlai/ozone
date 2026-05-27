@@ -123,22 +123,19 @@ public class BlockDeletingService extends BackgroundService {
     });
   }
 
-  public synchronized void updateAndRestart(OzoneConfiguration ozoneConf) {
+  private void updateAndRestart(OzoneConfiguration ozoneConf) {
+    TimeUnit timeUnit = getTimeUnit();
     long newInterval = ozoneConf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT, TimeUnit.SECONDS);
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT, timeUnit);
     int newCorePoolSize = ozoneConf.getInt(OZONE_BLOCK_DELETING_SERVICE_WORKERS,
         OZONE_BLOCK_DELETING_SERVICE_WORKERS_DEFAULT);
     long newTimeout = ozoneConf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.NANOSECONDS);
     LOG.info("Updating and restarting BlockDeletingService with interval {} {}" +
             ", core pool size {} and timeout {} {}",
-        newInterval, TimeUnit.SECONDS.name().toLowerCase(), newCorePoolSize, newTimeout,
+        newInterval, timeUnit.name().toLowerCase(), newCorePoolSize, newTimeout,
         TimeUnit.NANOSECONDS.name().toLowerCase());
-    shutdown();
-    setInterval(newInterval, TimeUnit.SECONDS);
-    setPoolSize(newCorePoolSize);
-    setServiceTimeoutInNanos(newTimeout);
-    start();
+    restart(newInterval, newCorePoolSize, () -> setServiceTimeoutInNanos(newTimeout));
   }
 
   /**

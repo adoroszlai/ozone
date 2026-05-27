@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +42,15 @@ public abstract class BackgroundService {
   protected static final Logger LOG =
       LoggerFactory.getLogger(BackgroundService.class);
 
+  private final Lock lock = new ReentrantLock(); // protects executor creation/shutdown
   // Executor to launch child tasks
   private ScheduledThreadPoolExecutor exec;
   private ThreadGroup threadGroup;
   private final String serviceName;
   private long interval;
-  private volatile long serviceTimeoutInNanos;
-  private TimeUnit unit;
-  private final int threadPoolSize;
+  private long serviceTimeoutInNanos;
+  private final TimeUnit unit;
+  private int threadPoolSize;
   private final String threadNamePrefix;
   private final PeriodicalTask service;
   private CompletableFuture<Void> future;
@@ -72,28 +75,35 @@ public abstract class BackgroundService {
     this.future = CompletableFuture.completedFuture(null);
   }
 
+  protected Lock getLock() {
+    return lock;
+  }
+
   protected CompletableFuture<Void> getFuture() {
     return future;
   }
 
   @VisibleForTesting
-  public synchronized ExecutorService getExecutorService() {
+  protected ExecutorService getExecutorService() {
     return this.exec;
   }
 
-  public synchronized void setPoolSize(int size) {
+  protected void setPoolSize(int size) {
     if (size <= 0) {
       throw new IllegalArgumentException("Pool size must be positive.");
     }
 
-    // In ScheduledThreadPoolExecutor, maximumPoolSize is Integer.MAX_VALUE
-    // the corePoolSize will always less maximumPoolSize.
-    // So we can directly set the corePoolSize
-    exec.setCorePoolSize(size);
+    lock.lock();
+    try {
+      threadPoolSize = size;
+      exec.setCorePoolSize(size);
+    } finally {
+      lock.unlock();
+    }
   }
 
-  public synchronized void setServiceTimeoutInNanos(long newTimeout) {
-    LOG.info("{} timeout is set to {} {}", serviceName, newTimeout, TimeUnit.NANOSECONDS.name().toLowerCase());
+  protected void setServiceTimeoutInNanos(long newTimeout) {
+    LOG.info("{} timeout is set to {}ns", serviceName, newTimeout);
     this.serviceTimeoutInNanos = newTimeout;
   }
 
@@ -112,21 +122,44 @@ public abstract class BackgroundService {
   }
 
   // start service
-  public synchronized void start() {
-    if (exec == null || exec.isShutdown() || exec.isTerminated()) {
-      initExecutorAndThreadGroup();
-    }
+  public void start() {
+    final long currentInterval = interval;
     LOG.info("Starting service {} with interval {} {}", serviceName,
-        interval, unit.name().toLowerCase());
-    exec.scheduleWithFixedDelay(service, 0, interval, unit);
+        currentInterval, unit.name().toLowerCase());
+    lock.lock();
+    try {
+      if (exec == null || exec.isShutdown() || exec.isTerminated()) {
+        initExecutorAndThreadGroup();
+      }
+      exec.scheduleWithFixedDelay(service, 0, currentInterval, unit);
+    } finally {
+      lock.unlock();
+    }
   }
 
-  protected synchronized void setInterval(long newInterval, TimeUnit newUnit) {
-    this.interval = newInterval;
-    this.unit = newUnit;
+  /** @param hook to be run between shutdown and start */
+  protected void restart(long newInterval, int newCorePoolSize, Runnable hook) {
+    if (newCorePoolSize <= 0) {
+      throw new IllegalArgumentException("Pool size must be positive.");
+    }
+
+    lock.lock();
+    try {
+      shutdown();
+      interval = newInterval;
+      threadPoolSize = newCorePoolSize;
+      hook.run();
+      start();
+    } finally {
+      lock.unlock();
+    }
   }
 
-  protected synchronized long getIntervalMillis() {
+  public TimeUnit getTimeUnit() {
+    return unit;
+  }
+
+  protected long getIntervalMillis() {
     return this.unit.toMillis(interval);
   }
 
@@ -162,39 +195,45 @@ public abstract class BackgroundService {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Number of background tasks to execute : {}", tasks.size());
       }
-      synchronized (BackgroundService.this) {
-        while (!tasks.isEmpty()) {
-          BackgroundTask task = tasks.poll();
-          future = future.thenCombine(CompletableFuture.runAsync(() -> {
-            long startTime = System.nanoTime();
-            try {
-              BackgroundTaskResult result = task.call();
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("task execution result size {}", result.getSize());
+      if (lock.tryLock()) { // if lock is already taken, shutdown is in progress
+        try {
+          final long threshold = serviceTimeoutInNanos;
+          while (!tasks.isEmpty()) {
+            BackgroundTask task = tasks.poll();
+            future = future.thenCombine(CompletableFuture.runAsync(() -> {
+              long startTime = System.nanoTime();
+              try {
+                BackgroundTaskResult result = task.call();
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("task execution result size {}", result.getSize());
+                }
+              } catch (Throwable e) {
+                LOG.error("Background task execution failed", e);
+                if (e instanceof Error) {
+                  throw (Error) e;
+                }
+              } finally {
+                long endTime = System.nanoTime();
+                if (endTime - startTime > threshold) {
+                  LOG.warn("{} Background task execution took {}ns > {}ns(timeout)",
+                      serviceName, endTime - startTime, threshold);
+                }
               }
-            } catch (Throwable e) {
-              LOG.error("Background task execution failed", e);
-              if (e instanceof Error) {
-                throw (Error) e;
-              }
-            } finally {
-              long endTime = System.nanoTime();
-              if (endTime - startTime > serviceTimeoutInNanos) {
-                LOG.warn("{} Background task execution took {}ns > {}ns(timeout)",
-                    serviceName, endTime - startTime, serviceTimeoutInNanos);
-              }
-            }
-          }, exec).exceptionally(e -> null), (Void1, Void) -> null);
+            }, exec).exceptionally(e -> null), (Void1, Void) -> null);
+          }
+        } finally {
+          lock.unlock();
         }
       }
     }
   }
 
   // shutdown and make sure all threads are properly released.
-  public synchronized void shutdown() {
+  public void shutdown() {
     LOG.info("Shutting down service {}", this.serviceName);
-    exec.shutdown();
+    lock.lock();
     try {
+      exec.shutdown();
       if (!exec.awaitTermination(60, TimeUnit.SECONDS)) {
         exec.shutdownNow();
       }
@@ -202,9 +241,8 @@ public abstract class BackgroundService {
       // Re-interrupt the thread while catching InterruptedException
       Thread.currentThread().interrupt();
       exec.shutdownNow();
-    }
-    if (threadGroup.activeCount() == 0 && !threadGroup.isDestroyed()) {
-      threadGroup.destroy();
+    } finally {
+      lock.unlock();
     }
   }
 
