@@ -195,35 +195,40 @@ public abstract class BackgroundService {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Number of background tasks to execute : {}", tasks.size());
       }
-      if (lock.tryLock()) { // if lock is already taken, shutdown is in progress
-        try {
-          final long threshold = serviceTimeoutInNanos;
-          while (!tasks.isEmpty()) {
-            BackgroundTask task = tasks.poll();
-            future = future.thenCombine(CompletableFuture.runAsync(() -> {
-              long startTime = System.nanoTime();
-              try {
-                BackgroundTaskResult result = task.call();
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("task execution result size {}", result.getSize());
+      try {
+        final long threshold = serviceTimeoutInNanos;
+        if (lock.tryLock(threshold, TimeUnit.NANOSECONDS)) {
+          try {
+            while (!tasks.isEmpty()) {
+              BackgroundTask task = tasks.poll();
+              future = future.thenCombine(CompletableFuture.runAsync(() -> {
+                long startTime = System.nanoTime();
+                try {
+                  BackgroundTaskResult result = task.call();
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("task execution result size {}", result.getSize());
+                  }
+                } catch (Throwable e) {
+                  LOG.error("Background task execution failed", e);
+                  if (e instanceof Error) {
+                    throw (Error) e;
+                  }
+                } finally {
+                  long endTime = System.nanoTime();
+                  if (endTime - startTime > threshold) {
+                    LOG.warn("{} Background task execution took {}ns > {}ns(timeout)",
+                        serviceName, endTime - startTime, threshold);
+                  }
                 }
-              } catch (Throwable e) {
-                LOG.error("Background task execution failed", e);
-                if (e instanceof Error) {
-                  throw (Error) e;
-                }
-              } finally {
-                long endTime = System.nanoTime();
-                if (endTime - startTime > threshold) {
-                  LOG.warn("{} Background task execution took {}ns > {}ns(timeout)",
-                      serviceName, endTime - startTime, threshold);
-                }
-              }
-            }, exec).exceptionally(e -> null), (Void1, Void) -> null);
+              }, exec).exceptionally(e -> null), (Void1, Void) -> null);
+            }
+          } finally {
+            lock.unlock();
           }
-        } finally {
-          lock.unlock();
         }
+      } catch (InterruptedException e) {
+        // if lock is already taken, startup/shutdown is in progress
+        LOG.info("{} submission timeout", serviceName);
       }
     }
   }
