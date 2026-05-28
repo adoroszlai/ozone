@@ -185,12 +185,6 @@ function ozonecmd_case
       OZONE_CLASSNAME=org.apache.hadoop.ozone.shell.tenant.TenantShell
       OZONE_RUN_ARTIFACT_NAME="ozone-cli-shell"
     ;;
-    csi)
-      OZONE_SUBCMD_SUPPORTDAEMONIZATION="true"
-      OZONE_CLASSNAME='org.apache.hadoop.ozone.csi.CsiServer'
-      OZONE_CSI_OPTS="${OZONE_CSI_OPTS} -Dlog4j.configuration=file:${OZONE_CONF_DIR}/log4j.properties"
-      OZONE_RUN_ARTIFACT_NAME="ozone-csi"
-    ;;
     recon)
       OZONE_SUBCMD_SUPPORTDAEMONIZATION="true"
       OZONE_CLASSNAME='org.apache.hadoop.ozone.recon.ReconServer'

@@ -222,7 +222,6 @@ share/ozone/lib/ozone-cli-interactive.jar
 share/ozone/lib/ozone-cli-repair.jar
 share/ozone/lib/ozone-cli-shell.jar
 share/ozone/lib/ozone-common.jar
-share/ozone/lib/ozone-csi.jar
 share/ozone/lib/ozone-datanode.jar
 share/ozone/lib/ozone-filesystem-common.jar
 share/ozone/lib/ozone-filesystem-hadoop2.jar
