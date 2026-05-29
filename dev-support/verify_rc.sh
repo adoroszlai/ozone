@@ -57,10 +57,25 @@ extract() {
   tar xzf "${tarball}"
 }
 
+compare_source() {
+  local source_dir=
+
+  pushd ../git
+  git reset --hard
+  git clean -dfx
+  git fetch --all
+  git checkout "${tag}"
+  popd
+  diff -qr --exclude=.git ../git "ozone-${version}-src"
+}
+
 for tarball in ${files}; do
   echo "$tarball"
   download "$tarball"
   verify_signatures "$tarball"
   extract "$tarball"
+  if [[ "${tarball}" =~ .*-src.* ]]; then
+    compare_source
+  fi
   echo
 done
