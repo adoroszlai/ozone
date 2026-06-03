@@ -39,7 +39,7 @@ services:
     command: ["/opt/hadoop/compose/common/init-kdc.sh"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.100
+        ipv6_address: 2001:3984:3989::100
   kms:
     image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
     dns_search: .
@@ -56,55 +56,55 @@ services:
     command: ["hadoop", "kms"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.101
+        ipv6_address: 2001:3984:3989::101
   datanode1:
     <<: *common-config
     ports:
       - 19864:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
-      - "recon=172.25.0.115"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
+      - "recon=2001:3984:3989::115"
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.102
+        ipv6_address: 2001:3984:3989::102
   datanode2:
     <<: *common-config
     ports:
       - 9866:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
-      - "recon=172.25.0.115"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
+      - "recon=2001:3984:3989::115"
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.103
+        ipv6_address: 2001:3984:3989::103
   datanode3:
     <<: *common-config
     ports:
       - 9868:9999
     command: ["/opt/hadoop/bin/ozone","datanode"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
-      - "recon=172.25.0.115"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
+      - "recon=2001:3984:3989::115"
     environment:
       WAITFOR: scm3.org:9894
       OZONE_OPTS:
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.104
+        ipv6_address: 2001:3984:3989::104
   om1:
     hostname: om1
     <<: *common-config
@@ -118,12 +118,12 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.111
+        ipv6_address: 2001:3984:3989::111
   om2:
     hostname: om2
     <<: *common-config
@@ -137,12 +137,12 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.112
+        ipv6_address: 2001:3984:3989::112
   om3:
     hostname: om3
     <<: *common-config
@@ -156,12 +156,12 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.113
+        ipv6_address: 2001:3984:3989::113
   om4:
     hostname: om4
     <<: *common-config
@@ -175,12 +175,12 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","om"]
     extra_hosts:
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.114
+        ipv6_address: 2001:3984:3989::114
   httpfs:
     hostname: httpfs
     <<: *common-config
@@ -192,14 +192,14 @@ services:
       OZONE_OPTS:
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.119
+        ipv6_address: 2001:3984:3989::119
   s3g:
     hostname: s3g
     <<: *common-config
     command: ["ozone","s3g"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.120
+        ipv6_address: 2001:3984:3989::120
   scm1.org:
     hostname: scm1.org
     <<: *common-config
@@ -214,15 +214,15 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","scm"]
     extra_hosts:
-      - "om1=172.25.0.111"
-      - "om2=172.25.0.112"
-      - "om3=172.25.0.113"
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "om1=2001:3984:3989::111"
+      - "om2=2001:3984:3989::112"
+      - "om3=2001:3984:3989::113"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.116
+        ipv6_address: 2001:3984:3989::116
   scm2.org:
     hostname: scm2.org
     <<: *common-config
@@ -236,15 +236,15 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","scm"]
     extra_hosts:
-      - "om1=172.25.0.111"
-      - "om2=172.25.0.112"
-      - "om3=172.25.0.113"
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "om1=2001:3984:3989::111"
+      - "om2=2001:3984:3989::112"
+      - "om3=2001:3984:3989::113"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.117
+        ipv6_address: 2001:3984:3989::117
   scm3.org:
     hostname: scm3.org
     <<: *common-config
@@ -258,15 +258,15 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","scm"]
     extra_hosts:
-      - "om1=172.25.0.111"
-      - "om2=172.25.0.112"
-      - "om3=172.25.0.113"
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "om1=2001:3984:3989::111"
+      - "om2=2001:3984:3989::112"
+      - "om3=2001:3984:3989::113"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.118
+        ipv6_address: 2001:3984:3989::118
   recon:
     hostname: recon
     <<: *common-config
@@ -276,18 +276,20 @@ services:
       OZONE_OPTS:
     command: ["/opt/hadoop/bin/ozone","recon"]
     extra_hosts:
-      - "om1=172.25.0.111"
-      - "om2=172.25.0.112"
-      - "om3=172.25.0.113"
-      - "scm1.org=172.25.0.116"
-      - "scm2.org=172.25.0.117"
-      - "scm3.org=172.25.0.118"
+      - "om1=2001:3984:3989::111"
+      - "om2=2001:3984:3989::112"
+      - "om3=2001:3984:3989::113"
+      - "scm1.org=2001:3984:3989::116"
+      - "scm2.org=2001:3984:3989::117"
+      - "scm3.org=2001:3984:3989::118"
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.115
+        ipv6_address: 2001:3984:3989::115
 networks:
   ozone_net:
     ipam:
       driver: default
       config:
-        - subnet: "172.25.0.0/24"
+        - subnet: "2001:3984:3989::/64"
+      enable_ipv4: false
+      enable_ipv6: true

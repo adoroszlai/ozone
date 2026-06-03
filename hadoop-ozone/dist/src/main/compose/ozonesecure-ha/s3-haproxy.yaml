@@ -32,21 +32,21 @@ services:
     command: ["ozone","s3g"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.121
+        ipv6_address: 2001:3984:3989::121
   s3g2:
     hostname: s3g2
     <<: *common-config
     command: ["ozone","s3g"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.122
+        ipv6_address: 2001:3984:3989::122
   s3g3:
     hostname: s3g3
     <<: *common-config
     command: ["ozone","s3g"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.123
+        ipv6_address: 2001:3984:3989::123
   s3g:
     image: haproxy:lts-alpine
     hostname: s3g
@@ -61,4 +61,4 @@ services:
     command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
     networks:
       ozone_net:
-        ipv4_address: 172.25.0.120
+        ipv6_address: 2001:3984:3989::120
