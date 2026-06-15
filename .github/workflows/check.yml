@@ -39,6 +39,18 @@ on:
         default: 1
         required: false
 
+      artifact-name:
+        type: string
+        description: "Custom name for artifact to be uploaded (default: none)"
+        default: ''
+        required: false
+
+      display-name:
+        type: string
+        description: "Custom name for the job (default: none)"
+        default: ''
+        required: false
+
       java-version:
         type: string
         description: "Java version to set up (default: none)"
@@ -117,6 +129,12 @@ on:
         default: ''
         required: false
 
+      test-iterations:
+        type: string
+        description: "Test iterations (default: 1) -- only for JUnit tests"
+        default: '1'
+        required: false
+
       timeout-minutes:
         type: number
         description: "Job timeout in minutes (default: 30)"
@@ -147,7 +165,7 @@ permissions: { }
 
 jobs:
   check:
-    name: ${{ (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
+    name: ${{ inputs.display-name || (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
@@ -241,6 +259,7 @@ jobs:
         env:
           COMMAND: hadoop-ozone/dev-support/checks/${{ inputs.script }}.sh ${{ inputs.script-args }} ${{ inputs.ratis-args }}
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          ITERATIONS: ${{ inputs.test-iterations }}
           OZONE_WITH_COVERAGE: ${{ inputs.with-coverage }}
 
       - name: Execute post-failure steps
@@ -269,7 +288,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
+          name: ${{ (inputs.artifact-name || (inputs.split && format('{0}-{1}', inputs.script, inputs.split))) || inputs.script }}
           # please keep path as a single item; move to that directory all files needed in the artifact
           path: target/${{ inputs.script }}
         continue-on-error: true

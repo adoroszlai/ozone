@@ -23,11 +23,10 @@ trap 'cancelled=true; echo "Caught cancellation signal, exiting..."; exit 130' S
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-: ${CHECK:="unit"}
+: ${CHECK:="junit"}
 : ${FAIL_FAST:="false"}
 : ${ITERATIONS:="1"}
 : ${OZONE_WITH_COVERAGE:="false"}
-: ${OZONE_REPO_CACHED:="false"}
 
 declare -i ITERATIONS
 if [[ ${ITERATIONS} -le 0 ]]; then
@@ -55,10 +54,6 @@ if [[ -f hadoop-ozone/dist/src/shell/ozone/ozone-functions.sh ]]; then
 fi
 
 mvn ${MAVEN_OPTIONS} clean
-
-if [[ ${ITERATIONS} -gt 1 ]] && [[ ${OZONE_REPO_CACHED} == "false" ]]; then
-  mvn ${MAVEN_OPTIONS} -DskipTests install
-fi
 
 REPORT_DIR=${OUTPUT_DIR:-"$DIR/../../../target/${CHECK}"}
 REPORT_FILE="${REPORT_DIR}/summary.txt"
