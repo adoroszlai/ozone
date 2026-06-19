@@ -24,8 +24,13 @@ if [[ "$@" =~ "-Ptest-flaky" ]]; then
   # tests may pass on re-run, so we cannot rely on output for status
   ERROR_PATTERN=""
 fi
-if [[ "$@" =~ "-Ptest-" ]] && [[ ! "$@" =~ "-Ptest-filesystem" ]]; then
-  args="$args -DskipShade"
+if [[ "$@" =~ "-Ptest-" ]]; then
+  if [[ ! "$@" =~ "-Ptest-filesystem" ]]; then
+    args="$args -DskipShade"
+  fi
+  if [[ ! "$@" =~ "-Ptest-recon" ]]; then
+    args="$args -DskipRecon"
+  fi
 fi
 
 source "${DIR}/junit.sh" $args "$@"
