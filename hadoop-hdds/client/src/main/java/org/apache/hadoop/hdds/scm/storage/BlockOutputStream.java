@@ -425,7 +425,7 @@ public class BlockOutputStream extends OutputStream {
   private void allocateNewBufferIfNeeded() throws IOException {
     if (currentBufferRemaining == 0) {
       try {
-        currentBuffer = bufferPool.allocateBuffer(config.getBufferIncrement());
+        currentBuffer = bufferPool.allocateBuffer(config.getBufferIncrement(), config.useDirectBuffers());
         currentBufferRemaining = currentBuffer.remaining();
         LOG.debug("Allocated new buffer {}, used = {}, capacity = {}", currentBuffer,
             bufferPool.getNumberOfUsedBuffers(), bufferPool.getCapacity());

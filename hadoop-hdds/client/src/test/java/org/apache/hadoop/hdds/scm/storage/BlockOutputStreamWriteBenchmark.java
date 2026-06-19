@@ -40,7 +40,6 @@ import org.apache.hadoop.hdds.scm.StreamBufferArgs;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.ozone.common.ChunkBuffer;
 import org.apache.ozone.test.GenericTestUtils;
 import org.slf4j.event.Level;
 
@@ -457,15 +456,14 @@ public final class BlockOutputStreamWriteBenchmark {
       config.setStreamBufferFlushSize(16 * 1024 * 1024);
       config.setChecksumType(checksumType);
       config.setBytesPerChecksum(64 * 1024);
+      // Both modes use the same BufferPool; config.useDirectBuffer() controls
+      // which allocator is called inside ChunkBuffer.allocate(), giving a true
+      // apples-to-apples comparison of heap vs direct buffer serialisation overhead.
+      config.useDirectBuffers(!heapBuffer);
       config.validate();
 
       final StreamBufferArgs streamBufferArgs =
           StreamBufferArgs.getDefaultStreamBufferArgs(pipeline.getReplicationConfig(), config);
-
-      // Both modes use the same BufferPool; ChunkBuffer.ALLOCATE_DIRECT controls
-      // which allocator is called inside ChunkBuffer.allocate(), giving a true
-      // apples-to-apples comparison of heap vs direct buffer serialisation overhead.
-      ChunkBuffer.ALLOCATE_DIRECT.set(!heapBuffer);
 
       return new BenchmarkSession(
           pipeline,

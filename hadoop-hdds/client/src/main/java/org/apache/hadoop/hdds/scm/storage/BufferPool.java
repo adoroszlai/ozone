@@ -84,6 +84,10 @@ public class BufferPool {
    * capacity.
    */
   public ChunkBuffer allocateBuffer(int increment) throws InterruptedException {
+    return allocateBuffer(increment, true);
+  }
+
+  public ChunkBuffer allocateBuffer(int increment, boolean direct) throws InterruptedException {
     lock.lockInterruptibly();
     try {
       Preconditions.assertTrue(allocated.size() + released.size() <= capacity, () ->
@@ -95,7 +99,7 @@ public class BufferPool {
       }
       // Get a buffer to allocate, preferably from the released ones.
       final ChunkBuffer buffer = released.isEmpty() ?
-          ChunkBuffer.allocate(bufferSize, increment) : released.removeFirst();
+          ChunkBuffer.allocate(bufferSize, increment, direct) : released.removeFirst();
       allocated.add(buffer);
       currentBuffer = buffer;
 

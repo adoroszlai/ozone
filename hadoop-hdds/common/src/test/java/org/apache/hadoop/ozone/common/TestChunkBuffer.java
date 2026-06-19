@@ -89,7 +89,7 @@ public class TestChunkBuffer {
   private static void runTestIncrementalChunkBuffer(int increment, int n) throws IOException {
     final byte[] expected = new byte[n];
     ThreadLocalRandom.current().nextBytes(expected);
-    try (IncrementalChunkBuffer c = new IncrementalChunkBuffer(n, increment, false)) {
+    try (IncrementalChunkBuffer c = new IncrementalChunkBuffer(n, increment, false, true)) {
       runTestImpl(expected, increment, c);
     }
   }

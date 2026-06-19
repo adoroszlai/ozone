@@ -93,6 +93,12 @@ public class OzoneClientConfig {
       tags = ConfigTag.CLIENT)
   private int dataStreamSyncSize = 0;
 
+  @Config(key = "ozone.client.stream.buffer.direct",
+      defaultValue = "true",
+      description = "Whether to allocate direct buffers (when true) or heap buffers (when false).",
+      tags = ConfigTag.CLIENT)
+  private boolean directBuffers;
+
   @Config(key = "ozone.client.stream.buffer.increment",
       defaultValue = "0B",
       type = ConfigType.SIZE,
@@ -644,6 +650,14 @@ public class OzoneClientConfig {
 
   public void setStreamReadTimeout(Duration streamReadTimeout) {
     this.streamReadTimeout = streamReadTimeout;
+  }
+
+  public void useDirectBuffers(boolean direct) {
+    this.directBuffers = direct;
+  }
+
+  public boolean useDirectBuffers() {
+    return directBuffers;
   }
 
   /**

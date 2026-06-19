@@ -52,10 +52,12 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
   private final List<CodecBuffer> underlying;
   /** Is this a duplicated buffer? (for debug only) */
   private final boolean isDuplicated;
+  /** Whether to allocate direct or heap buffers? */
+  private final boolean direct;
   /** The index of the first non-full buffer. */
   private int firstNonFullIndex = 0;
 
-  IncrementalChunkBuffer(int limit, int increment, boolean isDuplicated) {
+  IncrementalChunkBuffer(int limit, int increment, boolean isDuplicated, boolean direct) {
     Preconditions.checkArgument(limit >= 0);
     Preconditions.checkArgument(increment > 0);
     this.limit = limit;
@@ -65,6 +67,7 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
     this.buffers = new ArrayList<>(size);
     this.underlying = isDuplicated ? Collections.emptyList() : new ArrayList<>(size);
     this.isDuplicated = isDuplicated;
+    this.direct = direct;
   }
 
   @Override
@@ -131,7 +134,7 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
     // ChunkBuffer.ALLOCATE_DIRECT is flipped only by BlockOutputStreamWriteBenchmark.
     ByteBuffer b = null;
     for (; i <= index; i++) {
-      final CodecBuffer c = ChunkBuffer.ALLOCATE_DIRECT.get()
+      final CodecBuffer c = direct
           ? CodecBuffer.allocateDirect(getBufferCapacityAtIndex(i))
           : CodecBuffer.allocateHeap(getBufferCapacityAtIndex(i));
       underlying.add(c);
@@ -244,7 +247,7 @@ final class IncrementalChunkBuffer implements ChunkBuffer {
     Preconditions.checkArgument(newPosition <= newLimit);
     Preconditions.checkArgument(newLimit <= limit);
     final IncrementalChunkBuffer duplicated = new IncrementalChunkBuffer(
-        newLimit, increment, true);
+        newLimit, increment, true, direct);
 
     final int pi = newPosition / increment;
     final int pr = newPosition % increment;
