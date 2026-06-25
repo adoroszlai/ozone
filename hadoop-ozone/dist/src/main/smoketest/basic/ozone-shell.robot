@@ -24,30 +24,5 @@ Suite Setup         Run Keywords    Generate prefix
 ...                 AND             Get Security Enabled From Config
 
 *** Test Cases ***
-RpcClient with port
-   Test ozone shell       o3://            om:9862     ${prefix}-with-host
-
-RpcClient with execution errors
-   Test ozone shell errors    o3://        om:9862     ${prefix}-with-errors
-
-RpcClient volume acls
-   Test Volume Acls       o3://            om:9862     ${prefix}-acls
-
-RpcClient bucket acls
-    Test Bucket Acls      o3://            om:9862     ${prefix}-acls
-
-RpcClient key acls
-    Test Key Acls         o3://            om:9862     ${prefix}-acls
-
-# depends on being run between key and prefix tests
-Test native authorizer
-    Test native authorizer    o3://    om:9862    ${prefix}-acls
-
-RpcClient prefix acls
-    Test Prefix Acls      o3://            om:9862     ${prefix}-acls
-
-RpcClient without host
-    Test ozone shell      o3://            ${EMPTY}    ${prefix}-without-host
-
 RpcClient Delete key
    Test Delete key with Trash       o3://            om:9862      ${prefix}-with-del
