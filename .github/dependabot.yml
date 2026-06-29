@@ -16,9 +16,6 @@ version: 2
 updates:
   - package-ecosystem: maven
     directory: "/"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
     schedule:
       interval: "weekly"
       day: "saturday"
@@ -27,6 +24,46 @@ updates:
       default-days: 7
     pull-request-branch-name:
       separator: "-"
+    ignore:
+      # compatibility
+      - dependency-name: "com.google.protobuf:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "io.netty:*"
+        versions: [">=4.2.0"]
+      # using multiple versions
+      - dependency-name: "org.aspectj:*"
+        update-types: ["version-update:semver-patch"]
+      # bug: https://issues.apache.org/jira/browse/RAT-476
+      - dependency-name: "org.apache.rat:apache-rat-plugin"
+        versions: ["0.17"]
+      # update in sync with iceberg
+      - dependency-name: "org.apache.parquet:*"
+      # requires Java 11
+      - dependency-name: "com.github.ekryd.sortpom:sortpom-maven-plugin"
+        versions: [">=3.1.0"]
+      - dependency-name: "com.github.spotbugs:spotbugs"
+        versions: [">=4.9.0"]
+      - dependency-name: "com.github.spotbugs:spotbugs-maven-plugin"
+        versions: [">=4.9.0.0"]
+      - dependency-name: "com.googlecode.maven-download-plugin:download-maven-plugin"
+        versions: [">=1.10.0"]
+      - dependency-name: "org.jgrapht"
+        versions: [">=1.5.0"]
+      - dependency-name: "org.mockito:mockito-core"
+        versions: [">=5.0.0"]
+      # requires Java 17
+      - dependency-name: "dev.langchain4j:*"
+        versions: [">=0.36.0"]
+      - dependency-name: "org.apache.hadoop:*"
+        versions: [">=3.5.0"]
+      - dependency-name: "org.apache.iceberg:*"
+        versions: [">=1.11.0"]
+      - dependency-name: "org.apache.rat:apache-rat-plugin"
+        versions: [">=0.18"]
+      - dependency-name: "org.junit:junit-bom"
+        versions: [">=6.0.0"]
+      - dependency-name: "org.springframework:*"
+        versions: [">=6.0.0"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
