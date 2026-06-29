@@ -165,7 +165,7 @@ public final class HddsUtils {
       }
 
       return Collections.singletonList(
-          NetUtils.createSocketAddr(getHostName(address).get() + ":" + port));
+          NetUtils.createSocketAddrForHost(getHostName(address).get(), port));
     }
   }
 
@@ -325,7 +325,7 @@ public final class HddsUtils {
         .orElse(conf.getInt(HDDS_DATANODE_CLIENT_PORT_KEY,
             HDDS_DATANODE_CLIENT_PORT_DEFAULT));
 
-    return NetUtils.createSocketAddr(host + ":" + port);
+    return NetUtils.createSocketAddrForHost(host, port);
   }
 
   /**

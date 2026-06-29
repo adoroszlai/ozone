@@ -294,8 +294,8 @@ public abstract class BaseHttpServer implements AutoCloseable {
 
     String hostName = bindHost.orElse(addressHost.orElse(bindHostDefault));
 
-    return NetUtils.createSocketAddr(
-        hostName + ":" + addressPort.orElse(bindPortdefault));
+    return NetUtils.createSocketAddrForHost(
+        hostName, addressPort.orElse(bindPortdefault));
   }
 
   /**

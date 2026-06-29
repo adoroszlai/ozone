@@ -299,7 +299,7 @@ public final class SCMThroughputBenchmark implements Callable<Void>, VaporSubcom
       throws IOException {
     int dnPort = conf.getInt(OZONE_SCM_DATANODE_PORT_KEY,
         OZONE_SCM_DATANODE_PORT_DEFAULT);
-    InetSocketAddress scmAddress = NetUtils.createSocketAddr(scm, dnPort);
+    InetSocketAddress scmAddress = NetUtils.createSocketAddrForHost(scm, dnPort);
 
     Configuration hadoopConfig =
         LegacyHadoopConfigurationSource.asHadoopConfiguration(this.conf);

@@ -1131,7 +1131,7 @@ public final class OmUtils {
    */
   public static void resolveOmHost(String omHost, int omPort)
       throws IOException {
-    InetSocketAddress omHostAddress = NetUtils.createSocketAddr(omHost, omPort);
+    InetSocketAddress omHostAddress = NetUtils.createSocketAddrForHost(omHost, omPort);
     if (omHostAddress.isUnresolved()) {
       throw new IOException(
           "Cannot resolve OM host " + omHost + " in the URI",

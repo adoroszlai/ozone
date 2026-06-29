@@ -33,7 +33,7 @@ public class TestOzoneNetUtils {
     String fqdn = "pod0.service.com";
     int port = 1234;
 
-    InetSocketAddress addr0 = NetUtils.createSocketAddr(fqdn, port);
+    InetSocketAddress addr0 = NetUtils.createSocketAddrForHost(fqdn, port);
     InetSocketAddress addr1 = OzoneNetUtils.getAddressWithHostNameLocal(
             addr0);
     assertEquals("pod0", addr1.getHostName());

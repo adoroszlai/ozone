@@ -81,7 +81,7 @@ public final class OzoneNetUtils {
           final InetSocketAddress addr) {
     final String fqdn = addr.getHostName();
     final String hostName = getHostNameWithoutDomain(fqdn);
-    return NetUtils.createSocketAddr(hostName, addr.getPort());
+    return NetUtils.createSocketAddrForHost(hostName, addr.getPort());
   }
 
   private static String getHostNameWithoutDomain(final String fqdn) {

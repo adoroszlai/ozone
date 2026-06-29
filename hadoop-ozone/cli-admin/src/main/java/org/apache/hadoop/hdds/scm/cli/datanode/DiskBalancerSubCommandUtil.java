@@ -68,7 +68,7 @@ final class DiskBalancerSubCommandUtil {
       nodeAddr = NetUtils.createSocketAddr(address);
     } else {
       // Port not specified, use default
-      nodeAddr = NetUtils.createSocketAddr(address, HDDS_DATANODE_CLIENT_PORT_DEFAULT);
+      nodeAddr = NetUtils.createSocketAddrForHost(address, HDDS_DATANODE_CLIENT_PORT_DEFAULT);
     }
     return new DiskBalancerProtocolClientSideTranslatorPB(
         nodeAddr, user, ozoneConf);

@@ -257,7 +257,7 @@ public final class HddsServerUtil {
         .orElse(conf.getInt(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_KEY,
             ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
 
-    return NetUtils.createSocketAddr(host + ":" + port);
+    return NetUtils.createSocketAddrForHost(host, port);
   }
 
   /**
@@ -278,7 +278,7 @@ public final class HddsServerUtil {
         .orElse(conf.getInt(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_KEY,
             ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
 
-    return NetUtils.createSocketAddr(host + ":" + port);
+    return NetUtils.createSocketAddrForHost(host, port);
   }
 
   /**
@@ -297,12 +297,9 @@ public final class HddsServerUtil {
     final OptionalInt port = getPortNumberFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(
-        host
-            + ":" + port
-            .orElse(conf.getInt(ScmConfigKeys
-                    .OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
-                ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT)));
+    return NetUtils.createSocketAddrForHost(host,
+        port.orElse(conf.getInt(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
+            ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT)));
   }
 
   /**
@@ -320,10 +317,10 @@ public final class HddsServerUtil {
     final OptionalInt port = getPortNumberFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(
-        host.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
-            port.orElse(conf.getInt(OZONE_SCM_DATANODE_PORT_KEY,
-                ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT)));
+    return NetUtils.createSocketAddrForHost(
+        host.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT),
+        port.orElse(conf.getInt(OZONE_SCM_DATANODE_PORT_KEY,
+            ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT)));
   }
 
   /**
@@ -341,10 +338,9 @@ public final class HddsServerUtil {
     final OptionalInt port = getPortNumberFromConfigKeys(conf,
         ReconConfigKeys.OZONE_RECON_DATANODE_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(
-        host.orElse(
-            ReconConfigKeys.OZONE_RECON_DATANODE_BIND_HOST_DEFAULT) + ":" +
-            port.orElse(ReconConfigKeys.OZONE_RECON_DATANODE_PORT_DEFAULT));
+    return NetUtils.createSocketAddrForHost(
+        host.orElse(ReconConfigKeys.OZONE_RECON_DATANODE_BIND_HOST_DEFAULT),
+        port.orElse(ReconConfigKeys.OZONE_RECON_DATANODE_PORT_DEFAULT));
   }
 
   /**

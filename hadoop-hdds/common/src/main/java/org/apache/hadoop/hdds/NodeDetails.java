@@ -81,7 +81,7 @@ public abstract class NodeDetails {
 
   public InetSocketAddress getRpcAddress() {
     if (rpcAddress == null) {
-      rpcAddress = NetUtils.createSocketAddr(hostAddress, rpcPort);
+      rpcAddress = NetUtils.createSocketAddrForHost(hostAddress, rpcPort);
     }
     return rpcAddress;
   }

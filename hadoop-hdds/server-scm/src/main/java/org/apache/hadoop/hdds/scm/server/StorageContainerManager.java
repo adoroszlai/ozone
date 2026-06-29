@@ -1417,7 +1417,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         LOG.error("SCM Address not able to figure out from config, finding " +
             "hostname from InetAddress.");
         scmAddress =
-            NetUtils.createSocketAddr(InetAddress.getLocalHost().getHostName(),
+            NetUtils.createSocketAddrForHost(InetAddress.getLocalHost().getHostName(),
                 ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT);
       } else {
         scmAddress = NetUtils.createSocketAddr(

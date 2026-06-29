@@ -244,12 +244,11 @@ class TestSCMConfiguration {
 
 
     InetSocketAddress clientAddress =
-        NetUtils.createSocketAddr("0.0.0.0",
-        9897);
+        NetUtils.createSocketAddrForHost("0.0.0.0", 9897);
     InetSocketAddress blockAddress =
-        NetUtils.createSocketAddr("0.0.0.0", 9896);
+        NetUtils.createSocketAddrForHost("0.0.0.0", 9896);
     InetSocketAddress datanodeAddress =
-        NetUtils.createSocketAddr("0.0.0.0", 9898);
+        NetUtils.createSocketAddrForHost("0.0.0.0", 9898);
     assertEquals(clientAddress,
         scmhaNodeDetails.getLocalNodeDetails()
             .getClientProtocolServerAddress());
@@ -281,7 +280,7 @@ class TestSCMConfiguration {
     // Security protocol address is not set in SCMHANode Details.
     // Check conf is properly set with expected port.
     assertEquals(
-        NetUtils.createSocketAddr("0.0.0.0", 9899),
+        NetUtils.createSocketAddrForHost("0.0.0.0", 9899),
         HddsServerUtil.getScmSecurityInetAddress(conf));
 
 

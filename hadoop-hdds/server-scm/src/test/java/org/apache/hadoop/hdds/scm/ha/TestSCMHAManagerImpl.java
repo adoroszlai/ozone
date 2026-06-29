@@ -251,7 +251,7 @@ class TestSCMHAManagerImpl {
       when(leaderNodeDetails.getNodeId()).thenReturn(LEADER_SCM_ID);
       when(leaderNodeDetails.getGrpcPort()).thenReturn(LEADER_PORT);
       when(leaderNodeDetails.getRatisHostPortStr()).thenReturn("localhost:" + LEADER_PORT);
-      InetSocketAddress rpcAddress = NetUtils.createSocketAddr("localhost", LEADER_PORT);
+      InetSocketAddress rpcAddress = NetUtils.createSocketAddrForHost("localhost", LEADER_PORT);
       when(leaderNodeDetails.getRpcAddress()).thenReturn(rpcAddress);
       when(leaderNodeDetails.getInetAddress()).thenReturn(rpcAddress.getAddress());
     }

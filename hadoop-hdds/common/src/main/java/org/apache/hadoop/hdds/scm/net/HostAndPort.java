@@ -38,7 +38,7 @@ public class HostAndPort {
     this.hostAndPortString = host + ":" + port;
     this.hash = host.hashCode() ^ Integer.hashCode(port);
     // TODO: HDDS-15533 change the address resolution logic and make this.address threadsafe.
-    this.address = NetUtils.createSocketAddr(hostAndPortString);
+    this.address = NetUtils.createSocketAddrForHost(host, port);
   }
 
   public String getHostName() {
