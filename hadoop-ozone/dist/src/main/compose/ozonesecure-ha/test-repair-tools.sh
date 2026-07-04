@@ -98,6 +98,7 @@ echo "Test keys created"
 
 echo "Restarting OM after key creation to flush and generate sst files"
 docker restart "${om_container}"
+wait_for_om_leader
 # Delete keys to create tombstones that need compaction
 execute_command_in_container ${OM} ozone fs -rm -R -skipTrash ofs://${OM_SERVICE_ID}/vol1/bucket1
 
