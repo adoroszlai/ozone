@@ -102,8 +102,9 @@ docker restart "${om_container}"
 execute_command_in_container ${OM} ozone fs -rm -R -skipTrash ofs://${OM_SERVICE_ID}/vol1/bucket1
 
 get_om_db_size() {
-  execute_command_in_container ${OM} find /data/metadata/om.db -name '*.sst' -exec du -b {} + \
-      | awk '{ sum += $1}  END { print sum }'
+  files=$(execute_command_in_container ${OM} find /data/metadata/om.db -name '*.sst' -exec du -b {} +)
+  echo "$files" >&2
+  echo "$files" | awk '{ sum += $1 }  END { print sum }'
 }
 
 check_om_log() {
