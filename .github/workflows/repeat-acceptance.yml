@@ -112,7 +112,7 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
       - name: Run a full build
-        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Psrc -Dmaven.javadoc.skip=true
+        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Dmaven.javadoc.skip=true
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: Store binaries for tests
@@ -121,7 +121,6 @@ jobs:
           name: ozone-bin
           path: |
             hadoop-ozone/dist/target/ozone-*.tar.gz
-            !hadoop-ozone/dist/target/ozone-*-src.tar.gz
           retention-days: 1
   acceptance:
     needs:
