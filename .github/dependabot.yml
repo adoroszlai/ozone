@@ -20,9 +20,8 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
     schedule:
-      interval: "weekly"
-      day: "saturday"
-      time: "07:00" # UTC
+      interval: "cron"
+      cronjob: "0 5 * * 0,6"
     cooldown:
       default-days: 7
     pull-request-branch-name:
