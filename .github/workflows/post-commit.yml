@@ -14,9 +14,9 @@
 # limitations under the License.
 name: build-branch
 on:
-  pull_request:
-    types: [opened, ready_for_review, synchronize]
   push:
+    branches-ignore:
+      - 'dependabot**'
 concurrency:
   group: ci-${{ github.event.pull_request.number || case(github.repository == 'apache/ozone', github.sha, github.ref_name) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.repository != 'apache/ozone' }}
