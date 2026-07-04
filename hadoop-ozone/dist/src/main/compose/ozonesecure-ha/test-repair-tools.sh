@@ -101,6 +101,8 @@ docker restart "${om_container}"
 wait_for_om_leader
 # Delete keys to create tombstones that need compaction
 execute_command_in_container ${OM} ozone fs -rm -R -skipTrash ofs://${OM_SERVICE_ID}/vol1/bucket1
+execute_robot_test ${SCM} kinit.robot
+execute_command_in_container ${SCM} curl -f --negotiate -u : --connect-timeout 10 --max-time 30 -o /dev/null http://${OM}:9874/dbCheckpoint
 
 get_om_db_size() {
   files=$(execute_command_in_container ${OM} find /data/metadata/om.db -name '*.sst' -exec du -b {} +)
