@@ -39,7 +39,6 @@ public class TestAuthorizerLockImpl {
 
   @BeforeAll
   public static void init() {
-    // Enable debug logging for the test
     GenericTestUtils.setLogLevel(AuthorizerLockImpl.class, Level.DEBUG);
   }
 

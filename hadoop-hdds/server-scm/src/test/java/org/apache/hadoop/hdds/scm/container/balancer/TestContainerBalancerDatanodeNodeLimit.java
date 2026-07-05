@@ -129,7 +129,7 @@ public class TestContainerBalancerDatanodeNodeLimit {
     // Container balancer still has unbalanced nodes due to MaxSizeEnteringTarget limit
     assertTrue(stillHaveUnbalancedNodes(task));
     // ContainerToSourceMap is empty due to MaxSizeEnteringTarget limit
-    assertTrue(task.getContainerToSourceMap().isEmpty());
+    assertThat(task.getContainerToSourceMap()).isEmpty();
     // SizeScheduledForMoveInLatestIteration equals to 0 because there are no containers was selected
     assertEquals(0, task.getSizeScheduledForMoveInLatestIteration());
 
