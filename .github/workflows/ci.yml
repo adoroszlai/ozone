@@ -318,12 +318,13 @@ jobs:
       ratis-args: ${{ inputs.ratis_args }}
       script: kubernetes
       sha: ${{ needs.build-info.outputs.sha }}
-      split: ${{ matrix.split }}
+      split: ${{ matrix.x }}-${{ matrix.y }}
       timeout-minutes: 60
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        split: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+        x: [ 1, 2, 3, 4, 5 ]
+        y: [ 1, 2, 3, 4, 5 ]
       fail-fast: false
 
   integration:
