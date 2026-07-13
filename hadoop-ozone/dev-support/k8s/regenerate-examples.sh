@@ -21,7 +21,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
 source "hadoop-ozone/dev-support/checks/_lib.sh"
-
-install_flekszible
+source "hadoop-ozone/dev-support/checks/install/flekszible.sh"
 
 hadoop-ozone/dist/src/main/k8s/examples/regenerate-all.sh
