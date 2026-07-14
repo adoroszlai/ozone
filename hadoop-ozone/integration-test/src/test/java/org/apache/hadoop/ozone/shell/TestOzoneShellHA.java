@@ -160,6 +160,7 @@ public class TestOzoneShellHA {
   public void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OZONE_HBASE_ENHANCEMENTS_ALLOWED, true);
+    conf.setBoolean("ozone.client.hbase.enhancements.allowed", true);
     conf.setBoolean(OZONE_FS_HSYNC_ENABLED, true);
     startKMS();
     startCluster(conf);
