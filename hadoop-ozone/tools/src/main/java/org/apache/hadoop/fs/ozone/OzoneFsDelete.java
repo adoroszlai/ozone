@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -106,6 +107,15 @@ public final class OzoneFsDelete {
         }
         // prevent -f on a non-existent glob from failing
         return new LinkedList<PathData>();
+      }
+    }
+
+    @Override
+    protected void processArguments(LinkedList<PathData> args) throws IOException {
+      try {
+        super.processArguments(args);
+      } finally {
+        args.forEach(pathData -> IOUtils.closeQuietly(pathData.fs));
       }
     }
 
