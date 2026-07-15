@@ -21,6 +21,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_HSYNC_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HBASE_ENHANCEMENTS_ALLOWED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OM_LEASE_SOFT_LIMIT;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdds.conf.DatanodeRatisServerConfig;
@@ -32,6 +33,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Base class for Ozone integration tests.  Manages lifecycle of {@link MiniOzoneCluster}.
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ClusterForTests<C extends MiniOzoneCluster> {
 
+  private File tempDir;
   private C cluster;
 
   /**
@@ -101,7 +104,8 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
   }
 
   @BeforeAll
-  void startCluster() throws Exception {
+  void startCluster(@TempDir File tempDir) throws Exception {
+    this.tempDir = tempDir;
     cluster = createCluster();
     cluster.waitForClusterToBeReady();
     onClusterReady();
@@ -110,6 +114,10 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
   @AfterAll
   void shutdownCluster() {
     IOUtils.closeQuietly(cluster);
+  }
+
+  protected File getTempDir() {
+    return tempDir;
   }
 
 }

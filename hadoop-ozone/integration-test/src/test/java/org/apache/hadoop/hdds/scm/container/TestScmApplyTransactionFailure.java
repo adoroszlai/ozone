@@ -111,7 +111,7 @@ public abstract class TestScmApplyTransactionFailure implements HATests.TestCase
             .setNumberOfKeys(0)
             .setStateEnterTime(Time.now())
             .setOwner("test")
-            .setContainerID(1)
+            .setContainerID(Integer.MAX_VALUE)
             .setDeleteTransactionId(0)
             .setReplicationType(pipeline.getType());
 
