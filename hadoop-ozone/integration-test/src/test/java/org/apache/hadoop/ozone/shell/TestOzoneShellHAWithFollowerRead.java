@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.om.OmConfig;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.ratis.server.RaftServerConfigKeys;
@@ -66,37 +67,32 @@ public abstract class TestOzoneShellHAWithFollowerRead extends TestOzoneShellHA 
 
   @Test
   public void testAllowLeaderSkipLinearizableRead() throws Exception {
-    OzoneConfiguration oldConf = cluster().getConf();
     OzoneManager omLeader = cluster().getOMLeader();
+    OmConfig oldConf = omLeader.getConfig().copy();
     try {
       String[] args = new String[]{"volume", "list"};
-      getOzoneShell().getOzoneConf().setBoolean("ozone.client.follower.read.enabled", true);
+      getOzoneShell().getOzoneConf().setBoolean(OZONE_CLIENT_FOLLOWER_READ_ENABLED_KEY, true);
       for (int i = 0; i < 100; i++) {
         execute(getOzoneShell(), args);
       }
       long lastMetrics = omLeader.getMetrics().getNumLeaderSkipLinearizableRead();
       assertThat(lastMetrics).isGreaterThan(0);
-      OzoneConfiguration newConf = new OzoneConfiguration(oldConf);
-      newConf.setBoolean("ozone.om.allow.leader.skip.linearizable.read", false);
-      omLeader.setConfiguration(newConf);
+
+      omLeader.getConfig().setAllowLeaderSkipLinearizableRead(false);
       for (int i = 0; i < 100; i++) {
         execute(getOzoneShell(), args);
       }
       long curMetrics = omLeader.getMetrics().getNumLeaderSkipLinearizableRead();
       assertEquals(lastMetrics, curMetrics);
     } finally {
-      omLeader.setConfiguration(oldConf);
+      restoreConfig(omLeader, oldConf);
     }
   }
 
   @Test
   public void testAllowFollowerReadLocalLease() throws Exception {
-    OzoneConfiguration oldConf = cluster().getConf();
-    OzoneConfiguration newConf1 = new OzoneConfiguration(oldConf);
-    newConf1.setBoolean("ozone.om.follower.read.local.lease.enabled", true);
-    OzoneConfiguration newConf2 = new OzoneConfiguration(newConf1);
-    // All local lease should fail since the lease time is negative
-    newConf2.setLong("ozone.om.follower.read.local.lease.time.ms", -1000);
+    OmConfig oldConfig1 = null;
+    OmConfig oldConfig2 = null;
     OzoneManager omFollower1 = null;
     OzoneManager omFollower2 = null;
     try {
@@ -114,35 +110,40 @@ public abstract class TestOzoneShellHAWithFollowerRead extends TestOzoneShellHA 
       }
       assertNotNull(omFollower1, "Cannot find OM follower");
       assertNotNull(omFollower2, "Cannot find OM follower");
-      omFollower1.setConfiguration(newConf1);
-      omFollower2.setConfiguration(newConf2);
+      oldConfig1 = omFollower1.getConfig().copy();
+      omFollower1.getConfig().setFollowerReadLocalLeaseEnabled(true);
+      // All local lease should fail since the lease time is negative
+      oldConfig2 = omFollower2.getConfig().copy();
+      omFollower2.getConfig().setFollowerReadLocalLeaseEnabled(true);
+      omFollower2.getConfig().setFollowerReadLocalLeaseTimeMs(-1000);
 
       String[] args = new String[]{"volume", "list"};
-      getOzoneShell().getOzoneConf().setBoolean("ozone.client.follower.read.enabled", true);
+      getOzoneShell().getOzoneConf().setBoolean(OZONE_CLIENT_FOLLOWER_READ_ENABLED_KEY, true);
       getOzoneShell().getOzoneConf().set("ozone.client.follower.read.default.consistency", "LOCAL_LEASE");
       for (int i = 0; i < 100; i++) {
         execute(getOzoneShell(), args);
       }
-      assertThat(omFollower1.getMetrics().getNumFollowerReadLocalLeaseSuccess() > 0).isTrue();
+      assertThat(omFollower1.getMetrics().getNumFollowerReadLocalLeaseSuccess()).isPositive();
       // Local lease time is set to negative, for this OM should fail all local lease read requests
       assertEquals(0, omFollower2.getMetrics().getNumFollowerReadLocalLeaseSuccess());
-      assertThat(omFollower2.getMetrics().getNumFollowerReadLocalLeaseFailTime() > 0).isTrue();
+      assertThat(omFollower2.getMetrics().getNumFollowerReadLocalLeaseFailTime()).isPositive();
 
       // Setting the local lease time and log limit to -1 allow infinite lag
-      newConf2.setLong("ozone.om.follower.read.local.lease.time.ms", -1);
-      newConf2.setLong("ozone.om.follower.read.local.lease.log.limit", -1);
-      omFollower2.setConfiguration(newConf2);
+      omFollower2.getConfig().setFollowerReadLocalLeaseTimeMs(-1);
+      omFollower2.getConfig().setFollowerReadLocalLeaseLogLimit(-1);
       for (int i = 0; i < 100; i++) {
         execute(getOzoneShell(), args);
       }
-      assertThat(omFollower2.getMetrics().getNumFollowerReadLocalLeaseSuccess() > 0).isTrue();
+      assertThat(omFollower2.getMetrics().getNumFollowerReadLocalLeaseSuccess()).isPositive();
     } finally {
-      if (omFollower1 != null) {
-        omFollower1.setConfiguration(oldConf);
-      }
-      if (omFollower2 != null) {
-        omFollower2.setConfiguration(oldConf);
-      }
+      restoreConfig(omFollower1, oldConfig1);
+      restoreConfig(omFollower2, oldConfig2);
+    }
+  }
+
+  private static void restoreConfig(OzoneManager om, OmConfig config) {
+    if (om != null && config != null) {
+      om.getConfig().setFrom(config);
     }
   }
 }

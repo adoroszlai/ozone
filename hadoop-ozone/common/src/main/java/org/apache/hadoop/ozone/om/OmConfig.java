@@ -324,6 +324,9 @@ public class OmConfig extends ReconfigurableConfig {
     userDefaultRights = other.userDefaultRights;
     groupDefaultRights = other.groupDefaultRights;
     allowLeaderSkipLinearizableRead = other.allowLeaderSkipLinearizableRead;
+    followerReadLocalLeaseEnabled = other.followerReadLocalLeaseEnabled;
+    followerReadLocalLeaseLogLimit = other.followerReadLocalLeaseLogLimit;
+    followerReadLocalLeaseTimeMs = other.followerReadLocalLeaseTimeMs;
 
     validate();
   }
