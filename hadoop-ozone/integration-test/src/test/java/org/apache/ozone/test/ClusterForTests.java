@@ -104,8 +104,8 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
   }
 
   @BeforeAll
-  void startCluster(@TempDir File tempDir) throws Exception {
-    this.tempDir = tempDir;
+  void startCluster(@TempDir File dir) throws Exception {
+    this.tempDir = dir;
     cluster = createCluster();
     cluster.waitForClusterToBeReady();
     onClusterReady();
