@@ -238,10 +238,6 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
     return omLeader.getOMNodeId();
   }
 
-  private String getSetConfStringFromConf(String key) {
-    return String.format("--set=%s=%s", key, cluster.getConf().get(key));
-  }
-
   private String generateSetConfString(String key, String value) {
     return String.format("--set=%s=%s", key, value);
   }
@@ -1365,7 +1361,7 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
         " flag is required");
     out.reset();
     
-    args = new String[]{"volume", "clrquota", vol4 + "", "--space-quota",
+    args = new String[]{"volume", "clrquota", vol4, "--space-quota",
         "--namespace-quota"};
     execute(ozoneShell, args);
     assertEquals(-1, objectStore.getVolume(vol4).getQuotaInBytes());
