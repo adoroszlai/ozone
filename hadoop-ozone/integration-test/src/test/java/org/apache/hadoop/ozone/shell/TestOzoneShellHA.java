@@ -369,12 +369,7 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
 
     // Test case 2: ozone sh volume create o3://om1/volume2
     // Expectation: Success.
-    // Note: For now it seems OzoneShell is only trying the default port 9862
-    // instead of using the port defined in ozone.om.address (as ozone fs does).
-    // So the test will fail before this behavior is fixed.
-    // TODO: Fix this behavior, then uncomment the execute() below.
-    String setOmAddress = "--set=" + OMConfigKeys.OZONE_OM_ADDRESS_KEY + "="
-        + omLeaderNodeAddr;
+    String setOmAddress = generateSetConfString(OMConfigKeys.OZONE_OM_ADDRESS_KEY, omLeaderNodeAddr);
     String[] args = new String[] {setOmAddress, "volume", "create",
         "o3://" + omLeaderNodeAddrWithoutPort + "/" + uniqueObjectName("volume")};
     execute(ozoneShell, args);
