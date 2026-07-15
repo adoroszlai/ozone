@@ -20,6 +20,8 @@ package org.apache.ozone.test;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_HSYNC_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HBASE_ENHANCEMENTS_ALLOWED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OM_LEASE_SOFT_LIMIT;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OFS_URI_SCHEME;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 
 import java.io.File;
 import java.time.Duration;
@@ -72,6 +74,8 @@ public abstract class ClusterForTests<C extends MiniOzoneCluster> {
     conf.setBoolean("ozone.client.hbase.enhancements.allowed", true);
     conf.setBoolean(OZONE_FS_HSYNC_ENABLED, true);
     conf.setTimeDuration(OZONE_OM_LEASE_SOFT_LIMIT, 0, TimeUnit.SECONDS);
+    conf.setBoolean(String.format("fs.%s.impl.disable.cache", OZONE_OFS_URI_SCHEME), true);
+    conf.setBoolean(String.format("fs.%s.impl.disable.cache", OZONE_URI_SCHEME), true);
 
     return conf;
   }

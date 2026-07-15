@@ -495,7 +495,6 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
     final String hostPrefix = OZONE_OFS_URI_SCHEME + "://" + omServiceId;
 
     OzoneConfiguration clientConf = getClientConfForOFS(hostPrefix, conf);
-    disableCache(clientConf);
 
     try (FileSystem fs = FileSystem.get(clientConf)) {
 
@@ -615,7 +614,6 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
     final String hostPrefix = OZONE_OFS_URI_SCHEME + "://" + omServiceId;
 
     OzoneConfiguration clientConf = getClientConfForOFS(hostPrefix, conf);
-    disableCache(clientConf);
 
     try (FileSystem fs = FileSystem.get(clientConf)) {
 
@@ -733,7 +731,6 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
     final String hostPrefix = OZONE_OFS_URI_SCHEME + "://" + omServiceId;
 
     OzoneConfiguration clientConf = getClientConfForOFS(hostPrefix, conf);
-    disableCache(clientConf);
 
     try (FileSystem fs = FileSystem.get(clientConf)) {
 
@@ -2408,9 +2405,5 @@ public abstract class TestOzoneShellHA implements HATests.TestCase {
 
   protected OzoneShell getOzoneShell() {
     return ozoneShell;
-  }
-
-  private static void disableCache(OzoneConfiguration conf) {
-    conf.setBoolean(String.format("fs.%s.impl.disable.cache", OZONE_OFS_URI_SCHEME), true);
   }
 }
