@@ -351,8 +351,11 @@ public class TestOzoneFileSystemDataStreamEnablement {
           (PipelineManagerImpl) cluster.getStorageContainerManager().getPipelineManager();
       final List<Pipeline> reloaded = openRatisThreePipelines();
       assertFalse(reloaded.isEmpty());
-      reloaded.forEach(p -> assertFalse(allNodesHaveDatastreamPort(p),
-          "reloaded pipeline should still be portless"));
+      reloaded.forEach(p -> {
+        System.out.println("ZZZ pipeline existed before? " + before.contains(p) + ": " + p);
+        assertFalse(allNodesHaveDatastreamPort(p),
+            "reloaded pipeline should still be portless");
+      });
 
       // Close the pipeline(s) exposing the new datastream port; a fresh
       // streaming-capable pipeline is created in their place by
