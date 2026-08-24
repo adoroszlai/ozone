@@ -29,7 +29,7 @@
     <docker.hadoop.image>ghcr.io/apache/hadoop</docker.hadoop.image>
     <!-- suffix appended to Hadoop version to get Docker image version -->
     <docker.hadoop.image.flavor />
-    <docker.ozone-runner.client.version>20260626-1-jdk8</docker.ozone-runner.client.version>
+    <docker.ozone-runner.client.version>f3e36ca363fdd2a39a536bab3c13c3d3d3ff59f8</docker.ozone-runner.client.version>
     <docker.ozone-runner.version>f3e36ca363fdd2a39a536bab3c13c3d3d3ff59f8</docker.ozone-runner.version>
     <docker.ozone-testkr5b.image>ghcr.io/apache/ozone-testkrb5:20260507-1</docker.ozone-testkr5b.image>
     <docker.ozone.image>apache/ozone</docker.ozone.image>
