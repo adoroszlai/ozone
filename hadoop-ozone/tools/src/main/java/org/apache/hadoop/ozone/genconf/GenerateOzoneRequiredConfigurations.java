@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.genconf;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -26,9 +27,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -137,11 +136,9 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli implem
 
     File output = new File(path, "ozone-site.xml");
     if (output.createNewFile()) {
-      JAXBContext context =
-          JAXBContext.newInstance(XMLConfiguration.class);
-      Marshaller m = context.createMarshaller();
-      m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-      m.marshal(generatedConfig, output);
+      try (Writer writer = Files.newBufferedWriter(output.toPath())) {
+        generatedConfig.writeToXml(writer);
+      }
 
       out().println("ozone-site.xml has been generated at " + path);
     } else {

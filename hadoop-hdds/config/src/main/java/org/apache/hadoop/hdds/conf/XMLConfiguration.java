@@ -20,24 +20,17 @@ package org.apache.hadoop.hdds.conf;
 import java.io.InputStream;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.util.JAXBSource;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamResult;
-import org.apache.hadoop.util.XMLUtils;
 
 /**
  * Class to marshall/un-marshall configuration from xml files.
@@ -71,18 +64,13 @@ public class XMLConfiguration {
     return config.getProperties();
   }
 
-  public void writeToXml(Writer writer) throws JAXBException, TransformerException {
+  public void writeToXml(Writer writer) throws JAXBException {
     Collections.sort(properties);
 
     JAXBContext context = JAXBContext.newInstance(XMLConfiguration.class);
-    JAXBSource source = new JAXBSource(context, this);
-    TransformerFactory factory = XMLUtils.newSecureTransformerFactory();
-    Transformer transformer = factory.newTransformer();
-    transformer.setOutputProperty(OutputKeys.ENCODING, StandardCharsets.UTF_8.name());
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-    StreamResult result = new StreamResult(writer);
-    transformer.transform(source, result);
+    Marshaller marshaller = context.createMarshaller();
+    marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+    marshaller.marshal(this, writer);
   }
 
   public void addProperty(Property property) {
