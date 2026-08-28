@@ -19,20 +19,8 @@ package org.apache.hadoop.hdds.conf;
 
 import java.io.InputStream;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.stream.Collectors;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import org.apache.hadoop.util.XMLUtils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 /**
  * Simple DOM based config file writer.
@@ -42,29 +30,13 @@ import org.w3c.dom.Element;
  */
 public class ConfigFileAppender {
 
-  private Document document;
-
-  private final DocumentBuilder builder;
-
-  public ConfigFileAppender() {
-    try {
-      DocumentBuilderFactory factory = XMLUtils.newSecureDocumentBuilderFactory();
-      builder = factory.newDocumentBuilder();
-    } catch (Exception ex) {
-      throw new ConfigurationException("Can initialize new configuration", ex);
-    }
-  }
+  private XMLConfiguration config;
 
   /**
    * Initialize a new ozone-site.xml structure with empty content.
    */
   public void init() {
-    try {
-      document = builder.newDocument();
-      document.appendChild(document.createElement("configuration"));
-    } catch (Exception ex) {
-      throw new ConfigurationException("Can initialize new configuration", ex);
-    }
+    config = new XMLConfiguration();
   }
 
   /**
@@ -72,7 +44,7 @@ public class ConfigFileAppender {
    */
   public void load(InputStream stream) {
     try {
-      document = builder.parse(stream);
+      config = XMLConfiguration.readFromXml(stream);
     } catch (Exception ex) {
       throw new ConfigurationException("Can't load existing configuration", ex);
     }
@@ -83,28 +55,15 @@ public class ConfigFileAppender {
    */
   public void addConfig(String key, String defaultValue, String description,
       ConfigTag[] tags) {
-    Element root = document.getDocumentElement();
-    Element propertyElement = document.createElement("property");
-
-    addXmlElement(propertyElement, "name", key);
-
-    addXmlElement(propertyElement, "value", defaultValue);
-
-    addXmlElement(propertyElement, "description", description);
-
     String tagsAsString = Arrays.stream(tags).map(Enum::name)
         .collect(Collectors.joining(", "));
 
-    addXmlElement(propertyElement, "tag", tagsAsString);
-
-    root.appendChild(propertyElement);
-  }
-
-  private void addXmlElement(Element parentElement, String tagValue,
-      String textValue) {
-    Element element = document.createElement(tagValue);
-    element.appendChild(document.createTextNode(textValue));
-    parentElement.appendChild(element);
+    Property prop = new Property();
+    prop.setName(key);
+    prop.setValue(defaultValue);
+    prop.setDescription(description);
+    prop.setTag(tagsAsString);
+    config.addProperty(prop);
   }
 
   /**
@@ -112,17 +71,8 @@ public class ConfigFileAppender {
    */
   public void write(Writer writer) {
     try {
-      TransformerFactory factory = XMLUtils.newSecureTransformerFactory();
-      Transformer transformer = factory.newTransformer();
-
-      transformer.setOutputProperty(OutputKeys.ENCODING,
-              StandardCharsets.UTF_8.name());
-      transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-      transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount",
-          "2");
-
-      transformer.transform(new DOMSource(document), new StreamResult(writer));
-    } catch (TransformerException e) {
+      config.writeToXml(writer);
+    } catch (Exception e) {
       throw new ConfigurationException("Can't write the configuration xml", e);
     }
   }
