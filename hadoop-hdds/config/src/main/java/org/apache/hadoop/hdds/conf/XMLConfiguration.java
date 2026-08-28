@@ -17,9 +17,13 @@
 
 package org.apache.hadoop.hdds.conf;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -40,6 +44,14 @@ public class XMLConfiguration {
 
   public XMLConfiguration(List<Property> properties) {
     this.properties = new ArrayList<>(properties);
+  }
+
+  public static List<Property> readPropertyFromXml(URL url) throws JAXBException {
+    JAXBContext context = JAXBContext.newInstance(XMLConfiguration.class);
+    Unmarshaller um = context.createUnmarshaller();
+
+    XMLConfiguration config = (XMLConfiguration) um.unmarshal(url);
+    return config.getProperties();
   }
 
   public List<Property> getProperties() {

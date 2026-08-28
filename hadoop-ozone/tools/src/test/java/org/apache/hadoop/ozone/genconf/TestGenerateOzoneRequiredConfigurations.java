@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.Property;
+import org.apache.hadoop.hdds.conf.XMLConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,7 +159,7 @@ public class TestGenerateOzoneRequiredConfigurations {
         .toURI().toURL();
     OzoneConfiguration oc = new OzoneConfiguration();
     List<Property> allProperties =
-        oc.readPropertyFromXml(url);
+        XMLConfiguration.readPropertyFromXml(url);
 
     //Asserts all properties have a non-empty value
     for (Property p : allProperties) {
@@ -187,7 +188,7 @@ public class TestGenerateOzoneRequiredConfigurations {
         .toURI().toURL();
     OzoneConfiguration oc = new OzoneConfiguration();
     List<Property> allProperties =
-        oc.readPropertyFromXml(url);
+        XMLConfiguration.readPropertyFromXml(url);
 
     for (Property p : allProperties) {
       assertThat(p.getValue()).isNotNull().isNotEmpty();
@@ -202,7 +203,7 @@ public class TestGenerateOzoneRequiredConfigurations {
     url = new File(tempPathSecure.getAbsolutePath() + "/ozone-site.xml")
         .toURI().toURL();
     oc = new OzoneConfiguration();
-    allProperties = oc.readPropertyFromXml(url);
+    allProperties = XMLConfiguration.readPropertyFromXml(url);
 
     for (Property p : allProperties) {
       assertThat(p.getValue()).isNotNull().isNotEmpty();

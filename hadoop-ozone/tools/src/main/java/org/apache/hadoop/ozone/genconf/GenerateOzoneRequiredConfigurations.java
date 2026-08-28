@@ -88,8 +88,6 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli implem
       throw new IllegalArgumentException("Insufficient permission.");
     }
 
-    OzoneConfiguration oc = new OzoneConfiguration();
-
     ClassLoader cL = Thread.currentThread().getContextClassLoader();
     if (cL == null) {
       cL = OzoneConfiguration.class.getClassLoader();
@@ -97,7 +95,7 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli implem
     URL url = cL.getResource("ozone-default.xml");
 
     List<Property> allProperties =
-        oc.readPropertyFromXml(url);
+        XMLConfiguration.readPropertyFromXml(url);
 
     List<Property> requiredProperties = new ArrayList<>();
 

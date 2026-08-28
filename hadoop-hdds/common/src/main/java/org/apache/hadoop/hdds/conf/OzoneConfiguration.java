@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.toCollection;
 import static org.apache.hadoop.hdds.ratis.RatisHelper.HDDS_DATANODE_RATIS_PREFIX_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CONTAINER_COPY_WORKDIR;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,9 +37,6 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
@@ -103,14 +99,6 @@ public class OzoneConfiguration extends Configuration implements MutableConfigur
 
   public OzoneConfiguration(Configuration conf) {
     super(conf);
-  }
-
-  public List<Property> readPropertyFromXml(URL url) throws JAXBException {
-    JAXBContext context = JAXBContext.newInstance(XMLConfiguration.class);
-    Unmarshaller um = context.createUnmarshaller();
-
-    XMLConfiguration config = (XMLConfiguration) um.unmarshal(url);
-    return config.getProperties();
   }
 
   public static List<String> getConfigurationResourceFiles() {
