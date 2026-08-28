@@ -32,6 +32,8 @@ import javax.xml.bind.Marshaller;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.Property;
+import org.apache.hadoop.hdds.conf.XMLConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -94,12 +96,12 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli implem
     }
     URL url = cL.getResource("ozone-default.xml");
 
-    List<OzoneConfiguration.Property> allProperties =
+    List<Property> allProperties =
         oc.readPropertyFromXml(url);
 
-    List<OzoneConfiguration.Property> requiredProperties = new ArrayList<>();
+    List<Property> requiredProperties = new ArrayList<>();
 
-    for (OzoneConfiguration.Property p : allProperties) {
+    for (Property p : allProperties) {
       if (p.getTag() != null && (p.getTag().contains("REQUIRED") ||
           (genSecurityConf && p.getTag().contains("KERBEROS")))) {
         // Set default value for common required configs
@@ -132,13 +134,13 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli implem
       }
     }
 
-    OzoneConfiguration.XMLConfiguration generatedConfig =
-        new OzoneConfiguration.XMLConfiguration(requiredProperties);
+    XMLConfiguration generatedConfig =
+        new XMLConfiguration(requiredProperties);
 
     File output = new File(path, "ozone-site.xml");
     if (output.createNewFile()) {
       JAXBContext context =
-          JAXBContext.newInstance(OzoneConfiguration.XMLConfiguration.class);
+          JAXBContext.newInstance(XMLConfiguration.class);
       Marshaller m = context.createMarshaller();
       m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
       m.marshal(generatedConfig, output);

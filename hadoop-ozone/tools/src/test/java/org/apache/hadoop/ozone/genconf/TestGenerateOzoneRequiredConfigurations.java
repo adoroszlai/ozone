@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.Property;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -156,11 +157,11 @@ public class TestGenerateOzoneRequiredConfigurations {
     URL url = new File(tempPath.getAbsolutePath() + "/ozone-site.xml")
         .toURI().toURL();
     OzoneConfiguration oc = new OzoneConfiguration();
-    List<OzoneConfiguration.Property> allProperties =
+    List<Property> allProperties =
         oc.readPropertyFromXml(url);
 
     //Asserts all properties have a non-empty value
-    for (OzoneConfiguration.Property p : allProperties) {
+    for (Property p : allProperties) {
       assertThat(p.getValue()).isNotNull().isNotEmpty();
     }
   }
@@ -185,10 +186,10 @@ public class TestGenerateOzoneRequiredConfigurations {
     URL url = new File(tempPathDefault.getAbsolutePath() + "/ozone-site.xml")
         .toURI().toURL();
     OzoneConfiguration oc = new OzoneConfiguration();
-    List<OzoneConfiguration.Property> allProperties =
+    List<Property> allProperties =
         oc.readPropertyFromXml(url);
 
-    for (OzoneConfiguration.Property p : allProperties) {
+    for (Property p : allProperties) {
       assertThat(p.getValue()).isNotNull().isNotEmpty();
     }
     ozoneConfigurationCount = allProperties.size();
@@ -203,7 +204,7 @@ public class TestGenerateOzoneRequiredConfigurations {
     oc = new OzoneConfiguration();
     allProperties = oc.readPropertyFromXml(url);
 
-    for (OzoneConfiguration.Property p : allProperties) {
+    for (Property p : allProperties) {
       assertThat(p.getValue()).isNotNull().isNotEmpty();
     }
     ozoneSecurityConfigurationCount = allProperties.size();

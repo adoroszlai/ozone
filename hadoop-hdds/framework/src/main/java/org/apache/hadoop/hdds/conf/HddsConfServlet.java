@@ -137,17 +137,17 @@ public class HddsConfServlet extends HttpServlet {
       }
 
       Map<String, String> descriptionMap = buildDescriptionMap(config);
-      Map<String, Map<String, OzoneConfiguration.Property>> propMap = new HashMap<>();
+      Map<String, Map<String, Property>> propMap = new HashMap<>();
 
       for (String tag : tags.split(",")) {
         if (config.isPropertyTag(tag)) {
           Properties properties = config.getAllPropertiesByTag(tag);
-          Map<String, OzoneConfiguration.Property> metadataMap = new HashMap<>();
+          Map<String, Property> metadataMap = new HashMap<>();
 
           for (String propName : properties.stringPropertyNames()) {
             String value = properties.getProperty(propName);
             String description = descriptionMap.getOrDefault(propName, "");
-            OzoneConfiguration.Property property = new OzoneConfiguration.Property();
+            Property property = new Property();
             property.setName(propName);
             property.setValue(value);
             property.setDescription(description);
