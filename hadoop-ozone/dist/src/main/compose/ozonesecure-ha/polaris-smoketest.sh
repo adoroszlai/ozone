@@ -69,7 +69,7 @@ docker-compose --ansi never up -d polaris
 wait_for_port polaris 8181 120
 
 echo "Provisioning Polaris catalog (${POLARIS_CATALOG_NAME})..."
-docker-compose --ansi never run --rm polaris-setup
+docker-compose --progress plain --ansi never run --rm polaris-setup
 
 spark_packages="org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:${POLARIS_ICEBERG_SPARK_RUNTIME_VERSION},org.apache.iceberg:iceberg-aws-bundle:${POLARIS_ICEBERG_SPARK_RUNTIME_VERSION}"
 sql_file="/opt/hadoop/smoketest/security/ozone-secure-sts-polaris.sql"
