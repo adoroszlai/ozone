@@ -125,7 +125,7 @@ jobs:
     needs:
       - build-info
     if: needs.build-info.outputs.needs-build == 'true' || needs.build-info.outputs.needs-integration-tests == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     with:
       java-version: ${{ needs.build-info.outputs.java-version }}
       needs-npm-cache: true
@@ -146,7 +146,7 @@ jobs:
       needs.build-info.outputs.needs-build == 'true' &&
       (github.repository != 'apache/ozone' || github.event_name == 'pull_request' ||
        (github.event_name == 'push' && github.ref_name == 'master'))
-    uses: ./.github/workflows/generate-config-doc.yml
+    uses: $/.github/workflows/generate-config-doc.yml
     with:
       sha: ${{ needs.build-info.outputs.sha }}
 
@@ -157,7 +157,7 @@ jobs:
       github.event_name == 'push' &&
       github.repository == 'apache/ozone' &&
       github.ref_name == 'master'
-    uses: ./.github/workflows/update-ozone-site-config-doc.yml
+    uses: $/.github/workflows/update-ozone-site-config-doc.yml
     permissions:
       contents: read
     secrets:
@@ -179,7 +179,7 @@ jobs:
           - java: 21
             os: macos-15
       fail-fast: false
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     with:
       java-version: ${{ matrix.java }}
       needs-ozone-source-tarball: true
@@ -198,7 +198,7 @@ jobs:
     needs:
       - build-info
     if: needs.build-info.outputs.needs-basic-check == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     with:
       checkout-fetch-depth: ${{ matrix.check != 'bats' && 1 || 0 }}
       java-version: ${{ matrix.check == 'findbugs' && '8' || needs.build-info.outputs.java-version }} # HDDS-10150
@@ -218,7 +218,7 @@ jobs:
     needs:
       - build-info
       - build
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -232,7 +232,7 @@ jobs:
     needs:
       - build-info
       - build
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -248,7 +248,7 @@ jobs:
       - build
       - basic
     if: needs.build-info.outputs.needs-compile == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -265,7 +265,7 @@ jobs:
       - basic
       - dependency
       - license
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -287,7 +287,7 @@ jobs:
       - dependency
       - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -313,7 +313,7 @@ jobs:
       - dependency
       - license
     if: needs.build-info.outputs.needs-kubernetes-tests == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
@@ -332,7 +332,7 @@ jobs:
       - dependency
       - license
     if: needs.build-info.outputs.needs-integration-tests == 'true'
-    uses: ./.github/workflows/check.yml
+    uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
