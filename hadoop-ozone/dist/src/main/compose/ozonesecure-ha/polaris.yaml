@@ -44,7 +44,7 @@ services:
         ipv4_address: 172.25.0.124
 
   polaris-setup:
-    image: ${OZONE_RUNNER_IMAGE}
+    image: ${OZONE_RUNNER_IMAGE}:${OZONE_RUNNER_VERSION}
     dns_search: .
     depends_on:
       polaris:
