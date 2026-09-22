@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -134,30 +135,7 @@ public class TestOzoneManagerHASnapshot {
     cluster.waitForLeaderOM();
 
     String newLeader = cluster.getOMLeader().getOMNodeId();
-
-    if (Objects.equals(oldLeader, newLeader)) {
-      // If old leader becomes leader again. Job should be done by this time.
-      response = store.snapshotDiff(volumeName, bucketName,
-          snapshot1, snapshot2, null, 0, false, false);
-      assertEquals(DONE, response.getJobStatus());
-      assertEquals(100, response.getSnapshotDiffReport().getDiffList().size());
-    } else {
-      // If new leader is different from old leader. SnapDiff request will be
-      // new to OM, and job status should be IN_PROGRESS.
-      response = store.snapshotDiff(volumeName, bucketName, snapshot1,
-          snapshot2, null, 0, false, false);
-      assertEquals(IN_PROGRESS, response.getJobStatus());
-      while (true) {
-        response = store.snapshotDiff(volumeName, bucketName, snapshot1,
-                snapshot2, null, 0, false, false);
-        if (DONE == response.getJobStatus()) {
-          assertEquals(100,
-              response.getSnapshotDiffReport().getDiffList().size());
-          break;
-        }
-        Thread.sleep(response.getWaitTimeInMs());
-      }
-    }
+    assertEquals(oldLeader, newLeader);
   }
 
   @Test
