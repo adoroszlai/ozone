@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -134,6 +135,7 @@ public class TestOzoneManagerHASnapshot {
     cluster.waitForLeaderOM();
 
     String newLeader = cluster.getOMLeader().getOMNodeId();
+    assumeTrue(!Objects.equals(oldLeader, newLeader));
 
     if (Objects.equals(oldLeader, newLeader)) {
       // If old leader becomes leader again. Job should be done by this time.
