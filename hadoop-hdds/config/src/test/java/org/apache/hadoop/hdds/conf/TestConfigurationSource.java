@@ -31,7 +31,7 @@ class TestConfigurationSource {
     c.set("somePrefix.key", "value");
 
     assertEquals(ImmutableMap.of("key", "value"),
-        c.getPropsMatchPrefixAndTrimPrefix("somePrefix."));
+        c.getPropsMatchPrefixAndTrimPrefix("somePrefix!"));
   }
 
   @Test
