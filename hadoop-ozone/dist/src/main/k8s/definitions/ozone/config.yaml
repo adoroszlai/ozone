@@ -39,7 +39,7 @@ data:
   OZONE-SITE.XML_ozone.scm.datanode.id.dir: "/data/metadata"
   OZONE-SITE.XML_ozone.scm.names: "scm-0.scm"
   OZONE-SITE.XML_ozone.client.max.retries: "15"
-  OZONE-SITE.XML_ozone.client.retry.interval: "1"
+  OZONE-SITE.XML_ozone.client.retry.interval: "1000"
   LOG4J.PROPERTIES_hadoop.root.logger: "INFO,console"
   LOG4J.PROPERTIES_log4j.rootLogger: "${hadoop.root.logger}"
   LOG4J.PROPERTIES_log4j.appender.console: "org.apache.log4j.ConsoleAppender"
