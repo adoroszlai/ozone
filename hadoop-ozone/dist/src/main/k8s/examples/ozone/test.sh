@@ -31,12 +31,14 @@ export SCM=scm-0
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 
-# restart datanodes
-kubectl delete pod datanode-0 datanode-1 datanode-2
+for i in 0 1 2; do
+  # restart datanode
+  kubectl delete pod datanode-${i}
 
-wait_for_startup
-wait_for_pipeline
+  wait_for_startup
+  wait_for_pipeline
 
-execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
-execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/generate.robot
-execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/validate.robot
+  execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
+  execute_robot_test ${SCM} -v PREFIX:post${i} smoketest/freon/generate.robot
+  execute_robot_test ${SCM} -v PREFIX:post${i} smoketest/freon/validate.robot
+done
