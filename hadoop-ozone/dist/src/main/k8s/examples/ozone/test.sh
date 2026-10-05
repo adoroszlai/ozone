@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu -o pipefail
+set -u -o pipefail
 
 export K8S_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -24,19 +24,22 @@ cd "$K8S_DIR"
 # shellcheck source=/dev/null
 source "../testlib.sh"
 
-pre_run_setup
-
 export SCM=scm-0
 
-execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
-execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
+regenerate_resources
 
-set +e
-# restart datanodes
-if ! kubectl delete --timeout="60s" --warnings-as-errors pod datanode-{0..2}; then
+for i in {0..9}; do
+  kubectl apply -k .
+  wait_for_startup
+  execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
+  execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
+  kubectl delete --timeout="60s" pod datanode-{0..2}
+
   for c in datanode-{0..2}; do
     while read -r pid procname; do
       kubectl exec -it "${c}" -- jstack -l $pid
     done < <(kubectl exec -it "${c}" -- bash -c "jps | grep -v Jps" || true)
   done
-fi
+
+  kubectl delete --timeout="60s" -k .
+done
