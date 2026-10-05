@@ -31,9 +31,10 @@ export SCM=scm-0
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 
-kubectl delete --timeout="60s" pod datanode-{0..2}
-echo "rc: $?"
-capture_stack_dump
+if ! kubectl delete --timeout="60s" pod datanode-{0..2}; then
+  capture_stack_dump
+  exit 1
+fi
 
 wait_for_startup
 wait_for_pipeline

@@ -99,8 +99,10 @@ reset_k8s_env() {
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found deployment --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found service --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found configmap --all
-   kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pod --all
-   capture_stack_dump
+   if ! kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pod --all; then
+     capture_stack_dump
+     exit 1
+   fi
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pvc --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pv --all
 }
