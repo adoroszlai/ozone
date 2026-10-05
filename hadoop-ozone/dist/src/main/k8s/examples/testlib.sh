@@ -122,12 +122,10 @@ start_k8s_env() {
 }
 
 post_run() {
-  set +e
   combine_reports
   get_logs
   stop_k8s_env
   revert_resources
-  set -e
 }
 
 get_logs() {
