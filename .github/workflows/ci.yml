@@ -339,8 +339,6 @@ jobs:
       needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
       script: kubernetes
-      post-failure: grep "timed out" target/kubernetes/output.log || true
-      post-success: grep "timed out" target/kubernetes/output.log || true
       sha: ${{ needs.build-info.outputs.sha }}
       split: ${{ matrix.split }}
       timeout-minutes: 60
