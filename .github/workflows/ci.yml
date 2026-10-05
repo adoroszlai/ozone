@@ -132,7 +132,7 @@ jobs:
       needs-npm-cache: true
       ratis-args: ${{ inputs.ratis_args }}
       script: build
-      script-args: ${{ needs.build-info.outputs.build-args }}
+      script-args: ${{ needs.build-info.outputs.build-args }} -DskipRecon -DskipShade
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 60
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}

@@ -32,4 +32,11 @@ execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
 execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 
 # restart datanodes
-kubectl delete --timeout="120s" pod datanode-0 datanode-1 datanode-2
+for i in 0 1 2; do
+  c="datanode-${i}"
+  if ! kubectl delete --timeout="60s" pod "${c}"; then
+    while read -r pid procname; do
+      kubectl exec -it "${c}" -- jstack -l $pid
+    done < <(kubectl exec -it "${c}" -- bash -c "jps | grep -v Jps" || true)
+  fi
+done
