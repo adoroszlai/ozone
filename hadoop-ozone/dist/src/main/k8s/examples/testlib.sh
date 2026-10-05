@@ -93,15 +93,26 @@ pre_run_setup() {
 reset_k8s_env() {
    print_phase "Deleting existing k8s resources"
    #reset environment
-   local -r DEL_TIMEOUT="${RESET_TIMEOUT:-120s}"
+   local -r DEL_TIMEOUT="${RESET_TIMEOUT:-60s}"
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found statefulset --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found daemonset --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found deployment --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found service --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found configmap --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pod --all
+   capture_stack_dump
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pvc --all
    kubectl delete --timeout="$DEL_TIMEOUT" --ignore-not-found pv --all
+}
+
+# for datanodes
+capture_stack_dump() {
+  local c
+  for c in datanode-{0..2}; do
+    while read -r pid procname; do
+      kubectl exec -it "${c}" -- jstack -l $pid
+    done < <(kubectl exec -it "${c}" -- bash -c "jps | grep -v Jps" || true)
+  done
 }
 
 start_k8s_env() {

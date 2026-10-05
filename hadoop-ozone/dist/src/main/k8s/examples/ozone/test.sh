@@ -24,22 +24,20 @@ cd "$K8S_DIR"
 # shellcheck source=/dev/null
 source "../testlib.sh"
 
+pre_run_setup
+
 export SCM=scm-0
 
-regenerate_resources
+execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
+execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
 
-for i in {0..9}; do
-  kubectl apply -k .
-  wait_for_startup
-  execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/generate.robot
-  execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
-  kubectl delete --timeout="60s" pod datanode-{0..2}
+kubectl delete --timeout="60s" pod datanode-{0..2}
+echo "rc: $?"
+capture_stack_dump
 
-  for c in datanode-{0..2}; do
-    while read -r pid procname; do
-      kubectl exec -it "${c}" -- jstack -l $pid
-    done < <(kubectl exec -it "${c}" -- bash -c "jps | grep -v Jps" || true)
-  done
+wait_for_startup
+wait_for_pipeline
 
-  kubectl delete --timeout="60s" -k .
-done
+execute_robot_test ${SCM} -v PREFIX:pre smoketest/freon/validate.robot
+execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/generate.robot
+execute_robot_test ${SCM} -v PREFIX:post smoketest/freon/validate.robot
