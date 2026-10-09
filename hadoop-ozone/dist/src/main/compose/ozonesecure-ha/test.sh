@@ -46,11 +46,10 @@ execute_robot_test s3g -v SCHEME:o3fs -v BUCKET_TYPE:link -N ozonefs-o3fs-link o
 
 execute_robot_test s3g basic/links.robot
 
-exclude=""
+# some tests are independent of the bucket type, only need to be run once, in test-haproxy-s3g.sh
+exclude="--exclude no-bucket-type"
 for bucket in link; do
   execute_robot_test s3g -v BUCKET:${bucket} -N s3-${bucket} ${exclude} s3
-  # some tests are independent of the bucket type, only need to be run once
-  exclude="--exclude no-bucket-type"
 done
 
 # Run Fault Injection tests at the end
