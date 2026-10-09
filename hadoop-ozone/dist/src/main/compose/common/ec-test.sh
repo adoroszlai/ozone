@@ -17,7 +17,8 @@
 
 start_docker_env 5
 
-execute_robot_test scm -v BUCKET:erasure s3
+# some S3 tests are independent of the bucket type, only need to be run once, in ozonesecure-ha/test-haproxy-s3g.sh
+execute_robot_test scm -v BUCKET:erasure --exclude no-bucket-type s3
 
 execute_robot_test scm ec/rewrite.robot
 
