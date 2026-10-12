@@ -193,6 +193,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ github.event.inputs.java-version }}
+      - name: Pre-run tweak
+        run: |
+          sudo hostname localhost
       - name: Execute tests
         run: |
           if [[ -e "$repo_path" ]]; then
