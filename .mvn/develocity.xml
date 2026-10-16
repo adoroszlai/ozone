@@ -43,11 +43,11 @@
   </buildScan>
   <buildCache>
     <local>
-      <enabled>#{isFalse(env['GITHUB_ACTIONS'])}</enabled>
+      <enabled>true</enabled>
     </local>
     <remote>
-      <enabled>true</enabled>
-      <storeEnabled>#{isTrue(env['GITHUB_ACTIONS']) and env['DEVELOCITY_ACCESS_KEY'] != null and env['DEVELOCITY_ACCESS_KEY'] != ''}</storeEnabled>
+      <enabled>false</enabled>
+      <storeEnabled>false</storeEnabled>
     </remote>
   </buildCache>
 </develocity>
