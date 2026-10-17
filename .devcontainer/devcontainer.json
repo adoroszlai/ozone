@@ -1,6 +1,6 @@
 {
-  "name": "Apache Ozone (Java 21)",
-  "image": "mcr.microsoft.com/devcontainers/java:21-bookworm",
+  "name": "Apache Ozone (Java 25)",
+  "image": "mcr.microsoft.com/devcontainers/java:25-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
       "version": "none",
