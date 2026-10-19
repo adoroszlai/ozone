@@ -62,11 +62,13 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
   if [[ -z "${HADOOP_AWS_DIR}" ]]; then
     hadoop_version=$(mvn help:evaluate -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
     if [[ -n "${DOWNLOAD_DIR:-}" ]]; then
-      export HADOOP_AWS_DIR="${DOWNLOAD_DIR}/hadoop-src"
+      HADOOP_AWS_DIR="${DOWNLOAD_DIR}/hadoop-src"
     else
-      export HADOOP_AWS_DIR=${OZONE_ROOT}/target/hadoop-src
+      HADOOP_AWS_DIR=${OZONE_ROOT}/target/hadoop-src
     fi
   fi
+
+  export HADOOP_AWS_DIR
 
   download_hadoop_aws() {
     local dir="$1"
@@ -78,13 +80,10 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
 
     if [[ ! -e "${dir}" ]] || [[ ! -d "${dir}"/src/test/resources ]]; then
       mkdir -p "${dir}"
-      if [[ ! -f "${dir}.tar.gz" ]]; then
-        local url="https://www.apache.org/dyn/closer.lua?action=download&filename=hadoop/common/hadoop-${hadoop_version}/hadoop-${hadoop_version}-src.tar.gz"
-        echo "Downloading Hadoop from ${url}"
-        curl -LSs --fail -o "${dir}.tar.gz" "$url" || return 1
-      fi
-      tar -x -z -C "${dir}" --strip-components=3 -f "${dir}.tar.gz" --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
-      rm -f "${dir}.tar.gz"
+      local url="https://www.apache.org/dyn/closer.lua?action=download&filename=hadoop/common/hadoop-${hadoop_version}/hadoop-${hadoop_version}-src.tar.gz"
+      echo "Downloading Hadoop from ${url}"
+      curl -LSs --fail "$url" | \
+          tar -x -z -C "${dir}" --strip-components=3 -f - --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
     fi
   }
 

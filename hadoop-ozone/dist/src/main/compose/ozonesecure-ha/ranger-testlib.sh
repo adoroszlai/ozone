@@ -46,6 +46,7 @@ setup_ranger_acceptance_env() {
   fi
 
   : "${DOWNLOAD_DIR:=${TEMP_DIR:-/tmp}}"
+  mkdir -p "${DOWNLOAD_DIR}"
 
   export COMPOSE_FILE=docker-compose.yaml:ranger.yaml:../common/ranger.yaml
   export OM_SERVICE_ID="omservice"
