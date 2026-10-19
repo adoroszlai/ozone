@@ -233,6 +233,12 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ inputs.java-version }}
 
+      - name: Restore stashed files
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
+        with:
+          path: ~/.stash
+          key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
+
       - name: Execute pre-test steps
         if: ${{ inputs.pre-script }}
         run: |
@@ -246,6 +252,7 @@ jobs:
         env:
           COMMAND: hadoop-ozone/dev-support/checks/${{ inputs.script }}.sh ${{ inputs.script-args }} ${{ inputs.ratis-args }}
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          DOWNLOAD_DIR: ~/.stash
           OZONE_WITH_COVERAGE: ${{ inputs.with-coverage }}
 
       - name: Execute post-failure steps
@@ -286,6 +293,13 @@ jobs:
         run: python3 dev-support/ci/junit_summary.py >> "$GITHUB_STEP_SUMMARY"
         env:
           JUNIT_REPORT_URL: ${{ steps.archive.outputs.artifact-url }}
+
+      - name: Store stashed files
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.stash
+          key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
+          retention-days: 90
 
       # The following steps are hard-coded to be run only for 'build' check,
       # to avoid the need for 3 more inputs.
