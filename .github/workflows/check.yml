@@ -236,7 +236,7 @@ jobs:
       - name: Restore stashed files
         uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
-          path: ${{ github.workspace }}/.stash
+          path: ~/.stash
           key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
 
       - name: Execute pre-test steps
@@ -259,7 +259,7 @@ jobs:
         uses: apache/infrastructure-actions/stash/save@save/v1
         if: ${{ !cancelled() }}
         with:
-          path: ${{ github.workspace }}/.stash
+          path: ~/.stash
           key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
           retention-days: 90
 
