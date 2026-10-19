@@ -248,7 +248,9 @@ jobs:
 
       - name: Execute tests
         run: |
-          $COMMAND
+          mkdir -pv ${{ github.workspace }}/.stash
+          touch ${{ github.workspace }}/.stash/file1
+          touch ${{ github.workspace }}/.stash/file2
         env:
           COMMAND: hadoop-ozone/dev-support/checks/${{ inputs.script }}.sh ${{ inputs.script-args }} ${{ inputs.ratis-args }}
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}

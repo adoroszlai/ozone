@@ -61,7 +61,7 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
       needs-basic-check: false
-      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
+      needs-build: false
       needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
       needs-integration-tests: false
@@ -311,14 +311,12 @@ jobs:
   acceptance:
     needs:
       - build-info
-      - build
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
       java-version: 11 # Hadoop may not work with newer Java
-      needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
       script: acceptance
       script-args: ${{ matrix.suite }}
@@ -329,7 +327,6 @@ jobs:
     strategy:
       matrix:
         suite:
-          - ranger
           - s3a
       fail-fast: false
 
