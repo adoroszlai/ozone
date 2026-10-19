@@ -236,7 +236,7 @@ jobs:
       - name: Restore stashed files
         uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
-          path: ~/.stash
+          path: ${{ github.workspace }}/.stash
           key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
 
       - name: Execute pre-test steps
@@ -252,8 +252,16 @@ jobs:
         env:
           COMMAND: hadoop-ozone/dev-support/checks/${{ inputs.script }}.sh ${{ inputs.script-args }} ${{ inputs.ratis-args }}
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-          DOWNLOAD_DIR: ~/.stash
+          DOWNLOAD_DIR: ${{ github.workspace }}/.stash
           OZONE_WITH_COVERAGE: ${{ inputs.with-coverage }}
+
+      - name: Store stashed files
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        if: ${{ !cancelled() }}
+        with:
+          path: ${{ github.workspace }}/.stash
+          key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
+          retention-days: 90
 
       - name: Execute post-failure steps
         if: ${{ failure() && inputs.post-failure }}
@@ -293,13 +301,6 @@ jobs:
         run: python3 dev-support/ci/junit_summary.py >> "$GITHUB_STEP_SUMMARY"
         env:
           JUNIT_REPORT_URL: ${{ steps.archive.outputs.artifact-url }}
-
-      - name: Store stashed files
-        uses: apache/infrastructure-actions/stash/save@save/v1
-        with:
-          path: ~/.stash
-          key: stash-${{ (inputs.split && format('{0}-{1}', inputs.script, inputs.split)) || inputs.script }}
-          retention-days: 90
 
       # The following steps are hard-coded to be run only for 'build' check,
       # to avoid the need for 3 more inputs.
