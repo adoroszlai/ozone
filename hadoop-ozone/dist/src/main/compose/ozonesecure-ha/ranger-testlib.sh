@@ -59,7 +59,7 @@ setup_ranger_acceptance_env() {
   fi
 
   download_and_verify_apache_release "ranger/${RANGER_VERSION}/apache-ranger-${RANGER_VERSION}.tar.gz"
-  tar -C "${DOWNLOAD_DIR}" -x -z -f "${DOWNLOAD_DIR}/apache-ranger-${RANGER_VERSION}.tar.gz"
+  tar -C "${DOWNLOAD_DIR}" -x -z -f "${DOWNLOAD_DIR}/apache-ranger-${RANGER_VERSION}.tar.gz" -v
   export RANGER_SOURCE_DIR="${DOWNLOAD_DIR}/apache-ranger-${RANGER_VERSION}"
   chmod -R a+rX "${RANGER_SOURCE_DIR}"
   export RANGER_INIT_POSTGRES_SH="${RANGER_SOURCE_DIR}/dev-support/ranger-docker/scripts/rdbms/init_postgres.sh"
@@ -91,7 +91,7 @@ setup_ranger_acceptance_env() {
     find "${RANGER_SOURCE_DIR}/dev-support/ranger-docker" -type f -name '*.sh' -exec chmod a+x {} +
   fi
   download_and_verify_apache_release "ranger/${RANGER_VERSION}/plugins/ozone/ranger-${RANGER_VERSION}-ozone-plugin.tar.gz"
-  tar -C "${DOWNLOAD_DIR}" -x -z -f "${DOWNLOAD_DIR}/ranger-${RANGER_VERSION}-ozone-plugin.tar.gz"
+  tar -C "${DOWNLOAD_DIR}" -x -z -f "${DOWNLOAD_DIR}/ranger-${RANGER_VERSION}-ozone-plugin.tar.gz" -v
   export RANGER_OZONE_PLUGIN_DIR="${DOWNLOAD_DIR}/ranger-${RANGER_VERSION}-ozone-plugin"
   chmod -R a+rX "${RANGER_OZONE_PLUGIN_DIR}"
   chmod a+x "${RANGER_OZONE_PLUGIN_DIR}"/*.sh

@@ -83,7 +83,7 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
       local url="https://www.apache.org/dyn/closer.lua?action=download&filename=hadoop/common/hadoop-${hadoop_version}/hadoop-${hadoop_version}-src.tar.gz"
       echo "Downloading Hadoop from ${url}"
       curl -LSs --fail "$url" | \
-          tar -x -z -C "${dir}" --strip-components=3 -f - --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
+          tar -v -x -z -C "${dir}" --strip-components=3 -f - --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
     fi
   }
 
