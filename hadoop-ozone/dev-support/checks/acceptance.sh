@@ -61,7 +61,11 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
 
   if [[ -z "${HADOOP_AWS_DIR}" ]]; then
     hadoop_version=$(mvn help:evaluate -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
-    export HADOOP_AWS_DIR=${OZONE_ROOT}/target/hadoop-src
+    if [[ -n "${DOWNLOAD_DIR:-}" ]]; then
+      export HADOOP_AWS_DIR="${DOWNLOAD_DIR}/hadoop-src"
+    else
+      export HADOOP_AWS_DIR=${OZONE_ROOT}/target/hadoop-src
+    fi
   fi
 
   download_hadoop_aws() {
@@ -80,6 +84,7 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
         curl -LSs --fail -o "${dir}.tar.gz" "$url" || return 1
       fi
       tar -x -z -C "${dir}" --strip-components=3 -f "${dir}.tar.gz" --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
+      rm -f "${dir}.tar.gz"
     fi
   }
 
