@@ -49,6 +49,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Save pre-build pom.xml files
+        run: |
+          r=/tmp/pre-build
+          mkdir -p $r
+          for f in $(find . -name pom.xml | sort); do
+            d=$(dirname $f)
+            mkdir -pv $r/$d
+            cp -iv $f $r/$d/
+          done
+
       - name: Restore cache for Maven dependencies
         id: restore-cache
         uses: actions/cache/restore@v6
@@ -95,6 +105,20 @@ jobs:
       - name: List repo contents
         if: always()
         run: find ~/.m2/repository -type f | sort | xargs ls -lh
+
+      - name: Save post-build pom.xml files
+        run: |
+          r=/tmp/post-build
+          mkdir -p $r
+          for f in $(find . -name pom.xml | sort); do
+            d=$(dirname $f)
+            mkdir -pv $r/$d
+            cp -iv $f $r/$d/
+          done
+
+      - name: Compare pre- and post-build pom.xml files
+        run: |
+          diff -uwr /tmp/pre-build /tmp/post-build
 
       - name: Save cache for Maven dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
