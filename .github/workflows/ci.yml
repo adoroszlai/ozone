@@ -77,13 +77,6 @@ jobs:
         with:
           persist-credentials: false
         if: github.event_name  == 'push'
-      - name: "Checkout ${{ github.sha }} with its parent (pull request)"
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 2
-          persist-credentials: false
-        if: github.event_name  == 'pull_request'
       - name: "Checkout ${{ inputs.ref }} given in workflow input (manual dispatch)"
         uses: actions/checkout@v7
         with:
@@ -150,7 +143,7 @@ jobs:
       - build
     if: |
       needs.build-info.outputs.needs-build == 'true' &&
-      (github.repository != 'apache/ozone' || github.event_name == 'pull_request' ||
+      (github.repository != 'apache/ozone' ||
        (github.event_name == 'push' && github.ref_name == 'master'))
     uses: $/.github/workflows/generate-config-doc.yml
     with:
