@@ -329,7 +329,7 @@ jobs:
         suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
         exclude:
           - suite: xcompat/test-old.sh
-      fail-fast: false
+      fail-fast: true
       max-parallel: 10
 
   # acceptance (compat-old), split by old Ozone version
@@ -357,7 +357,7 @@ jobs:
     strategy:
       matrix:
         version: ${{ fromJson(needs.build-info.outputs.acceptance-versions) }}
-      fail-fast: false
+      fail-fast: true
 
   kubernetes:
     needs:
