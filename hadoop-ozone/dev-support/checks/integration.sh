@@ -18,12 +18,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 CHECK=integration
 ERROR_PATTERN="\[ERROR\]"
 
-if [[ "${CI:-}" == "true" ]]; then
-  # skip build, use pre-built artifacts
-  PHASE="surefire:test"
-else
-  # build, including requirements
-  PHASE=test
+PHASE=test
+
+if [[ "${CI:-}" != "true" ]]; then
+  # build requirements, too
   args="$args --also-make"
 fi
 
