@@ -58,7 +58,7 @@ jobs:
       acceptance-versions: ${{ steps.acceptance-suites.outputs.versions }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
-      junit-modules: ${{ steps.junit-modules.outputs.suites }}
+      junit-modules: ${{ steps.junit-modules.outputs.modules }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
       needs-basic-check: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}

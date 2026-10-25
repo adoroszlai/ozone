@@ -52,7 +52,7 @@ elif [[ "$@" =~ "-pl :([a-z0-9-]+)" ]]; then
   if [[ "${split}" =~ "ozone-filesystem-hadoop.*" ]] && [[ "${CI:-}" != "true" ]]; then
     # shading is performed in `package` phase, which is after `test`
     PHASE=verify
-  if
+  fi
 fi
 
 source "${DIR}/junit.sh" $args "$@"
