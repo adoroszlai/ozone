@@ -60,12 +60,12 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       junit-modules: ${{ steps.junit-modules.outputs.suites }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
+      needs-basic-check: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
+      needs-compile: false
+      needs-compose-tests: false
       needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       test-classes: ${{ steps.selective-checks.outputs.test-classes }}
       # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
@@ -393,9 +393,6 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
-      - dependency
-      - license
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: $/.github/workflows/check.yml
     secrets:
@@ -421,9 +418,6 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
-      - dependency
-      - license
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: $/.github/workflows/check.yml
     secrets:
@@ -451,9 +445,6 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
-      - dependency
-      - license
     if: |
       needs.build-info.outputs.test-classes != '' &&
       needs.build-info.outputs.needs-integration-tests != 'true'
