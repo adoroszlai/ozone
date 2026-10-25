@@ -17,30 +17,42 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 CHECK=integration
 ERROR_PATTERN="\[ERROR\]"
-PHASE=test
+
+if [[ "${CI:-}" == "true" ]]; then
+  # skip build, use pre-built artifacts
+  PHASE="surefire:test"
+else
+  # build, including requirements
+  PHASE=test
+  args="$args --also-make"
+fi
 
 args=""
 
 if [[ "$@" =~ -Ptest-([a-z]+) ]]; then
+  # test-... profile
   split="${BASH_REMATCH[1]}"
+  args="$args -Dscan.value.testset=${split}"
+
   if [[ "${split}" == "flaky" ]]; then
     args="$args -Dsurefire.rerunFailingTestsCount=5 -Dsurefire.fork.timeout=3600"
     # tests may pass on re-run, so we cannot rely on output for status
     ERROR_PATTERN=""
-  fi
-
-  if [[ "${split}" == "filesystem" ]]; then
-    if [[ "${CI:-}" == "true" ]]; then
-      args="$args -DskipShade --activate-profiles CI"
-    else
-      # shading is performed in `package` phase, which is after `test`
-      PHASE=verify
-    fi
+    # flaky tests may be present in any module, not setting project list
   else
-    args="$args -DskipShade"
+    # apply profile only to the "main" integration test module
+    args="$args -pl :ozone-integration-test"
   fi
 
+elif [[ "$@" =~ "-pl :([a-z0-9-]+)" ]]; then
+  # specific module
+  split="${BASH_REMATCH[1]}"
   args="$args -Dscan.value.testset=${split}"
+
+  if [[ "${split}" =~ "ozone-filesystem-hadoop.*" ]] && [[ "${CI:-}" != "true" ]]; then
+    # shading is performed in `package` phase, which is after `test`
+    PHASE=verify
+  if
 fi
 
 source "${DIR}/junit.sh" $args "$@"
