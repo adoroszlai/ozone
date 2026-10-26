@@ -45,6 +45,12 @@ on:
         default: ''
         required: false
 
+      name:
+        type: string
+        description: "Display name (default: derived from script, and split, if present)"
+        default: ''
+        required: false
+
       needs-maven-cache:
         type: boolean
         description: "Whether to restore Maven cache before run (default: yes)"
@@ -113,7 +119,7 @@ on:
 
       split:
         type: string
-        description: "Name of split for matrix jobs, only used in display name"
+        description: "Name of split for matrix jobs, used in display name and artifact name"
         default: ''
         required: false
 
@@ -147,7 +153,7 @@ permissions: { }
 
 jobs:
   check:
-    name: ${{ (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
+    name: ${{ (inputs.name || (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script) }}
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
