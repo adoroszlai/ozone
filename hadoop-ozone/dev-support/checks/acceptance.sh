@@ -69,7 +69,10 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]] || [[ "${OZONE_TEST_SELECTOR}" =~ 
   fi
 fi
 
-export OZONE_ACCEPTANCE_SUITE OZONE_ACCEPTANCE_TEST_TYPE OZONE_TEST_SELECTOR
+export DOWNLOAD_DIR
+export OZONE_ACCEPTANCE_SUITE
+export OZONE_ACCEPTANCE_TEST_TYPE
+export OZONE_TEST_SELECTOR
 
 cd "$DIST_DIR/compose" || exit 1
 ./test-all.sh 2>&1 | tee "${REPORT_DIR}/output.log"
