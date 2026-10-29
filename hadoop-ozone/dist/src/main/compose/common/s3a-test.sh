@@ -19,31 +19,9 @@
 # a Docker Compose-based Ozone cluster.
 # Requires HADOOP_AWS_DIR to point the directory containing hadoop-aws sources.
 
-if [[ -z ${HADOOP_AWS_DIR} ]]; then
-  echo "[ERROR] Please set HADOOP_AWS_DIR (where hadoop-aws sources can be found or should be extracted)" >&2
-  exit 1
-fi
-
-download_hadoop_aws() {
-  if [[ ! -e "${HADOOP_AWS_DIR}" ]] || [[ ! -d "${HADOOP_AWS_DIR}"/src/test/resources ]]; then
-    if [[ -z ${HADOOP_VERSION} ]]; then
-      echo "[ERROR] Please set HADOOP_VERSION (version of Hadoop to download)" >&2
-      exit 1
-    fi
-
-    if [[ "${SKIP_APACHE_VERIFY_DOWNLOAD}" != "true" ]]; then
-      import_keys https://downloads.apache.org/hadoop/common/KEYS
-    fi
-
-    local tarball="$(download_hadoop)"
-    tar -x -z -C "${HADOOP_AWS_DIR}" --strip-components=3 -f "${tarball}" --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
-    # keep tarball for caching
-  fi
-}
-
-if ! download_hadoop_aws; then
-  echo "[ERROR] Failed to download Hadoop"
-  exit 1
+if [[ -z ${HADOOP_AWS_DIR} ]] || [[ ! -e ${HADOOP_AWS_DIR} ]]; then
+  echo "Skipping S3A tests due to missing HADOOP_AWS_DIR (directory with hadoop-aws sources)" >&2
+  exit
 fi
 
 # shellcheck source=/dev/null
