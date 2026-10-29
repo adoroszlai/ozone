@@ -24,9 +24,6 @@ if [[ -z ${HADOOP_AWS_DIR} ]]; then
   exit 1
 fi
 
-# shellcheck source=/dev/null
-source "$COMPOSE_DIR/../testlib.sh"
-
 download_hadoop_aws() {
   if [[ ! -e "${HADOOP_AWS_DIR}" ]] || [[ ! -d "${HADOOP_AWS_DIR}"/src/test/resources ]]; then
     if [[ -z ${HADOOP_VERSION} ]]; then
@@ -48,6 +45,9 @@ if ! download_hadoop_aws; then
   echo "[ERROR] Failed to download Hadoop"
   exit 1
 fi
+
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../testlib.sh"
 
 ## @description Run S3A contract tests against Ozone.
 ## @param       Ozone S3 bucket
