@@ -39,7 +39,6 @@ download_hadoop_aws() {
     fi
 
     local tarball="$(download_hadoop)"
-    mkdir -p "${HADOOP_AWS_DIR}"
     tar -x -z -C "${HADOOP_AWS_DIR}" --strip-components=3 -f "${tarball}" --wildcards 'hadoop-*-src/hadoop-tools/hadoop-aws' || return 1
     # keep tarball for caching
   fi
