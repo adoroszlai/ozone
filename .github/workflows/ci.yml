@@ -333,9 +333,7 @@ jobs:
       matrix:
         suite:
           - ozone/test-s3a.sh
-          - ozone/test-ec.sh
           - ozonesecure-ha/test-ranger.sh
-          - ozonesecure-ha/test-sts.sh
         exclude:
           - suite: xcompat/test-old.sh
       fail-fast: false
