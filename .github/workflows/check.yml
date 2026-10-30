@@ -316,7 +316,7 @@ jobs:
           path: |
             hadoop-ozone/dist/target/ozone-*.tar.gz
             !hadoop-ozone/dist/target/ozone-*-src.tar.gz
-          retention-days: 1
+          retention-days: 5
 
       - name: Store source tarball for compilation
         if: ${{ inputs.script == 'build' && !cancelled() }}
@@ -325,7 +325,7 @@ jobs:
           name: ozone-src
           path: |
             hadoop-ozone/dist/target/ozone-*-src.tar.gz
-          retention-days: 1
+          retention-days: 2
 
       - name: Store Maven repo for tests
         if: ${{ inputs.script == 'build' && !cancelled() }}
@@ -334,4 +334,4 @@ jobs:
           name: ozone-repo
           path: |
             ~/.m2/repository/org/apache/ozone
-          retention-days: 1
+          retention-days: 5
