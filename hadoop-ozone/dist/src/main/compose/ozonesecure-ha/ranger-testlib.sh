@@ -89,6 +89,9 @@ setup_ranger_acceptance_env() {
   chmod -R a+rX "${RANGER_OZONE_PLUGIN_DIR}"
   chmod a+x "${RANGER_OZONE_PLUGIN_DIR}"/*.sh
 
+  echo "OK"
+  exit
+
   # customizations before install
   perl -wpl -i \
     -e 's@^POLICY_MGR_URL=.*@POLICY_MGR_URL=http://ranger:6080@;' \

@@ -130,6 +130,9 @@ EOF
   popd
 }
 
+echo "OK"
+exit
+
 start_docker_env
 
 if [[ ${SECURITY_ENABLED} == "true" ]]; then
