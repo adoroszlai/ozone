@@ -157,6 +157,7 @@
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <metainf-services.version>1.11</metainf-services.version>
     <mockito.version>4.11.0</mockito.version>
+    <native-maven-plugin.version>1.1.18</native-maven-plugin.version>
     <native.lib.tmp.dir />
     <netty.version>4.1.139.Final</netty.version>
     <!-- Node.js version number (without the v prefix required by frontend-maven-plugin) -->
@@ -3254,6 +3255,28 @@
                     </exec>
                   </target>
                 </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>native-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
               </execution>
             </executions>
           </plugin>

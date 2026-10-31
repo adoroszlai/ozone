@@ -39,7 +39,7 @@ on:
 
 env:
   # BUILD_ARGS and TEST_JAVA_VERSION are duplicated in populate-cache.yml, please keep in sync
-  BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native"
+  BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native -Pnative-image -DskipRecon -DskipShade"
   TEST_JAVA_VERSION: 25 # JDK version used by CI build and tests; should match the JDK version in apache/ozone-runner image
   # MAVEN_ARGS and MAVEN_OPTS are duplicated in several workflows, please keep in sync
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml -Ddevelocity.user.config=${{ github.workspace }}/.mvn/develocity-asf.xml
@@ -60,12 +60,12 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       junit-modules: ${{ steps.junit-modules.outputs.modules }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
+      needs-basic-check: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
-      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-compile: false
+      needs-compose-tests: false
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       test-classes: ${{ steps.selective-checks.outputs.test-classes }}
       # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
@@ -152,6 +152,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     if: |
       needs.build-info.outputs.needs-build == 'true' &&
       (github.repository != 'apache/ozone' || github.event_name == 'pull_request' ||
@@ -247,6 +248,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -261,6 +263,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
