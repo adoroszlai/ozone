@@ -31,6 +31,16 @@ ${SNAPSHOT_KEY1}     snapdiff-key1-${CLIENT_VERSION}
 ${SNAPSHOT_KEY2}     snapdiff-key2-${CLIENT_VERSION}
 
 
+*** Keywords ***
+Expected Snapshot Diff Output
+    IF   '${CLUSTER_VERSION}' < '${SNAPSHOT_DIFF_SUBMIT_VERSION}'
+        RETURN    Snapshot diff job is IN_PROGRESS
+    ELSE
+        RETURN    Submitting a new job
+    END
+
+
+
 *** Test Cases ***
 Create Bucket With Replication Type
     Pass Execution If    '${CLIENT_VERSION}' < '${EC_VERSION}'    Client does not support EC
@@ -101,10 +111,8 @@ Snapshot Diff Can Be Requested
     Pass Execution If    '${CLUSTER_VERSION}' < '${SNAPSHOT_VERSION}'   Cluster does not support snapshots
 
     ${output} =    Execute    ozone sh snapshot diff ${FSO_BUCKET} ${SNAPSHOT1} ${SNAPSHOT2}
-
-    IF   '${CLIENT_VERSION}' >= '${SNAPSHOT_DIFF_SUBMIT_VERSION}'
-        Should Contain    ${output}    Submitting a new job
-    END
+    ${expected} =    Expected Snapshot Diff Output
+    Should Contain    ${output}    ${expected}
 
 Snapshot Diff --get-report fallback
     Pass Execution If    '${CLIENT_VERSION}' < '${SNAPSHOT_DIFF_SUBMIT_VERSION}'    Client does not support snapshot diff submit
@@ -112,11 +120,13 @@ Snapshot Diff --get-report fallback
     Pass Execution If    '${CLUSTER_VERSION}' >= '${SNAPSHOT_DIFF_SUBMIT_VERSION}'    Client supports snapshot diff submit, no fallback
 
     ${output} =    Execute    ozone sh snapshot diff --get-report ${FSO_BUCKET} ${SNAPSHOT2} ${SNAPSHOT3}
-    Should Contain    ${output}    Submitting a new job
+    ${expected} =    Expected Snapshot Diff Output
+    Should Contain    ${output}    ${expected}
 
 Snapshot Diff Can Be --ordered
     Pass Execution If    '${CLIENT_VERSION}' < '${SNAPSHOT_DIFF_ORDERED_VERSION}'    Client does not support ordered snapshots
     Pass Execution If    '${CLUSTER_VERSION}' < '${SNAPSHOT_VERSION}'                Cluster does not support snapshots
 
     ${output} =    Execute    ozone sh snapshot diff --ordered ${FSO_BUCKET} ${SNAPSHOT1} ${SNAPSHOT3}
-    Should Contain    ${output}    Submitting a new job
+    ${expected} =    Expected Snapshot Diff Output
+    Should Contain    ${output}    ${expected}
