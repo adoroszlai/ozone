@@ -33,7 +33,7 @@ ${SNAPSHOT_KEY2}     snapdiff-key2-${CLIENT_VERSION}
 
 *** Keywords ***
 Expected Snapshot Diff Output
-    IF   '${CLUSTER_VERSION}' < '${SNAPSHOT_DIFF_SUBMIT_VERSION}'
+    IF   '${CLUSTER_VERSION}' < '${SNAPSHOT_DIFF_SUBMIT_VERSION}' or '${CLIENT_VERSION}' < '${SNAPSHOT_DIFF_SUBMIT_VERSION}'
         RETURN    Snapshot diff job is IN_PROGRESS
     ELSE
         RETURN    Submitting a new job
