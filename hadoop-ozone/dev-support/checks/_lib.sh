@@ -95,3 +95,8 @@ create_aws_dir() {
     popd
   fi
 }
+
+get_version() {
+  local dep="$1"
+  mvn help:evaluate --non-recursive -Dexpression="${dep}.version" -q -DforceStdout -Dscan=false
+}

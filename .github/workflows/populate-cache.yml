@@ -48,6 +48,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      hadoop-version: ${{ steps.versions.outputs.hadoop }}
+      ranger-version: ${{ steps.versions.outputs.ranger }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v7
@@ -72,61 +75,14 @@ jobs:
       - name: Get versions
         id: versions
         run: |
-          NODEJS_VERSION=$(mvn help:evaluate -N -Dexpression=nodejs.version -q -DforceStdout -Dscan=false)
-          echo "NODEJS_VERSION=$NODEJS_VERSION" >> $GITHUB_ENV
-          HADOOP_VERSION=$(mvn help:evaluate -N -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
-          echo "HADOOP_VERSION=$HADOOP_VERSION" >> $GITHUB_ENV
-          RANGER_VERSION=$(mvn help:evaluate -N -Dexpression=ranger.version -q -DforceStdout -Dscan=false)
-          echo "RANGER_VERSION=$RANGER_VERSION" >> $GITHUB_ENV
-
-      - name: Restore Hadoop
-        id: restore-hadoop
-        uses: apache/infrastructure-actions/stash/restore@restore/v1
-        with:
-          clean: true
-          path: ~/.cache/ozone
-          key: hadoop-${{ env.HADOOP_VERSION }}
-
-      - name: Get Hadoop
-        if: steps.restore-hadoop.outputs.stash-hit != 'true'
-        run: |
-          rm -fr ~/.cache/ozone
-          source hadoop-ozone/dist/src/main/compose/testlib.sh
-          import_keys https://downloads.apache.org/hadoop/common/KEYS
-          download_hadoop
-
-      - name: Stash Hadoop
-        if: steps.restore-hadoop.outputs.stash-hit != 'true'
-        uses: apache/infrastructure-actions/stash/save@save/v1
-        with:
-          path: ~/.cache/ozone
-          key: hadoop-${{ env.HADOOP_VERSION }}
-          retention-days: 90
-
-      - name: Restore Ranger
-        id: restore-ranger
-        uses: apache/infrastructure-actions/stash/restore@restore/v1
-        with:
-          clean: true
-          path: ~/.cache/ozone
-          key: ranger-${{ env.RANGER_VERSION }}
-
-      - name: Get Ranger
-        if: steps.restore-ranger.outputs.stash-hit != 'true'
-        run: |
-          rm -fr ~/.cache/ozone
-          source hadoop-ozone/dist/src/main/compose/testlib.sh
-          import_keys https://downloads.apache.org/ranger/KEYS
-          download_ranger
-          download_ranger_ozone_plugin
-
-      - name: Stash Ranger
-        if: steps.restore-ranger.outputs.stash-hit != 'true'
-        uses: apache/infrastructure-actions/stash/save@save/v1
-        with:
-          path: ~/.cache/ozone
-          key: ranger-${{ env.RANGER_VERSION }}
-          retention-days: 90
+          source hadoop-ozone/dev-support/checks/_lib.sh
+          set -e
+          nodejs_version="$(get_version nodejs)"
+          [[ -n "$nodejs_version" ]] && echo "NODEJS_VERSION=$nodejs_version" >> $GITHUB_ENV
+          hadoop_version="$(get_version hadoop)"
+          [[ -n "$hadoop_version" ]] && echo "hadoop=$hadoop_version" >> $GITHUB_OUTPUT
+          ranger_version="$(get_version ranger)"
+          [[ -n "$ranger_version" ]] && echo "ranger=$ranger_version" >> $GITHUB_OUTPUT
 
       - name: Restore NodeJS tarballs
         id: restore-nodejs
@@ -164,3 +120,78 @@ jobs:
             ~/.m2/repository/*/*/*
             !~/.m2/repository/org/apache/ozone
           key: maven-repo-${{ hashFiles('**/pom.xml') }}
+
+  hadoop:
+    needs: build
+    env:
+      HADOOP_VERSION: ${{ needs.build.outputs.hadoop-version }}
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            hadoop-ozone/dist/src/main
+
+      - name: Restore
+        id: restore
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
+        with:
+          clean: true
+          path: ~/.cache/ozone
+          key: hadoop-${{ env.HADOOP_VERSION }}
+
+      - name: Download
+        if: steps.restore.outputs.stash-hit != 'true'
+        run: |
+          rm -fr ~/.cache/ozone
+          source hadoop-ozone/dist/src/main/compose/testlib.sh
+          import_keys https://downloads.apache.org/hadoop/common/KEYS
+          download_hadoop
+
+      - name: Store
+        if: steps.restore.outputs.stash-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.cache/ozone
+          key: hadoop-${{ env.HADOOP_VERSION }}
+          retention-days: 90
+
+  ranger:
+    needs: build
+    env:
+      RANGER_VERSION: ${{ needs.build.outputs.ranger-version }}
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            hadoop-ozone/dist/src/main
+
+      - name: Restore
+        id: restore
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
+        with:
+          clean: true
+          path: ~/.cache/ozone
+          key: ranger-${{ env.RANGER_VERSION }}
+
+      - name: Download
+        if: steps.restore.outputs.stash-hit != 'true'
+        run: |
+          rm -fr ~/.cache/ozone
+          source hadoop-ozone/dist/src/main/compose/testlib.sh
+          import_keys https://downloads.apache.org/ranger/KEYS
+          download_ranger
+          download_ranger_ozone_plugin
+
+      - name: Store
+        if: steps.restore.outputs.stash-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.cache/ozone
+          key: ranger-${{ env.RANGER_VERSION }}
+          retention-days: 90
