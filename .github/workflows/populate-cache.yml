@@ -27,6 +27,7 @@ on:
       - 'pom.xml'
       - '**/pom.xml'
       - '.github/workflows/populate-cache.yml'
+      - '.mvn/extensions.xml'
   workflow_call:
   workflow_dispatch:
 
