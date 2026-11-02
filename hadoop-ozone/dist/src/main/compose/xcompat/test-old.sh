@@ -33,6 +33,7 @@ fi
 if [[ -n "${CI:-}" ]] && [[ -n "${OZONE_RUNNER_CLIENT_VERSION:-}" ]]; then
   # override for running rebot after tests
   export OZONE_RUNNER_VERSION="$OZONE_RUNNER_CLIENT_VERSION"
+  get_runner_image_spec
 else
   env
   exit 1
@@ -44,3 +45,5 @@ for cluster_version in ${old_versions}; do
   export COMPOSE_FILE=old-cluster.yaml:clients.yaml
   test_cross_compatibility ${cluster_version} ${current_version}
 done
+
+get_runner_image_spec
