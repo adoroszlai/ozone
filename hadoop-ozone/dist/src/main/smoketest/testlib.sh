@@ -47,5 +47,9 @@ get_runner_image_spec() {
   local runner_image=${OZONE_RUNNER_IMAGE:-apache/ozone-runner} # may be specified by user running the test
   local v=${1:-${runner_version}} # prefer explicit argument
 
+  for v in default_version runner_image runner_version OZONE_RUNNER_VERSION OZONE_RUNNER_IMAGE OZONE_RUNNER_CLIENT_VERSION; do
+    echo "$v: ${!v}" >&2
+  done
+
   echo "${runner_image}:${v}"
 }
