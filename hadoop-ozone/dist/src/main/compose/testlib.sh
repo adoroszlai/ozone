@@ -55,10 +55,6 @@ if _is_build; then
   if [[ -z "${RANGER_VERSION:-}" ]]; then
     export RANGER_VERSION="${ranger.version}"
   fi
-
-  if [[ -z "${OZONE_RUNNER_CLIENT_VERSION:-}" ]]; then
-    export OZONE_RUNNER_CLIENT_VERSION="${docker.ozone-runner.client.version}"
-  fi
 else
   OZONE_CURRENT_VERSION=src
 fi

@@ -42,12 +42,10 @@ run_rebot() {
 ##   (no binaries included)
 ## @param `ozone-runner` image version (optional)
 get_runner_image_spec() {
-  set -x
   local default_version=${docker.ozone-runner.version} # set at build-time from Maven property
   local runner_version=${OZONE_RUNNER_VERSION:-${default_version}} # may be specified by user running the test
   local runner_image=${OZONE_RUNNER_IMAGE:-apache/ozone-runner} # may be specified by user running the test
   local v=${1:-${runner_version}} # prefer explicit argument
 
   echo "${runner_image}:${v}"
-  set +x
 }
