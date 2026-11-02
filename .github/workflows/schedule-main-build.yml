@@ -35,7 +35,7 @@ env:
   MARKER_FILE: scheduled-build
   STASH_KEY: scheduled-build-${{ github.sha }}
 
-run-name: build-default-branch for ${{ github.sha }} on ${{ github.event_name }}
+run-name: CI for ${{ github.sha }} on ${{ github.event_name }}
 
 jobs:
   pre-check:
