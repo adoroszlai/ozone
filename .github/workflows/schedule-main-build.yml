@@ -53,7 +53,7 @@ jobs:
   CI:
     needs: pre-check
     # no scheduled run in forks
-    if: (github.repository_owner == 'apache' && needs.pre-check.outputs.hit != 'true') || github.event_name == 'workflow_dispatch'
+    if: needs.pre-check.outputs.hit != 'true'
     uses: $/.github/workflows/ci.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.OZONE_DEVELOCITY_ACCESS_KEY }}
