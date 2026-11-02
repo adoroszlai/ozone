@@ -32,12 +32,10 @@ fi
 
 if [[ -n "${CI:-}" ]] && [[ -n "${OZONE_RUNNER_CLIENT_VERSION:-}" ]]; then
   # override for running rebot after tests
-  export OZONE_RUNNER_VERSION="$OZONE_RUNNER_CLIENT_VERSION"
-  get_runner_image_spec
-else
-  env
-  exit 1
+  export OZONE_RUNNER_VERSION="${OZONE_RUNNER_CLIENT_VERSION}"
 fi
+env
+get_runner_image_spec
 
 # old cluster with clients: same version and current version
 for cluster_version in ${old_versions}; do
