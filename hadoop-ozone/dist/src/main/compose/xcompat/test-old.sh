@@ -30,6 +30,11 @@ if [[ -n "${OZONE_OLD_VERSIONS:-}" ]]; then
   old_versions="${OZONE_OLD_VERSIONS}"
 fi
 
+if [[ -n "${CI:-}" ]] && [[ -n "${OZONE_RUNNER_CLIENT_VERSION:-}" ]]; then
+  # override for running rebot after tests
+  export OZONE_RUNNER_VERSION="$OZONE_RUNNER_CLIENT_VERSION"
+fi
+
 # old cluster with clients: same version and current version
 for cluster_version in ${old_versions}; do
   export OZONE_VERSION=${cluster_version}
