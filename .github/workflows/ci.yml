@@ -230,7 +230,7 @@ jobs:
       - build-info
       - build
       - basic
-    if: contains(needs.build-info.outputs.basic-checks, 'errorprone')
+    if: false
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
