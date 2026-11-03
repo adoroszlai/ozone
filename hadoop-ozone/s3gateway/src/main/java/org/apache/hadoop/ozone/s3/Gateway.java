@@ -54,7 +54,7 @@ import picocli.CommandLine.Command;
  * This class is used to start/stop S3 compatible rest server.
  */
 @Command(name = "ozone s3g",
-    hidden = true, description = "S3 compatible rest server.",
+    hidden = true, description = "S3-compatible REST server",
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true)
 public class Gateway extends GenericCli implements Callable<Void> {
