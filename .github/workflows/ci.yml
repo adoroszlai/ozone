@@ -100,7 +100,6 @@ jobs:
             sha="${GITHUB_SHA}"
           fi
           echo "sha=$sha" >> $GITHUB_OUTPUT
-          exit 1 # simulate failure
       - name: Selective checks
         id: selective-checks
         env:
