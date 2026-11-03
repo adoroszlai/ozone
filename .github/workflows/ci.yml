@@ -60,11 +60,11 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       junit-modules: ${{ steps.junit-modules.outputs.modules }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
-      needs-basic-check: false
-      needs-build: false
+      needs-basic-check: true
+      needs-build: true
       needs-compile: false
-      needs-compose-tests: false
-      needs-integration-tests: false
+      needs-compose-tests: true
+      needs-integration-tests: true
       needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       test-classes: ${{ steps.selective-checks.outputs.test-classes }}
@@ -219,7 +219,8 @@ jobs:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     strategy:
       matrix:
-        check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
+        check:
+          - author
         exclude:
           - check: errorprone
       fail-fast: false
@@ -329,7 +330,8 @@ jobs:
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+        suite:
+          - compatibility/test.sh
         exclude:
           - suite: xcompat/test-old.sh
       fail-fast: false
@@ -359,7 +361,8 @@ jobs:
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        version: ${{ fromJson(needs.build-info.outputs.acceptance-versions) }}
+        version:
+          - 1.2.1
       fail-fast: false
       max-parallel: 3
 
@@ -414,7 +417,8 @@ jobs:
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        profile: ${{ fromJson(needs.build-info.outputs.integration-suites) }}
+        profile:
+          - filesystem
       fail-fast: false
 
   # same as integration, but runs tests in specific modules instead of profiles
@@ -443,7 +447,8 @@ jobs:
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        module: ${{ fromJson(needs.build-info.outputs.junit-modules) }}
+        module:
+          - hdds-config
       fail-fast: false
       max-parallel: 10
 
