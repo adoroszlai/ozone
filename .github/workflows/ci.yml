@@ -312,7 +312,6 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
       - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: $/.github/workflows/check.yml
@@ -344,7 +343,6 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
       - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: $/.github/workflows/check.yml
@@ -398,7 +396,6 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
       - license
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: $/.github/workflows/check.yml
@@ -427,7 +424,6 @@ jobs:
       - build-info
       - build
       - basic
-      - dependency
       - license
     if: needs.build-info.outputs.needs-integration-tests == 'true'
     uses: $/.github/workflows/check.yml
