@@ -193,9 +193,12 @@ combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
     local title="$(basename $(pwd))"
-    kubectl cp result "${CONTAINER}":/tmp/rebot-input
+    kubectl exec -it "${CONTAINER}" -- bash -c 'rm -fr /tmp/rebot-input'
+    kubectl exec -it "${CONTAINER}" -- bash -c 'mkdir -p /tmp/rebot-input'
+    kubectl cp result/robot*xml "${CONTAINER}":/tmp/rebot-input/
     kubectl exec -it "${CONTAINER}" -- rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/rebot-output /tmp/rebot-input/robot*.xml
-    kubectl cp "${CONTAINER}":/tmp/rebot-output result
+    kubectl cp "${CONTAINER}":/tmp/rebot-output/log.html result/
+    kubectl cp "${CONTAINER}":/tmp/rebot-output/output.xml result/
     rm -f result/robot*xml
   fi
 }
