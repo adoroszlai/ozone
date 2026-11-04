@@ -16,6 +16,7 @@
 # limitations under the License.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROBOT_OUTPUT_DIR=/tmp/robot
 source "${SCRIPT_DIR}/../../smoketest/testlib.sh"
 
 retry() {
@@ -83,7 +84,6 @@ all_pods_are_running() {
 }
 
 pre_run_setup() {
-  rm -fr logs result
   regenerate_resources
   reset_k8s_env
   start_k8s_env
@@ -121,6 +121,7 @@ post_run() {
 
 get_logs() {
   print_phase "Collecting container logs"
+  rm -fr logs
   mkdir -p logs
   for pod in $(kubectl get pods -o custom-columns=NAME:.metadata.name | tail -n +2); do
     for initContainer in $(kubectl get pod -o jsonpath='{.spec.initContainers[*].name}' "${pod}"); do
@@ -161,11 +162,11 @@ regenerate_resources() {
   local runner_version=${OZONE_RUNNER_VERSION:-${default_version}} # may be specified by user running the test
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
-  mkdir -p result
+  mkdir -p "$ROBOT_OUTPUT_DIR"
 
   flekszible generate \
-    -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop \
-    -t mount:name=robot,hostPath="$(pwd)/result",path=/robot \
+    -t mount:name=ozone,path=/opt/hadoop,hostPath="$OZONE_ROOT" \
+    -t mount:name=robot,path=/robot,hostPath="$ROBOT_OUTPUT_DIR" \
     -t image:image="${runner_image}:${runner_version}" \
     -t ozone/onenode
 }
@@ -186,19 +187,19 @@ execute_robot_test() {
 
    kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /robot ${ARGUMENTS[@]-}
 
-   local robot_xml=$(get_next_robot_xml result)
+   local robot_xml=$(get_next_robot_xml "$ROBOT_OUTPUT_DIR")
    [[ -n "${robot_xml}" ]]
 
-   mv -iv result/output.xml result/"${robot_xml}"
+   ( cd "$ROBOT_OUTPUT_DIR" && mv -iv output.xml "${robot_xml}" )
 }
 
 combine_reports() {
-  if [[ -d result ]]; then
-    rm -f result/output.xml
+  if [[ -d "$ROBOT_OUTPUT_DIR" ]]; then
     local title="$(basename $(pwd))"
     kubectl exec -it "${CONTAINER}" -- rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /robot /robot/robot*.xml || true
-    rm -fv result/robot*xml
-    ls -la result
+    rm -f result
+    mkdir -p result
+    mv -iv "${ROBOT_OUTPUT_DIR}/output.xml" "${ROBOT_OUTPUT_DIR}/log.html" result/
   fi
 }
 
