@@ -164,11 +164,7 @@ regenerate_resources() {
 
   mkdir -p result
 
-  flekszible generate \
-    -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop \
-    -t mount:hostPath="$(pwd)/result",path=/tmp/report \
-    -t image:image="${runner_image}:${runner_version}" \
-    -t ozone/onenode
+  flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image="${runner_image}:${runner_version}" -t ozone/onenode
 }
 
 revert_resources() {
@@ -185,21 +181,18 @@ execute_robot_test() {
    # shellcheck disable=SC2206
    ARGUMENTS=($@)
 
-   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/report ${ARGUMENTS[@]-} || true
-
    local robot_xml=$(get_next_robot_xml result)
    [[ -n "${robot_xml}" ]]
-   mv -v result/output.xml "result/${robot_xml}" || true
+
+   kubectl exec -it "${CONTAINER}" -- "robot --nostatusrc -d result ${ARGUMENTS[@]-} && mv -v result/output.xml 'result/${robot_xml}'" || true
 }
 
 combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
-    # kubectl cp result/robot*.xml "${CONTAINER}":/tmp/report/
     local title="$(basename $(pwd))"
-    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/report *.xml"
-    # kubectl cp "${CONTAINER}":/tmp/report/log.html result/
-    # kubectl cp "${CONTAINER}":/tmp/report/output.xml result/
+    kubectl exec -it "${CONTAINER}" -- "cd result && rebot --nostatusrc --reporttitle '${title}' -N '${title}' *.xml"
+    rm -f result/robot*xml
   fi
 }
 
