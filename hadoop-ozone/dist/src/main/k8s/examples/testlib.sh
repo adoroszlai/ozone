@@ -181,7 +181,7 @@ execute_robot_test() {
 
    kubectl exec -it "${CONTAINER}" -- bash -c 'rm -fr /tmp/robot'
    kubectl exec -it "${CONTAINER}" -- bash -c 'mkdir -p /tmp/robot'
-   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/robot "${ARGUMENTS[@]-}"
+   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/robot ${ARGUMENTS[@]-}
 
    local robot_xml=$(get_next_robot_xml result)
    [[ -n "${robot_xml}" ]]
@@ -194,7 +194,7 @@ combine_reports() {
     rm -f result/output.xml
     local title="$(basename $(pwd))"
     kubectl cp result "${CONTAINER}":/tmp/rebot-input
-    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/rebot-output /tmp/rebot-input/robot*.xml"
+    kubectl exec -it "${CONTAINER}" -- rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/rebot-output /tmp/rebot-input/robot*.xml
     kubectl cp "${CONTAINER}":/tmp/rebot-output result
     rm -f result/robot*xml
   fi
