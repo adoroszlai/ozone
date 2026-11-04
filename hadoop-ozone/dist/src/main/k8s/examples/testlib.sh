@@ -16,7 +16,6 @@
 # limitations under the License.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ROBOT_OUTPUT_DIR=/tmp/robot
 source "${SCRIPT_DIR}/../../smoketest/testlib.sh"
 
 retry() {
@@ -162,7 +161,7 @@ regenerate_resources() {
   local runner_version=${OZONE_RUNNER_VERSION:-${default_version}} # may be specified by user running the test
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
-  mkdir -p "$ROBOT_OUTPUT_DIR"
+  create_robot_dir
 
   flekszible generate \
     -t mount:name=ozone,path=/opt/hadoop,hostPath="$OZONE_ROOT" \
@@ -194,7 +193,7 @@ execute_robot_test() {
 }
 
 combine_reports() {
-  if [[ -d "$ROBOT_OUTPUT_DIR" ]]; then
+  if [[ -d "${ROBOT_OUTPUT_DIR}" ]]; then
     local title="$(basename $(pwd))"
     kubectl exec -it "${CONTAINER}" -- rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /robot /robot/robot*.xml || true
     rm -f result
@@ -207,4 +206,15 @@ print_phase() {
    echo ""
    echo "**** $1 ****"
    echo ""
+}
+
+create_robot_dir() {
+  if [[ -z "${ROBOT_OUTPUT_DIR:-}" ]]; then
+    export ROBOT_OUTPUT_DIR="$(mktemp -d "${TMPDIR:-/tmp}"/robot-data-XXXXXX)"
+    chmod go+rwx "${ROBOT_OUTPUT_DIR}"
+    _k8s_delete_test_data() {
+      rm -frv "${ROBOT_OUTPUT_DIR}"
+    }
+    trap _k8s_delete_test_data EXIT HUP INT TERM
+  fi
 }
