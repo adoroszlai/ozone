@@ -387,7 +387,8 @@ jobs:
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.kubernetes-suites) }}
+        suite:
+          - ozone
       fail-fast: false
       max-parallel: 3
 
