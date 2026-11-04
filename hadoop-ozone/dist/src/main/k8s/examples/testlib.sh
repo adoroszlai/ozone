@@ -184,21 +184,17 @@ execute_robot_test() {
    # shellcheck disable=SC2206
    ARGUMENTS=($@)
 
-   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /robot ${ARGUMENTS[@]-}
-
-   local robot_xml=$(get_next_robot_xml "$ROBOT_OUTPUT_DIR")
-   [[ -n "${robot_xml}" ]]
-
-   ( cd "$ROBOT_OUTPUT_DIR" && mv -iv output.xml "${robot_xml}" )
+   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc --outputdir /robot --timestampoutputs ${ARGUMENTS[@]-}
 }
 
 combine_reports() {
   if [[ -d "${ROBOT_OUTPUT_DIR}" ]]; then
     local title="$(basename $(pwd))"
-    kubectl exec -it "${CONTAINER}" -- rebot --nostatusrc --reporttitle "${title}" -N "${title}" -d /robot /robot/robot*.xml || true
+    kubectl exec -it "${CONTAINER}" -- rebot --logtitle "${title}" --name "${title}" --nostatusrc \
+      --outputdir /robot --output output.xml --report NONE /robot/*.xml || true
     rm -f result
     mkdir -p result
-    mv -iv "${ROBOT_OUTPUT_DIR}/output.xml" "${ROBOT_OUTPUT_DIR}/log.html" result/
+    mv -iv "${ROBOT_OUTPUT_DIR}"/{log.html,output.xml} result/
   fi
 }
 
