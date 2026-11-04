@@ -84,7 +84,6 @@ all_pods_are_running() {
 
 pre_run_setup() {
   rm -fr logs result
-  mkdir -p result
   regenerate_resources
   reset_k8s_env
   start_k8s_env
@@ -162,8 +161,6 @@ regenerate_resources() {
   local runner_version=${OZONE_RUNNER_VERSION:-${default_version}} # may be specified by user running the test
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
-  mkdir -p result
-
   flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image="${runner_image}:${runner_version}" -t ozone/onenode
 }
 
@@ -174,6 +171,7 @@ revert_resources() {
 
 execute_robot_test() {
    print_phase "Executing robot tests $@"
+   mkdir -p result
 
    CONTAINER="$1"
    shift 1 #Remove first argument which was the container name
@@ -181,18 +179,23 @@ execute_robot_test() {
    # shellcheck disable=SC2206
    ARGUMENTS=($@)
 
+   kubectl exec -it "${CONTAINER}" -- bash -c 'rm -fr /tmp/robot'
+   kubectl exec -it "${CONTAINER}" -- bash -c 'mkdir -p /tmp/robot'
+   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/robot "${ARGUMENTS[@]-}"
+
    local robot_xml=$(get_next_robot_xml result)
    [[ -n "${robot_xml}" ]]
 
-   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d result "${ARGUMENTS[@]-}"
-   kubectl exec -it "${CONTAINER}" -- mv -v result/output.xml result/"${robot_xml}"
+   kubectl cp "${CONTAINER}":/tmp/robot/output.xml result/"${robot_xml}"
 }
 
 combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
     local title="$(basename $(pwd))"
-    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d result result/robot*.xml"
+    kubectl cp result "${CONTAINER}":/tmp/rebot-input
+    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/rebot-output /tmp/rebot-input/robot*.xml"
+    kubectl cp "${CONTAINER}":/tmp/rebot-output result
     rm -f result/robot*xml
   fi
 }
