@@ -17,8 +17,6 @@ name: space-debug
 
 on:
   push:
-    paths:
-      - .github/workflows/space-debug.yml
 
 jobs:
   debug:
