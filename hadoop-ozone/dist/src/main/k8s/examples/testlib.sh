@@ -184,14 +184,15 @@ execute_robot_test() {
    local robot_xml=$(get_next_robot_xml result)
    [[ -n "${robot_xml}" ]]
 
-   kubectl exec -it "${CONTAINER}" -- bash -c "robot --nostatusrc -d result ${ARGUMENTS[@]-} && mv -v result/output.xml 'result/${robot_xml}'" || true
+   kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d result "${ARGUMENTS[@]-}"
+   kubectl exec -it "${CONTAINER}" -- mv -v result/output.xml result/"${robot_xml}"
 }
 
 combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
     local title="$(basename $(pwd))"
-    kubectl exec -it "${CONTAINER}" -- bash -c "cd result && rebot --nostatusrc --reporttitle '${title}' -N '${title}' *.xml"
+    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d result result/robot*.xml"
     rm -f result/robot*xml
   fi
 }
