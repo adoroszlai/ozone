@@ -53,6 +53,4 @@ for test in $(find "$SCRIPT_DIR" -name test.sh | grep "${OZONE_TEST_SELECTOR:-""
   fi
 done
 
-run_rebot "$ALL_RESULT_DIR" "$ALL_RESULT_DIR" "-N smoketests *.xml"
-
 exit ${RESULT}

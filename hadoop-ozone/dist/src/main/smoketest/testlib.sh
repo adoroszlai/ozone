@@ -15,6 +15,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+get_output_name() {
+  if [[ -n "${OUTPUT_NAME:-}" ]]; then
+    echo "${OUTPUT_NAME}-"
+  fi
+}
+
+get_next_robot_xml() {
+  local output_name=$(get_output_name)
+
+  local dir=""
+  if [[ -n "$1" ]]; then
+    dir="$1/"
+  fi
+
+  # find unique filename
+  for ((i=1; i<1000; i++)); do
+    local candidate="robot-${output_name}$(printf "%03d" ${i}).xml"
+    if [[ ! -f "${dir}${candidate}" ]]; then
+      echo "${candidate}"
+      break
+    fi
+  done
+}
+
 ## @description  Run Robot Framework report generator (rebot) in ozone-runner container.
 ## @param input directory where source Robot XML files are
 ## @param output directory where report should be placed

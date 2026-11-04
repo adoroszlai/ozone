@@ -270,13 +270,8 @@ execute_robot_test(){
 
   local output_name=$(get_output_name)
 
-  # find unique filename
-  for ((i=1; i<1000; i++)); do
-    OUTPUT_FILE="robot-${output_name}$(printf "%03d" ${i}).xml"
-    if [[ ! -f $RESULT_DIR/$OUTPUT_FILE ]]; then
-      break;
-    fi
-  done
+  OUTPUT_FILE=$(get_next_robot_xml "$RESULT_DIR")
+  [[ -n "${OUTPUT_FILE}" ]]
 
   : ${OZONE_DIR:=/opt/hadoop}
   SMOKETEST_DIR_INSIDE="$OZONE_DIR/smoketest"
@@ -390,12 +385,6 @@ start_containers() {
 
 create_containers() {
   docker-compose --ansi never up -d $@
-}
-
-get_output_name() {
-  if [[ -n "${OUTPUT_NAME:-}" ]]; then
-    echo "${OUTPUT_NAME}-"
-  fi
 }
 
 save_container_logs() {

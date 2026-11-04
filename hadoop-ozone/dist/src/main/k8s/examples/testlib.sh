@@ -84,6 +84,7 @@ all_pods_are_running() {
 
 pre_run_setup() {
   rm -fr logs result
+  mkdir -p result
   regenerate_resources
   reset_k8s_env
   start_k8s_env
@@ -161,7 +162,13 @@ regenerate_resources() {
   local runner_version=${OZONE_RUNNER_VERSION:-${default_version}} # may be specified by user running the test
   local runner_image="${OZONE_RUNNER_IMAGE:-apache/ozone-runner}" # may be specified by user running the test
 
-  flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image="${runner_image}:${runner_version}" -t ozone/onenode
+  mkdir -p result
+
+  flekszible generate \
+    -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop \
+    -t mount:hostPath="$(pwd)/result",path=/tmp/report \
+    -t image:image="${runner_image}:${runner_version}" \
+    -t ozone/onenode
 }
 
 revert_resources() {
@@ -171,7 +178,6 @@ revert_resources() {
 
 execute_robot_test() {
    print_phase "Executing robot tests $@"
-   mkdir -p result
 
    CONTAINER="$1"
    shift 1 #Remove first argument which was the container name
@@ -179,16 +185,21 @@ execute_robot_test() {
    # shellcheck disable=SC2206
    ARGUMENTS=($@)
 
-   kubectl exec -it "${CONTAINER}" -- bash -c 'rm -rf /tmp/report'
-   kubectl exec -it "${CONTAINER}" -- bash -c 'mkdir -p  /tmp/report'
    kubectl exec -it "${CONTAINER}" -- robot --nostatusrc -d /tmp/report ${ARGUMENTS[@]-} || true
-   kubectl cp "${CONTAINER}":/tmp/report/output.xml "result/$CONTAINER-$RANDOM.xml" || true
+
+   local robot_xml=$(get_next_robot_xml result)
+   [[ -n "${robot_xml}" ]]
+   mv -v result/output.xml "result/${robot_xml}" || true
 }
 
 combine_reports() {
   if [[ -d result ]]; then
     rm -f result/output.xml
-    run_rebot result result "-o output.xml -N '$(basename $(pwd))' *.xml"
+    # kubectl cp result/robot*.xml "${CONTAINER}":/tmp/report/
+    local title="$(basename $(pwd))"
+    kubectl exec -it "${CONTAINER}" -- "rebot --nostatusrc --reporttitle '${title}' -N '${title}' -d /tmp/report *.xml"
+    # kubectl cp "${CONTAINER}":/tmp/report/log.html result/
+    # kubectl cp "${CONTAINER}":/tmp/report/output.xml result/
   fi
 }
 
