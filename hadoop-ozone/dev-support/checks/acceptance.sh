@@ -27,8 +27,8 @@ OZONE_ROOT=$(pwd -P)
 : ${OZONE_WITH_COVERAGE:="false"}
 
 if [[ "${OZONE_TEST_SELECTOR}" == "xcompat/test-old.sh" ]]; then
-  : ${OZONE_OLD_VERSIONS:="${2:-}"}
-  export OZONE_OLD_VERSIONS
+  : ${OZONE_CLUSTER_VERSIONS:="${2:-}"}
+  export OZONE_CLUSTER_VERSIONS
 fi
 
 source "${DIR}/_lib.sh"
