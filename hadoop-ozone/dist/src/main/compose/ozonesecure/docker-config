@@ -16,6 +16,7 @@
 
 CORE-SITE.XML_fs.defaultFS=ofs://om
 CORE-SITE.XML_fs.trash.interval=1
+CORE-SITE.XML_hadoop.security.token.service.use_ip=false
 # For HttpFS service it is required to enable proxying users.
 CORE-SITE.XML_hadoop.proxyuser.httpfs.hosts=*
 CORE-SITE.XML_hadoop.proxyuser.httpfs.groups=*

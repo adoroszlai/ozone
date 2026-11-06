@@ -35,6 +35,8 @@ OZONE-SITE.XML_ozone.recon.om.snapshot.task.initial.delay=20s
 OZONE-SITE.XML_hdds.scmclient.max.retry.timeout=30s
 OZONE-SITE.XML_ozone.http.basedir=/tmp/ozone_http
 
+CORE-SITE.XML_hadoop.security.token.service.use_ip=false
+
 OZONE_CONF_DIR=/etc/hadoop
 OZONE_LOG_DIR=/var/log/hadoop
 

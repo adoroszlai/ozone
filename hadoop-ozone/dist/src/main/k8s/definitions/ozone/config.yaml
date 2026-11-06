@@ -23,6 +23,7 @@ data:
   CORE-SITE.XML_fs.trash.interval: "1"
   CORE-SITE.XML_hadoop.proxyuser.hadoop.groups: '*'
   CORE-SITE.XML_hadoop.proxyuser.hadoop.hosts: '*'
+  CORE-SITE.XML_hadoop.security.token.service.use_ip: 'false'
   HTTPFS-SITE.XML_httpfs.hadoop.config.dir: /opt/hadoop/etc/config
   HTTPFS-SITE.XML_httpfs.proxyuser.hadoop.groups: "*"
   HTTPFS-SITE.XML_httpfs.proxyuser.hadoop.hosts: "*"
