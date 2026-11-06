@@ -48,7 +48,6 @@ _write() {
 
 _read() {
   _kinit
-  local data_version="$1"
   execute_robot_test ${container} -N "xcompat-cluster-${cluster_version}-client-${client_version}-read-${data_version}" \
     -v CLIENT_VERSION:${client_version} \
     -v CLUSTER_VERSION:${cluster_version} \
@@ -66,8 +65,14 @@ _test_checkpoint_compatibility() {
     compatibility/checkpoint.robot
 }
 
-# new client always reads all data
-# old clients read data if the cluster and/or the writer is new
+# Generates version combinations for read tests in the form of
+#   reader=writer
+# printing to stdout.
+#
+# A combination is tested if it is related to the current version in any way:
+# - cluster running
+# - client who wrote the data
+# - client to read the data
 get_read_version_combinations() {
   [[ -n "${cluster_version}" ]] || return 1
   [[ -n "${current_version}" ]] || return 2
@@ -80,7 +85,7 @@ get_read_version_combinations() {
       if [[ "${cluster_version}" == "${current_version}" ]] \
           || [[ "${reader}" == "${current_version}" ]] \
           || [[ "${writer}" == "${current_version}" ]]; then
-        echo "$reader $writer"
+        echo "$reader=$writer"
       fi
     done
   done | sort --reverse --unique
@@ -112,9 +117,11 @@ test_cross_compatibility() {
     client _write
   done
 
-  while read -r client_version data_version; do
-    client _read ${data_version}
-  done <<< "$read_combinations"
+  for line in $read_combinations; do
+    data_version="${line##*=}"
+    client_version="${line%%=*}"
+    client _read
+  done
 
   # Add checkpoint compatibility tests (only for clusters that support checkpoint endpoints)
   # Skip checkpoint tests for very old clusters that don't have the endpoints

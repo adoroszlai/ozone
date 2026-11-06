@@ -25,28 +25,28 @@ load ${TOOLS_DIR}/bats/bats-assert/load.bash
 load ../../main/compose/xcompat/lib.sh
 
 @test "Cross-version reads in old cluster" {
-  current_version="7.8.9"
   old_versions="1.2.3 4.5.6"
+  current_version="7.8.9"
 
   for cluster_version in $old_versions; do
     run get_read_version_combinations
     assert_output # is not empty
 
     # old clients read new data
-    assert_line '1.2.3 7.8.9'
-    assert_line '4.5.6 7.8.9'
+    assert_line '1.2.3=7.8.9'
+    assert_line '4.5.6=7.8.9'
     # new client reads all data
-    assert_line '7.8.9 1.2.3'
-    assert_line '7.8.9 4.5.6'
-    assert_line '7.8.9 7.8.9'
+    assert_line '7.8.9=1.2.3'
+    assert_line '7.8.9=4.5.6'
+    assert_line '7.8.9=7.8.9'
 
     assert_equal "$(wc -l <<< "$output")" '5'
   done
 }
 
 @test "Cross-version reads in new cluster" {
-  current_version="7.8.9"
   old_versions="1.2.3 4.5.6"
+  current_version="7.8.9"
   cluster_version="${current_version}"
 
   run get_read_version_combinations
@@ -57,7 +57,7 @@ load ../../main/compose/xcompat/lib.sh
   # each client reads all data
   for r in ${all}; do
     for w in ${all}; do
-      assert_line "$r $w"
+      assert_line "$r=$w"
     done
   done
 
