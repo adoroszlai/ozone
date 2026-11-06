@@ -87,6 +87,12 @@ get_read_version_combinations() {
 }
 
 test_cross_compatibility() {
+  local read_combinations=$(get_read_version_combinations)
+  if [[ -z "$read_combinations" ]]; then
+    echo "No read test combinations found" >&2
+    return 1
+  fi
+
   echo "Starting ${cluster_version} cluster with COMPOSE_FILE=${COMPOSE_FILE}"
 
   OZONE_KEEP_RESULTS=true start_docker_env 5
@@ -105,12 +111,6 @@ test_cross_compatibility() {
     fi
     client _write
   done
-
-  read_combinations=$(get_read_version_combinations)
-  if [[ -z "$read_combinations" ]]; then
-    echo "No read test combinations found" >&2
-    return 1
-  fi
 
   while read -r client_version data_version; do
     client _read ${data_version}
