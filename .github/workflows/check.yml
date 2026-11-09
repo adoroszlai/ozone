@@ -272,6 +272,20 @@ jobs:
           path: ~/.cache/ozone
           key: ranger-${{ env.RANGER_VERSION }}
 
+      - name: Get versions
+        if: ${{ inputs.needs-npm-cache }}
+        run: |
+          source hadoop-ozone/dev-support/checks/_lib.sh
+          nodejs_version="$(get_version nodejs)"
+          echo "NODEJS_VERSION=$nodejs_version" >> $GITHUB_ENV
+
+      - name: Download NodeJS
+        if: ${{ inputs.needs-npm-cache }}
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
+        with:
+          path: ~/.m2/repository/com/github/eirslett/node
+          key: nodejs-${{ env.NODEJS_VERSION }}
+
       - name: Execute pre-test steps
         if: ${{ inputs.pre-script }}
         run: |

@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       hadoop-version: ${{ steps.versions.outputs.hadoop }}
+      nodejs-version: ${{ steps.versions.outputs.nodejs }}
       ranger-version: ${{ steps.versions.outputs.ranger }}
     steps:
       - name: Checkout project
@@ -83,23 +84,11 @@ jobs:
           source hadoop-ozone/dev-support/checks/_lib.sh
           set -e
           nodejs_version="$(get_version nodejs)"
-          [[ -n "$nodejs_version" ]] && echo "NODEJS_VERSION=$nodejs_version" >> $GITHUB_ENV
+          [[ -n "$nodejs_version" ]] && echo "nodejs=$nodejs_version" >> $GITHUB_OUTPUT
           hadoop_version="$(get_version hadoop)"
           [[ -n "$hadoop_version" ]] && echo "hadoop=$hadoop_version" >> $GITHUB_OUTPUT
           ranger_version="$(get_version ranger)"
           [[ -n "$ranger_version" ]] && echo "ranger=$ranger_version" >> $GITHUB_OUTPUT
-
-      - name: Restore NodeJS tarballs
-        id: restore-nodejs
-        if: steps.restore-cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v6
-        with:
-          path: ~/.m2/repository/com/github/eirslett/node
-          key: nodejs-${{ env.NODEJS_VERSION }}
-
-      - name: Download NodeJS
-        if: steps.restore-cache.outputs.cache-hit != 'true' && steps.restore-nodejs.outputs.cache-hit != 'true'
-        run: dev-support/ci/download-nodejs.sh
 
       - name: Fetch dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
@@ -161,6 +150,38 @@ jobs:
         with:
           path: ~/.cache/ozone
           key: hadoop-${{ env.HADOOP_VERSION }}
+          retention-days: 90
+
+  nodejs:
+    needs: build
+    env:
+      NODEJS_VERSION: ${{ needs.build.outputs.nodejs-version }}
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            dev-support/ci/download-nodejs.sh
+
+      - name: Restore
+        id: restore
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
+        with:
+          path: ~/.m2/repository/com/github/eirslett/node
+          key: nodejs-${{ env.NODEJS_VERSION }}
+
+      - name: Download
+        if: steps.restore.outputs.stash-hit != 'true'
+        run: dev-support/ci/download-nodejs.sh
+
+      - name: Store
+        if: steps.restore.outputs.stash-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.m2/repository/com/github/eirslett/node
+          key: nodejs-${{ env.NODEJS_VERSION }}
           retention-days: 90
 
   ranger:
