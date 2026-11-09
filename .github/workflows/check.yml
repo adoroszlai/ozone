@@ -275,7 +275,8 @@ jobs:
       - name: Execute pre-test steps
         if: ${{ inputs.pre-script }}
         run: |
-          $COMMAND
+          sudo apt install -y ripgrep
+          rg central.maven.org ~/.m2
         env:
           COMMAND: ${{ inputs.pre-script }}
 

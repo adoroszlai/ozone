@@ -39,7 +39,7 @@ on:
 
 env:
   # BUILD_ARGS and TEST_JAVA_VERSION are duplicated in populate-cache.yml, please keep in sync
-  BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native"
+  BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native -DskipRecon -DskipShade"
   TEST_JAVA_VERSION: 25 # JDK version used by CI build and tests; should match the JDK version in apache/ozone-runner image
   # MAVEN_ARGS and MAVEN_OPTS are duplicated in several workflows, please keep in sync
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml -Ddevelocity.user.config=${{ github.workspace }}/.mvn/develocity-asf.xml
@@ -141,7 +141,7 @@ jobs:
       needs-npm-cache: true
       ratis-args: ${{ inputs.ratis_args }}
       script: build
-      script-args: ${{ needs.build-info.outputs.build-args }}
+      script-args: ${{ needs.build-info.outputs.build-args }} --debug
       sha: ${{ needs.build-info.outputs.sha }}
       timeout-minutes: 60
       with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
