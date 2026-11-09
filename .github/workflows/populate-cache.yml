@@ -57,6 +57,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Calculate Maven cache key
+        id: maven-cache-key
+        run: |
+          echo "MAVEN_REPO_KEY=maven-repo-${{ hashFiles('**/pom.xml', '.mvn/extensions.xml') }}" >> $GITHUB_ENV
+
       - name: Restore cache for Maven dependencies
         id: restore-cache
         uses: actions/cache/restore@v6
@@ -64,7 +69,7 @@ jobs:
           path: |
             ~/.m2/repository/*/*/*
             !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
+          key: ${{ env.MAVEN_REPO_KEY }}
 
       - name: Setup Java
         uses: actions/setup-java@v6
@@ -112,10 +117,6 @@ jobs:
         if: always()
         run: find ~/.m2/repository -type f | sort | xargs ls -lh
 
-      - name: Clean workspace
-        if: always()
-        run: mvn $BUILD_ARGS $MAVEN_ARGS --no-transfer-progress --show-version -Pgo-offline -Dscan=false clean
-
       - name: Save cache for Maven dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
@@ -123,7 +124,7 @@ jobs:
           path: |
             ~/.m2/repository/*/*/*
             !~/.m2/repository/org/apache/ozone
-          key: maven-repo-${{ hashFiles('**/pom.xml') }}
+          key: ${{ env.MAVEN_REPO_KEY }}
 
   hadoop:
     needs: build
