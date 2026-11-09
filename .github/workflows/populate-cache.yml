@@ -65,11 +65,9 @@ jobs:
 
       - name: Restore cache for Maven dependencies
         id: restore-cache
-        uses: actions/cache/restore@v6
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
-          path: |
-            ~/.m2/repository/*/*/*
-            !~/.m2/repository/org/apache/ozone
+          path: ~/.m2/repository
           key: ${{ env.MAVEN_REPO_KEY }}
 
       - name: Setup Java
@@ -91,23 +89,40 @@ jobs:
           [[ -n "$ranger_version" ]] && echo "ranger=$ranger_version" >> $GITHUB_OUTPUT
 
       - name: Fetch dependencies
-        if: steps.restore-cache.outputs.cache-hit != 'true'
+        if: steps.restore-cache.outputs.stash-hit != 'true'
         run: mvn $MAVEN_ARGS --show-version dependency:go-offline dependency:resolve-plugins
 
       - name: Build
-        if: steps.restore-cache.outputs.cache-hit != 'true'
+        if: steps.restore-cache.outputs.stash-hit != 'true'
         run: mvn $BUILD_ARGS $MAVEN_ARGS --show-version -Pgo-offline clean verify
 
       - name: Delete Ozone jars from repo
-        if: steps.restore-cache.outputs.cache-hit != 'true'
+        if: steps.restore-cache.outputs.stash-hit != 'true'
         run: rm -fr ~/.m2/repository/org/apache/ozone
 
       - name: List repo contents
         if: always()
         run: find ~/.m2/repository -type f | sort | xargs ls -lh
 
+      - name: Save stash with exact key
+        if: steps.restore-cache.outputs.stash-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ env.MAVEN_REPO_KEY }}
+          retention-days: 90
+
+      - name: Save stash with generic key
+        if: steps.restore-cache.outputs.stash-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.m2/repository
+          key: maven-repo
+          retention-days: 90
+
+      # keep saving cache for other branches that may not have started using stash
       - name: Save cache for Maven dependencies
-        if: steps.restore-cache.outputs.cache-hit != 'true'
+        if: steps.restore-cache.outputs.stash-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: |
