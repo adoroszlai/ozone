@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This workflow creates cache with Maven dependencies for Ozone build.
+# This workflow creates caches with dependencies for Ozone build and test.
 
 name: populate-cache
 
@@ -46,7 +46,7 @@ env:
   SKIP_APACHE_VERIFY_DOWNLOAD: false
 
 jobs:
-  build:
+  maven:
     runs-on: ubuntu-24.04
     outputs:
       hadoop-version: ${{ steps.versions.outputs.hadoop }}
@@ -89,15 +89,15 @@ jobs:
           [[ -n "$ranger_version" ]] && echo "ranger=$ranger_version" >> $GITHUB_OUTPUT
 
       - name: Fetch dependencies
-        if: steps.restore-cache.outputs.stash-hit != 'true'
+        if: steps.restore.outputs.stash-hit != 'true'
         run: mvn $MAVEN_ARGS --show-version dependency:go-offline dependency:resolve-plugins
 
       - name: Build
-        if: steps.restore-cache.outputs.stash-hit != 'true'
+        if: steps.restore.outputs.stash-hit != 'true'
         run: mvn $BUILD_ARGS $MAVEN_ARGS --show-version -Pgo-offline clean verify
 
       - name: Delete Ozone jars from repo
-        if: steps.restore-cache.outputs.stash-hit != 'true'
+        if: steps.restore.outputs.stash-hit != 'true'
         run: rm -fr ~/.m2/repository/org/apache/ozone
 
       - name: List repo contents
@@ -105,7 +105,7 @@ jobs:
         run: find ~/.m2/repository -type f | sort | xargs ls -lh
 
       - name: Save stash with exact key
-        if: steps.restore-cache.outputs.stash-hit != 'true'
+        if: steps.restore.outputs.stash-hit != 'true'
         uses: apache/infrastructure-actions/stash/save@save/v1
         with:
           path: ~/.m2/repository
@@ -113,7 +113,7 @@ jobs:
           retention-days: 90
 
       - name: Save stash with generic key
-        if: steps.restore-cache.outputs.stash-hit != 'true'
+        if: steps.restore.outputs.stash-hit != 'true'
         uses: apache/infrastructure-actions/stash/save@save/v1
         with:
           path: ~/.m2/repository
@@ -131,9 +131,9 @@ jobs:
           key: ${{ env.MAVEN_REPO_KEY }}
 
   hadoop:
-    needs: build
+    needs: maven
     env:
-      HADOOP_VERSION: ${{ needs.build.outputs.hadoop-version }}
+      HADOOP_VERSION: ${{ needs.maven.outputs.hadoop-version }}
     runs-on: ubuntu-slim
     steps:
       - name: Checkout project
@@ -168,9 +168,9 @@ jobs:
           retention-days: 90
 
   nodejs:
-    needs: build
+    needs: maven
     env:
-      NODEJS_VERSION: ${{ needs.build.outputs.nodejs-version }}
+      NODEJS_VERSION: ${{ needs.maven.outputs.nodejs-version }}
     runs-on: ubuntu-slim
     steps:
       - name: Checkout project
@@ -189,7 +189,8 @@ jobs:
 
       - name: Download
         if: steps.restore.outputs.stash-hit != 'true'
-        run: dev-support/ci/download-nodejs.sh
+        run: |
+          dev-support/ci/download-nodejs.sh
 
       - name: Store
         if: steps.restore.outputs.stash-hit != 'true'
@@ -200,9 +201,9 @@ jobs:
           retention-days: 90
 
   ranger:
-    needs: build
+    needs: maven
     env:
-      RANGER_VERSION: ${{ needs.build.outputs.ranger-version }}
+      RANGER_VERSION: ${{ needs.maven.outputs.ranger-version }}
     runs-on: ubuntu-slim
     steps:
       - name: Checkout project
