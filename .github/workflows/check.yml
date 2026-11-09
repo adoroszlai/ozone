@@ -273,10 +273,10 @@ jobs:
           key: ranger-${{ env.RANGER_VERSION }}
 
       - name: Execute pre-test steps
-        if: ${{ inputs.pre-script }}
         run: |
           sudo apt install -y ripgrep
           rg central.maven.org ~/.m2
+          exit 1 # no need to build
         env:
           COMMAND: ${{ inputs.pre-script }}
 
