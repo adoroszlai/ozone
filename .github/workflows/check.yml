@@ -248,9 +248,10 @@ jobs:
         # TODO remove hard-code in HDDS-17509
         if: ${{ inputs.script == 'acceptance' }}
         run: |
-          HADOOP_VERSION=$(mvn help:evaluate -N -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
+          source hadoop-ozone/dev-support/checks/_lib.sh
+          HADOOP_VERSION="$(get_version hadoop)"
           echo "HADOOP_VERSION=$HADOOP_VERSION" >> $GITHUB_ENV
-          RANGER_VERSION=$(mvn help:evaluate -N -Dexpression=ranger.version -q -DforceStdout -Dscan=false)
+          RANGER_VERSION="$(get_version ranger)"
           echo "RANGER_VERSION=$RANGER_VERSION" >> $GITHUB_ENV
 
       - name: Restore Hadoop
