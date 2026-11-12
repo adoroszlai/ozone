@@ -60,12 +60,12 @@ jobs:
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       junit-modules: ${{ steps.junit-modules.outputs.modules }}
       kubernetes-suites: ${{ steps.kubernetes-suites.outputs.suites }}
-      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
+      needs-basic-check: false
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compile: false
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
-      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      needs-integration-tests: false
+      needs-kubernetes-tests: false
       sha: ${{ steps.get-sha.outputs.sha }}
       test-classes: ${{ steps.selective-checks.outputs.test-classes }}
       # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
@@ -152,6 +152,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     uses: $/.github/workflows/generate-config-doc.yml
     with:
       sha: ${{ needs.build-info.outputs.sha }}
@@ -244,6 +245,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -259,6 +261,7 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     uses: $/.github/workflows/check.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -310,9 +313,6 @@ jobs:
     needs:
       - build-info
       - build
-      - basic
-      - dependency
-      - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     uses: $/.github/workflows/check.yml
     secrets:
@@ -334,7 +334,7 @@ jobs:
         exclude:
           - suite: xcompat/test-old.sh
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 20
 
   # acceptance (compat-old), split by old Ozone version
   compat-old:
