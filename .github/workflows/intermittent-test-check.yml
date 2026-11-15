@@ -57,6 +57,8 @@ on:
         default: '25'
         required: true
 env:
+  # BUILD_ARGS, MAVEN_ARGS, MAVEN_OPTS  are duplicated in several workflows, please keep in sync
+  BUILD_ARGS: "-Dmaven.javadoc.skip=true -Drocks_tools_native"
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml -Ddevelocity.user.config=${{ github.workspace }}/.mvn/develocity-asf.xml
   MAVEN_OPTS: -Daether.connector.http.connectionMaxTtl=25 -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.intervalMax=30000
   TEST_CLASS: ${{ github.event.inputs.test-class}}
@@ -108,37 +110,19 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout project
-        uses: actions/checkout@v7
+        uses: $/.github/actions/get-source
         with:
-          persist-credentials: false
           ref: ${{ github.event.inputs.ref }}
       - name: Setup java
         uses: $/.github/actions/setup-java-with-cache
         with:
           java-version: ${{ github.event.inputs.java-version }}
-      - name: Download Ratis repo
-        if: ${{ github.event.inputs.ratis-ref != '' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
       - name: Build (most) of Ozone
-        run: |
-          args="-DskipRecon -DskipShade -Dmaven.javadoc.skip=true -Drocks_tools_native"
-          args="$args $ratis_args"
-          args="$args -am -pl :$SUBMODULE"
-
-          hadoop-ozone/dev-support/checks/build.sh $args
-        env:
-          ratis_args: ${{ needs.ratis.outputs.build-args }}
-      - name: Store Maven repo for tests
-        uses: actions/upload-artifact@v7
+        uses: $/.github/actions/build-ozone
         with:
-          name: ozone-repo
-          path: |
-            ~/.m2/repository/org/apache/ozone
-          retention-days: 1
+          ratis-args: ${{ needs.ratis.outputs.build-args }}
+          script-args: -DskipShade -am -pl :$SUBMODULE
+          with-recon: false
   run-test:
     if: ${{ !cancelled() }}
     needs:
@@ -152,61 +136,26 @@ jobs:
         split: ${{fromJson(needs.prepare-job.outputs.matrix)}}  # Define  splits
       fail-fast: ${{ fromJson(github.event.inputs.fail-fast) }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout project
+        uses: $/.github/actions/get-source
         with:
-          persist-credentials: false
           ref: ${{ github.event.inputs.ref }}
+
       - name: Setup java
         uses: $/.github/actions/setup-java-with-cache
         with:
           java-version: ${{ github.event.inputs.java-version }}
-      - name: Download Ratis repo
-        if: ${{ github.event.inputs.ratis-ref != '' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: ratis-jars
-          path: |
-            ~/.m2/repository/org/apache/ratis
-      - name: Download Ozone repo
-        id: download-ozone-repo
-        uses: actions/download-artifact@v8
-        with:
-          name: ozone-repo
-          path: |
-            ~/.m2/repository/org/apache/ozone
+
       - name: Execute tests
-        run: |
-          if [[ -e "$repo_path" ]]; then
-            export OZONE_REPO_CACHED=true
-          fi
-
-          args="-DexcludedGroups=slow|unhealthy -DskipShade -Drocks_tools_native"
-          args="$args $ratis_args"
-          args="$args -pl :$SUBMODULE"
-
-          if [ "$TEST_METHOD" = "ALL" ]; then
-            echo "Running all tests from $TEST_CLASS"
-            set -x
-            hadoop-ozone/dev-support/checks/junit.sh $args -Dtest="$TEST_CLASS,Abstract*Test*\$*"
-          else
-            echo "Running test: $TEST_METHOD from $TEST_CLASS"
-            set -x
-            hadoop-ozone/dev-support/checks/junit.sh $args -Dtest="$TEST_CLASS#$TEST_METHOD,Abstract*Test*\$*"
-          fi
-        env:
-          CHECK: flaky
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.OZONE_DEVELOCITY_ACCESS_KEY }}
-          repo_path: ${{ steps.download-ozone-repo.outputs.download-path }}
-          ratis_args: ${{ needs.ratis.outputs.build-args }}
-      - name: Summary of failures
-        run: hadoop-ozone/dev-support/checks/_summary.sh target/flaky/summary.txt
-        if: ${{ failure() }}
-      - name: Archive build results
-        uses: actions/upload-artifact@v7
-        if: ${{ failure() }}
+        uses: $/.github/actions/run-check
         with:
-          name: result-${{ github.run_number }}-${{ github.run_id }}-split-${{ matrix.split }}
-          path: target/flaky
+          artifact-name: flaky-${{ github.run_number }}-${{ github.run_id }}-split-${{ matrix.split }}
+          ratis-args: ${{ needs.ratis.outputs.build-args }}
+          script: flaky
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.OZONE_DEVELOCITY_ACCESS_KEY }}
+          OZONE_REPO_CACHED: ${{ steps.download-ozone-repo.outputs.download-path != '' }}
+
   count-failures:
     if: ${{ failure() }}
     needs: run-test

@@ -1,0 +1,105 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build Ozone
+description: >
+  Build Ozone and upload artifacts if needed.
+  Requires sources to be present, Java set up.
+
+inputs:
+  ratis-args:
+    description: >
+      Optional version overrides from custom Ratis build.
+    default: ''
+
+  script:
+    description: >
+      Build script to run from hadoop-ozone/dev-support/checks, without .sh extension.
+    default: build
+
+  script-args:
+    description: >
+      Optional extra arguments for the build script, in addition to `ratis-args` input and `BUILD_ARGS` environment
+      variable.
+    default: ''
+
+  with-binary-tarball:
+    description: >
+      Build binary tarball (when true) or skip it (when false).
+    default: 'true'
+
+  with-recon:
+    description: >
+      Build Recon (when true) or skip it (when false).
+    default: 'true'
+
+  with-source-tarball:
+    description: >
+      Build source tarball (when true) or skip it (when false).
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Cache for NPM dependencies
+      if: ${{ inputs.with-recon != 'false' }}
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Build
+      uses: $/.github/actions/run-check
+      with:
+        needs-ozone-repo: ${{ inputs.script == 'repro' }}
+        ratis-args: ${{ inputs.ratis-args }}
+        script: ${{ inputs.script }}
+        script-args: >
+          ${{ env.BUILD_ARGS }}
+          ${{ inputs.script-args }}
+          ${{ inputs.with-binary-tarball == 'true' && ' -Pdist' || '' }}
+          ${{ inputs.with-source-tarball == 'true' && ' -Psrc' || '' }}
+          ${{ inputs.with-recon == 'false' && ' -DskipRecon' || '' }}
+
+    - name: Store binaries for tests
+      if: ${{ !cancelled() && inputs.script == 'build' && inputs.with-binary-tarball == 'true' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ozone-bin
+        path: |
+          hadoop-ozone/dist/target/ozone-*.tar.gz
+          !hadoop-ozone/dist/target/ozone-*-src.tar.gz
+        retention-days: 1
+
+    - name: Store source tarball for compilation
+      if: ${{ !cancelled() && inputs.script == 'build' && inputs.with-source-tarball == 'true' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ozone-src
+        path: |
+          hadoop-ozone/dist/target/ozone-*-src.tar.gz
+        retention-days: 1
+
+    - name: Store Maven repo for tests
+      if: ${{ !cancelled() && inputs.script == 'build' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ozone-repo
+        path: |
+          ~/.m2/repository/org/apache/ozone
+        retention-days: 1

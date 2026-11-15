@@ -1,0 +1,64 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Get Ozone source
+
+description: >
+  Get Ozone source from Git (default) or tarball.
+
+inputs:
+  checkout-fetch-depth:
+    description: >
+      Optional fetch depth for Git checkout.
+    default: '1'
+
+  ref:
+    description: >
+      Git ref to check out (commit SHA, tag or branch name).
+    default: ''
+
+  use-source-tarball:
+    description: >
+      Whether to download Ozone source tarball, created by build, instead of Git.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout project
+      if: ${{ inputs.use-source-tarball != 'true' }}
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+        ref: ${{ inputs.ref }}
+        fetch-depth: ${{ inputs.checkout-fetch-depth }}
+
+    - name: Delete .git to omit commit SHA in build artifacts
+      if: ${{ inputs.use-source-tarball != 'true' && inputs.checkout-fetch-depth == '1' }}
+      shell: bash
+      run: |
+        rm -fr .git
+
+    - name: Download Ozone source tarball
+      if: ${{ inputs.use-source-tarball == 'true' }}
+      uses: actions/download-artifact@v8
+      with:
+        name: ozone-src
+
+    - name: Extract source tarball
+      if: ${{ inputs.use-source-tarball == 'true' }}
+      shell: bash
+      run: |
+        tar --strip-components 1 -xzvf ozone*-src.tar.gz

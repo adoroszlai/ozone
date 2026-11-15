@@ -19,8 +19,8 @@ description: Setup Java and restore Maven cache of Ozone's dependencies
 inputs:
   java-version:
     description: >
-      Java version to set up.
-    required: true
+      Java version to set up.  Defaults to $JAVA_VERSION.
+    default: ''
 
   only-exact-hit:
     description: >
@@ -47,12 +47,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Setup Java ${{ inputs.java-version }}
+    - name: Setup Java ${{ env.version }}
       id: setup-java
       uses: actions/setup-java@v6
       with:
         distribution: 'temurin'
-        java-version: ${{ inputs.java-version }}
+        java-version: ${{ env.version }}
+      env:
+        version: ${{ inputs.java-version || env.JAVA_VERSION }}
 
     - name: Calculate cache key
       id: cache-key
