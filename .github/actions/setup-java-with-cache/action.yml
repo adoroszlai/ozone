@@ -140,3 +140,9 @@ runs:
       if: steps.any-hit.outputs.value == 'true'
       run: |
         find ~/.m2/repository -path '*/com/gradle/develocity-maven-extension/*' | sort | xargs ls -la
+
+    - name: Debug
+      shell: bash
+      if: steps.any-hit.outputs.value == 'true'
+      run: |
+        cat ~/.m2/settings.xml
