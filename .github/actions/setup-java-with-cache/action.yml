@@ -66,8 +66,16 @@ runs:
       run: |
         rm -frv ~/.m2/repository
 
-    - name: Restore cache with exact key
+    - name: Restore stash with exact key
+      id: exact-stash
+      uses: apache/infrastructure-actions/stash/restore@restore/v1
+      with:
+        path: ~/.m2/repository
+        key: ${{ steps.cache-key.outputs.value }}
+
+    - name: Fallback to cache with exact key
       id: exact-cache
+      if: steps.exact-stash.outputs.stash-hit != 'true'
       uses: actions/cache/restore@v6
       with:
         path: |
@@ -87,13 +95,24 @@ runs:
         echo "hit: $value"
         echo "value=$value" >> "$GITHUB_OUTPUT"
       env:
-        HIT: ${{ steps.exact-cache.outputs.cache-hit }}
+        HIT: ${{ steps.exact-stash.outputs.stash-hit == 'true' || steps.exact-cache.outputs.cache-hit == 'true' }}
+
+    - name: Fallback to generic stash
+      id: generic-stash
+      if: >
+        steps.exact-hit.outputs.value != 'true'
+        && inputs.only-exact-hit != 'true'
+      uses: apache/infrastructure-actions/stash/restore@restore/v1
+      with:
+        path: ~/.m2/repository
+        key: maven-repo
 
     - name: Fallback to generic cache
       id: generic-cache
       if: >
         steps.exact-hit.outputs.value != 'true'
         && inputs.only-exact-hit != 'true'
+        && steps.generic-stash.outputs.stash-hit != 'true'
       uses: actions/cache/restore@v6
       with:
         path: |
@@ -103,9 +122,6 @@ runs:
 
     - name: Any hit?
       id: any-hit
-      if: >
-        steps.exact-hit.outputs.value != 'true'
-        && inputs.only-exact-hit != 'true'
       shell: bash
       run: |
         if [[ "$HIT" == "true" ]] || [[ -d ~/.m2/repository ]]; then
