@@ -145,4 +145,6 @@ runs:
       shell: bash
       if: steps.any-hit.outputs.value == 'true'
       run: |
+        ls -la ~/.m2
         cat ~/.m2/settings.xml
+        cat ~/.m2/toolchains.xml
