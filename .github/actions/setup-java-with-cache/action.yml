@@ -134,3 +134,9 @@ runs:
         echo "value=$value" >> "$GITHUB_OUTPUT"
       env:
         HIT: ${{ steps.exact-hit.outputs.value }}
+
+    - name: Debug
+      shell: bash
+      if: steps.any-hit.outputs.value == 'true'
+      run: |
+        find ~/.m2/repository -path '*/com/gradle/develocity-maven-extension/*' | sort | xargs ls -la
