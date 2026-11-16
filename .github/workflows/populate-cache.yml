@@ -65,7 +65,7 @@ jobs:
       - name: Get versions
         id: versions
         run: |
-          mvn help:evaluate -N -Dexpression=nodejs.version -q -DforceStdout -Dscan=false
+          mvn help:evaluate -N -Dexpression=nodejs.version -Dscan=false
 
           NODEJS_VERSION=$(mvn help:evaluate -N -Dexpression=nodejs.version -q -DforceStdout -Dscan=false)
           echo "NODEJS_VERSION=$NODEJS_VERSION" >> $GITHUB_ENV
