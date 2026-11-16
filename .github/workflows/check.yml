@@ -191,9 +191,15 @@ jobs:
 
       - name: Setup Java ${{ inputs.java-version }} with cache
         if: ${{ inputs.java-version }}
+        id: setup-java
         uses: $/.github/actions/setup-java-with-cache
         with:
           java-version: ${{ inputs.java-version }}
+
+      - name: Use Maven offline
+        if: ${{ inputs.java-version != '' && steps.setup-java.outputs.cache-hit == 'true' }}
+        run: |
+          echo MAVEN_ARGS="$MAVEN_ARGS --offline" >> "$GITHUB_ENV"
 
       - name: Download Ozone repo
         id: download-ozone-repo
@@ -230,7 +236,9 @@ jobs:
         # TODO remove hard-code in HDDS-17509
         if: ${{ inputs.script == 'acceptance' }}
         run: |
+          echo "MAVEN_ARGS: $MAVEN_ARGS"
           HADOOP_VERSION=$(mvn help:evaluate -N -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
+          echo "HADOOP_VERSION: $HADOOP_VERSION" # debug
           echo "HADOOP_VERSION=$HADOOP_VERSION" >> $GITHUB_ENV
           RANGER_VERSION=$(mvn help:evaluate -N -Dexpression=ranger.version -q -DforceStdout -Dscan=false)
           echo "RANGER_VERSION=$RANGER_VERSION" >> $GITHUB_ENV

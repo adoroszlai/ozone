@@ -179,9 +179,9 @@ jobs:
     if: needs.build-info.outputs.needs-compile == 'true'
     strategy:
       matrix:
-        java: [ 25 ]
-        include:
-          - os: ubuntu-24.04
+        java: [ 21, 25 ]
+        os:
+          - ubuntu-24.04
       fail-fast: false
     uses: $/.github/workflows/check.yml
     with:
@@ -327,6 +327,7 @@ jobs:
     strategy:
       matrix:
         suite:
+          - ozone/test-s3a.sh
           - ozonesecure-ha/test-s3g-virtual-host.sh
         exclude:
           - suite: xcompat/test-old.sh
