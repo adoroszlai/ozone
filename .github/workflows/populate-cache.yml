@@ -149,6 +149,22 @@ jobs:
         if: always()
         run: find ~/.m2/repository -type f | sort | xargs ls -lh
 
+      - name: Save stash with exact key
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ steps.restore-cache.outputs.cache-key }}
+          retention-days: 90
+
+      - name: Save stash with generic key
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        uses: apache/infrastructure-actions/stash/save@save/v1
+        with:
+          path: ~/.m2/repository
+          key: maven-repo
+          retention-days: 90
+
+      # keep saving cache for other branches that may not have started using stash
       - name: Save cache for Maven dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
