@@ -232,29 +232,31 @@ jobs:
         if: ${{ inputs.script == 'acceptance' }}
         run: |
           source hadoop-ozone/dev-support/checks/_lib.sh
-          HADOOP_VERSION=$(get_version hadoop)
-          echo "HADOOP_VERSION=$HADOOP_VERSION" >> $GITHUB_ENV
-          RANGER_VERSION=$(get_version ranger)
-          echo "RANGER_VERSION=$RANGER_VERSION" >> $GITHUB_ENV
+          set -x
+          if [[ "$SPLIT" =~ *test-s3a.sh ]]; then
+            hadoop_version=$(get_version hadoop)
+            echo "hadoop_version=$hadoop_version" >> $GITHUB_OUTPUT
+          elif [[ "$SPLIT" =~ *test-ranger.sh ]] || [[ "$SPLIT" =~ *test-sts.sh ]]; then
+            ranger_version=$(get_version ranger)
+            echo "ranger_version=$ranger_version" >> $GITHUB_OUTPUT
+          fi
 
       - name: Restore Hadoop
         id: restore-hadoop
-        # TODO reduce hard-code in HDDS-17509
-        if: ${{ inputs.script == 'acceptance' && contains(inputs.split, 'test-s3a.sh') }}
+        if: ${{ steps.versions.outputs.hadoop_version != '' }}
         uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
           clean: true
           path: ~/.cache/ozone
-          key: hadoop-${{ env.HADOOP_VERSION }}
+          key: hadoop-${{ steps.versions.outputs.hadoop_version }}
 
       - name: Restore Ranger
         id: restore-ranger
-        # TODO reduce hard-code in HDDS-17509
-        if: ${{ inputs.script == 'acceptance' && (contains(inputs.split, 'test-ranger.sh') || contains(inputs.split, 'test-sts.sh')) }}
+        if: ${{ steps.versions.outputs.ranger_version != '' }}
         uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
           path: ~/.cache/ozone
-          key: ranger-${{ env.RANGER_VERSION }}
+          key: ranger-${{ steps.versions.outputs.ranger_version }}
 
       - name: Execute pre-test steps
         if: ${{ inputs.pre-script }}
