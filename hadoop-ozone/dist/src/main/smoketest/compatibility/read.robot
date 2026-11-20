@@ -90,6 +90,53 @@ Key Read From Bucket With Replication
         Assert Later    File ${ec_result} Should    Contain    NOT_SUPPORTED_OPERATION
     END
 
+Key List
+    ${result} =    Execute Later ozone sh    key list /vol1/bucket1
+
+    IF    '${CLIENT_VERSION}' >= '${EC_VERSION}'
+        Assert Later    File ${result} Should    Contain    key-${DATA_VERSION}
+    ELSE IF    '${DATA_VERSION}' < '${EC_VERSION}' # New client creates RATIS/ONE key by default: BUG?
+        Assert Later    File ${result} Filtered By ${KEY_REPLICATION_FILTER} Should    Contain    key-${DATA_VERSION} RATIS 3
+    END
+
+Key List In Bucket With Replication
+    Pass Execution If    '${CLUSTER_VERSION}' < '${EC_VERSION}'   Cluster does not support EC
+
+    ${ratis_result} =     Execute Later ozone sh    key list /vol1/ratis-${CLUSTER_VERSION}
+    ${ec_result} =     Execute Later ozone sh    key list /vol1/ecbucket-${CLUSTER_VERSION}
+
+    IF    '${CLIENT_VERSION}' < '${EC_VERSION}'
+        Assert Later    File ${ratis_result} Filtered By ${KEY_REPLICATION_FILTER} Should    Contain    key-${DATA_VERSION} RATIS 3
+        Assert Later    File ${ec_result} Should    Contain    NOT_SUPPORTED_OPERATION
+    ELSE
+        Assert Later    File ${ratis_result} Should    Contain    key-${DATA_VERSION}
+        Assert Later    File ${ec_result} Should    Contain    key-${DATA_VERSION}
+    END
+
+File Can Be Get
+    ${file} =    Get Key Later    /vol1/bucket1/dir-${DATA_VERSION}/file-${DATA_VERSION}
+    Assert Later    Compare Files    ${file}    ${TESTFILE}
+
+File Can Be Get via FS
+    File Should Match Local File    o3fs://bucket1.vol1/dir-${DATA_VERSION}/file-${DATA_VERSION}    ${TESTFILE}
+
+Key Info File Flag Should Be Set Correctly
+    Pass Execution If    '${CLUSTER_VERSION}' <= '${EC_VERSION}'   Cluster does not support 'file' flag
+    Pass Execution If    '${CLIENT_VERSION}' <= '${EC_VERSION}'    Client does not support 'file' flag
+
+    ${dirpath} =      Set Variable    /${FSO_BUCKET}/dir/subdir/
+    ${filepath} =     Set Variable    ${dirpath}file
+
+    ${key_info} =     Execute Later ozone sh    key info ${filepath}
+    Assert Later    File ${key_info} Should    Contain    \"file\" : true
+
+    ${dir_info} =     Execute Later ozone sh    key info ${dirpath}
+    Assert Later    File ${dir_info} Should    Contain    \"file\" : false
+
+# execute batch before any ozone fs or other non-sh commands
+Execute Batch Shell
+    Execute Batch
+
 Dir Can Be Listed
     ${result} =     Execute    ozone fs -ls o3fs://bucket1.vol1/dir-${DATA_VERSION}
                     Should contain    ${result}    dir-${DATA_VERSION}/file-${DATA_VERSION}
@@ -123,36 +170,6 @@ File Can Be Listed
                         Should contain  ${result}   : No such file or directory
     END
 
-Key List
-    ${result} =    Execute Later ozone sh    key list /vol1/bucket1
-
-    IF    '${CLIENT_VERSION}' >= '${EC_VERSION}'
-        Assert Later    File ${result} Should    Contain    key-${DATA_VERSION}
-    ELSE IF    '${DATA_VERSION}' < '${EC_VERSION}' # New client creates RATIS/ONE key by default: BUG?
-        Assert Later    File ${result} Filtered By ${KEY_REPLICATION_FILTER} Should    Contain    key-${DATA_VERSION} RATIS 3
-    END
-
-Key List In Bucket With Replication
-    Pass Execution If    '${CLUSTER_VERSION}' < '${EC_VERSION}'   Cluster does not support EC
-
-    ${ratis_result} =     Execute Later ozone sh    key list /vol1/ratis-${CLUSTER_VERSION}
-    ${ec_result} =     Execute Later ozone sh    key list /vol1/ecbucket-${CLUSTER_VERSION}
-
-    IF    '${CLIENT_VERSION}' < '${EC_VERSION}'
-        Assert Later    File ${ratis_result} Filtered By ${KEY_REPLICATION_FILTER} Should    Contain    key-${DATA_VERSION} RATIS 3
-        Assert Later    File ${ec_result} Should    Contain    NOT_SUPPORTED_OPERATION
-    ELSE
-        Assert Later    File ${ratis_result} Should    Contain    key-${DATA_VERSION}
-        Assert Later    File ${ec_result} Should    Contain    key-${DATA_VERSION}
-    END
-
-File Can Be Get
-    ${file} =    Get Key Later    /vol1/bucket1/dir-${DATA_VERSION}/file-${DATA_VERSION}
-    Assert Later    Compare Files    ${file}    ${TESTFILE}
-
-File Can Be Get via FS
-    File Should Match Local File    o3fs://bucket1.vol1/dir-${DATA_VERSION}/file-${DATA_VERSION}    ${TESTFILE}
-
 File Can Be Get From Bucket With Replication
     Pass Execution If    '${CLUSTER_VERSION}' < '${EC_VERSION}'   Cluster does not support EC
 
@@ -176,19 +193,6 @@ HSync Lease Recover Can Be Used
     Pass Execution If    '${CLIENT_VERSION}' < '${HSYNC_VERSION}'    Client does not support HSYNC
     Pass Execution If    '${CLUSTER_VERSION}' < '${HSYNC_VERSION}'   Cluster does not support HSYNC
     Execute    ozone admin om lease recover --path=ofs://om/${FSO_BUCKET}/dir/subdir/file
-
-Key Info File Flag Should Be Set Correctly
-    Pass Execution If    '${CLUSTER_VERSION}' <= '${EC_VERSION}'   Cluster does not support 'file' flag
-    Pass Execution If    '${CLIENT_VERSION}' <= '${EC_VERSION}'    Client does not support 'file' flag
-
-    ${dirpath} =      Set Variable    /${FSO_BUCKET}/dir/subdir/
-    ${filepath} =     Set Variable    ${dirpath}file
-
-    ${key_info} =     Execute Later ozone sh    key info ${filepath}
-    Assert Later    File ${key_info} Should    Contain    \"file\" : true
-
-    ${dir_info} =     Execute Later ozone sh    key info ${dirpath}
-    Assert Later    File ${dir_info} Should    Contain    \"file\" : false
 
 Snapshots Can Be Diffed
     Pass Execution If    '${CLUSTER_VERSION}' < '${SNAPSHOT_VERSION}'    Cluster does not support snapshots
@@ -224,7 +228,3 @@ Can --get-report of --ordered Snapshot Diff
     IF    '${CLUSTER_VERSION}' >= '${SNAPSHOT_DIFF_ORDERED_VERSION}' and '${CLIENT_VERSION}' >= '${SNAPSHOT_DIFF_ORDERED_VERSION}'
         Should Contain    ${output}    Report is dependency ordered
     END
-
-# execute batch before any ozone fs or other non-sh commands
-Execute Batch Shell
-    Execute Batch
