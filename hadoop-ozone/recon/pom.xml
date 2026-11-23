@@ -23,6 +23,7 @@
   <name>Apache Ozone Recon</name>
   <properties>
     <classpath.skip>false</classpath.skip>
+    <pnpm.store>~/.pnpm-store</pnpm.store>
     <pnpm.version>10.28.2</pnpm.version>
   </properties>
   <dependencies>
@@ -459,7 +460,7 @@
               <goal>pnpm</goal>
             </goals>
             <configuration>
-              <arguments>config set store-dir ~/.pnpm-store</arguments>
+              <arguments>config set store-dir ${pnpm.store}</arguments>
             </configuration>
           </execution>
           <execution>

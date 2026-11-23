@@ -149,6 +149,7 @@ env:
   DISPLAY_NAME: ${{ inputs.display-name }}
   SCRIPT: ${{ inputs.script }}
   SPLIT: ${{ inputs.split }}
+  PNPM_STORE: ${{ github.workspace }}/pnpm-store
 
 permissions: { }
 
@@ -182,15 +183,12 @@ jobs:
         run: |
           tar --strip-components 1 -xzvf ozone*-src.tar.gz
 
-      - name: Cache for NPM dependencies
+      - name: Restore NPM dependencies
         if: ${{ inputs.needs-npm-cache }}
-        uses: actions/cache@v6
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
-          path: |
-            ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Setup Java ${{ inputs.java-version }} with cache
         if: ${{ inputs.java-version }}

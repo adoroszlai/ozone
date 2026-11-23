@@ -50,6 +50,7 @@ env:
   OZONE_ACCEPTANCE_SUITE: ${{ github.event.inputs.test-suite}}
   OZONE_TEST_SELECTOR: ${{ github.event.inputs.test-filter }}
   FAIL_FAST: ${{ github.event.inputs.fail-fast }}
+  PNPM_STORE: ${{ github.workspace }}/pnpm-store
   SPLITS: ${{ github.event.inputs.splits }}
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('{0}[{1}]-{2}', inputs.test-suite || inputs.test-filter, inputs.ref, inputs.splits) || '' }}
 permissions: { }
@@ -89,19 +90,15 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.inputs.ref }}
-      - name: Cache for npm dependencies
-        uses: actions/cache@v6
+      - name: Restore NPM dependencies
+        uses: apache/infrastructure-actions/stash/restore@restore/v1
         with:
-          path: |
-            ~/.pnpm-store
-            **/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
       - name: Setup java
         uses: $/.github/actions/setup-java-with-cache
       - name: Run a full build
-        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Dmaven.javadoc.skip=true
+        run: hadoop-ozone/dev-support/checks/build.sh -Pdist -Dmaven.javadoc.skip=true -Dpnpm.store=$PNPM_STORE
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.OZONE_DEVELOCITY_ACCESS_KEY }}
       - name: Store binaries for tests
