@@ -21,8 +21,7 @@
 
 cd hadoop-ozone/dist/src/main/compose
 SUITES=$(find . -mindepth 2 -maxdepth 2 -name 'test*.sh' | cut -c3- \
-  | grep -Fv -e 'testlib.sh' -e 'test-failures' \
-  | grep -Fv -e 'xcompat/test-old.sh' \
+  | grep -Fv -e 'testlib.sh' -e 'test-failures' -e 'xcompat/test-old.sh' \
   | sort)
 VERSIONS=$(grep '^old_versions=' xcompat/lib.sh \
   | cut -f2 -d'"')

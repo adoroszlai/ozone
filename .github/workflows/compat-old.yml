@@ -50,9 +50,9 @@ jobs:
           dev-support/ci/acceptance_suites.sh
 
   test:
+    needs:
+      - build-info
     uses: $/.github/workflows/check.yml
-    secrets:
-      DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
       needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis-args }}
@@ -68,3 +68,5 @@ jobs:
         version: ${{ fromJson(needs.build-info.outputs.versions) }}
       fail-fast: false
       max-parallel: 3
+    secrets:
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
