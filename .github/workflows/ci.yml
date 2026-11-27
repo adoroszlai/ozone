@@ -55,8 +55,6 @@ jobs:
     env:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
-      acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      acceptance-versions: ${{ steps.acceptance-suites.outputs.versions }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       integration-suites: ${{ steps.integration-suites.outputs.suites }}
       junit-modules: ${{ steps.junit-modules.outputs.modules }}
@@ -114,9 +112,6 @@ jobs:
             # Run all checks
             dev-support/ci/selective_ci_checks.sh
           fi
-      - name: Acceptance suites
-        id: acceptance-suites
-        run: dev-support/ci/acceptance_suites.sh
       - name: Integration suites
         id: integration-suites
         run: dev-support/ci/integration_suites.sh
@@ -314,27 +309,12 @@ jobs:
       - dependency
       - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
-    uses: $/.github/workflows/check.yml
+    uses: $/.github/workflows/acceptance.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
-      java-version: 11 # Hadoop may not work with newer Java
-      needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
-      runner: ubuntu-24.04
-      script: acceptance
-      script-args: ${{ matrix.suite }}
       sha: ${{ needs.build-info.outputs.sha }}
-      split: ${{ matrix.suite }}
-      timeout-minutes: 60
-      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
-    strategy:
-      matrix:
-        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
-        exclude:
-          - suite: xcompat/test-old.sh
-      fail-fast: false
-      max-parallel: 10
 
   # acceptance (compat-old), split by old Ozone version
   compat-old:
@@ -346,24 +326,12 @@ jobs:
       - dependency
       - license
     if: needs.build-info.outputs.needs-compose-tests == 'true'
-    uses: $/.github/workflows/check.yml
+    uses: $/.github/workflows/compat-old.yml
     secrets:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
     with:
-      java-version: ${{ needs.build-info.outputs.java-version }}
-      needs-ozone-binary-tarball: true
       ratis-args: ${{ inputs.ratis_args }}
-      script: acceptance
-      script-args: xcompat/test-old.sh ${{ matrix.version }}
       sha: ${{ needs.build-info.outputs.sha }}
-      split: compat-old-${{ matrix.version }}
-      timeout-minutes: 30
-      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
-    strategy:
-      matrix:
-        version: ${{ fromJson(needs.build-info.outputs.acceptance-versions) }}
-      fail-fast: false
-      max-parallel: 3
 
   kubernetes:
     needs:
